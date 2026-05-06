@@ -1,0 +1,47 @@
+import { StyleSheet, View } from "react-native";
+
+import { borderRadius, fontSize, fontWeight, spacing } from "../theme/tokens";
+import { useTheme } from "../theme/useTheme";
+
+import { Text } from "./Text";
+
+export type BadgeVariant = "neutral" | "brand" | "success";
+
+type Props = {
+  label: string;
+  variant?: BadgeVariant;
+};
+
+/**
+ * Compact pill for surface, size, amenity, or status labels. Uses tinted
+ * backgrounds so multiple badges in a row stay legible without heavy borders.
+ */
+export function Badge({ label, variant = "neutral" }: Props) {
+  const colors = useTheme();
+
+  const tintMap = {
+    neutral: { bg: colors.surfaceSecondary, fg: colors.textSecondary },
+    // ~16% opacity tint of brand/success on the surface — works in both schemes.
+    brand: { bg: colors.brand + "29", fg: colors.brand },
+    success: { bg: colors.success + "29", fg: colors.success },
+  } as const;
+
+  const { bg, fg } = tintMap[variant];
+
+  return (
+    <View style={[styles.pill, { backgroundColor: bg }]}>
+      <Text style={{ color: fg, fontSize: fontSize.xs, fontWeight: fontWeight.medium }}>
+        {label}
+      </Text>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  pill: {
+    paddingHorizontal: spacing.sm + 2,
+    paddingVertical: 3,
+    borderRadius: borderRadius.sm,
+    alignSelf: "flex-start",
+  },
+});

@@ -15,12 +15,17 @@ export type ListVenuesOptions = {
 };
 
 /**
- * List active venues. When `lat`, `lng`, and `radiusKm` are all provided,
- * delegates to the `venues_within` RPC (PostGIS ST_DWithin) and orders by
- * distance. Result is cached in Redis for 60s keyed on the rounded coords
- * + radius.
+ * List active venues with their active fields nested. Cards depend on the
+ * field summary (count + surfaces + min price), so the list endpoint always
+ * embeds fields rather than forcing each card to fetch them separately.
+ *
+ * When `lat`/`lng`/`radiusKm` are all provided, results come from the
+ * `venues_within` RPC ordered by distance, then we hydrate fields in a
+ * follow-up query and re-apply that ordering.
  */
-export async function listVenues(opts: ListVenuesOptions = {}): Promise<Venue[]> {
+export async function listVenues(
+  opts: ListVenuesOptions = {}
+): Promise<VenueWithFields[]> {
   const { lat, lng, radiusKm } = opts;
 
   if (lat !== undefined && lng !== undefined && radiusKm !== undefined) {
@@ -31,27 +36,49 @@ export async function listVenues(opts: ListVenuesOptions = {}): Promise<Venue[]>
 
   const { data, error } = await supabase
     .from("venues")
-    .select("*")
+    .select("*, fields(*)")
     .eq("is_active", true)
+    .eq("fields.is_active", true)
     .order("name");
 
   if (error) throw error;
-  return (data ?? []) as Venue[];
+  return (data ?? []) as unknown as VenueWithFields[];
 }
 
-async function proximitySearch(lat: number, lng: number, radiusKm: number): Promise<Venue[]> {
-  const { data, error } = await supabase.rpc("venues_within", {
+async function proximitySearch(
+  lat: number,
+  lng: number,
+  radiusKm: number
+): Promise<VenueWithFields[]> {
+  // Step 1: ask the RPC for venues ordered by distance.
+  const { data: ordered, error: rpcErr } = await supabase.rpc("venues_within", {
     p_lat: lat,
     p_lng: lng,
     p_radius_meters: radiusKm * 1000,
   });
+  if (rpcErr) throw rpcErr;
+  if (!ordered || ordered.length === 0) return [];
 
-  if (error) throw error;
-  return (data ?? []) as Venue[];
+  // Step 2: fetch the same venues with active fields embedded.
+  const ids = ordered.map((v) => v.id);
+  const { data: hydrated, error: selErr } = await supabase
+    .from("venues")
+    .select("*, fields(*)")
+    .in("id", ids)
+    .eq("fields.is_active", true);
+  if (selErr) throw selErr;
+  if (!hydrated) return [];
+
+  // Step 3: re-apply the RPC's distance ordering.
+  const byId = new Map(
+    (hydrated as unknown as VenueWithFields[]).map((v) => [v.id, v])
+  );
+  return ids
+    .map((id) => byId.get(id))
+    .filter((v): v is VenueWithFields => Boolean(v));
 }
 
 function proximityKey(lat: number, lng: number, radiusKm: number): string {
-  // Round to 4 decimals (~11 m) so jitter doesn't fragment the cache.
   return `venues:${lat.toFixed(4)}:${lng.toFixed(4)}:${radiusKm}`;
 }
 
@@ -74,7 +101,5 @@ export async function getVenueWithFields(id: string): Promise<VenueWithFields | 
   return data as unknown as VenueWithFields;
 }
 
-// Re-export the field enums for use in route validation, so handlers don't
-// have to reach into the generated types directly.
 export type FieldSurface = Enums<"field_surface">;
 export type FieldSize = Enums<"field_size">;
