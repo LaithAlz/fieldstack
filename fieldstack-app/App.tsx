@@ -8,6 +8,7 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { ToastProvider } from "./src/components/Toast";
+import { EVENT_APP_OPENED, track } from "./src/lib/analytics";
 import { OnboardingProvider } from "./src/lib/onboardingContext";
 import { getOnboardingComplete } from "./src/lib/storage";
 import { RootNavigator } from "./src/navigation/RootNavigator";
@@ -35,6 +36,7 @@ export default function App() {
   const scheme = useColorScheme();
 
   useEffect(() => {
+    track(EVENT_APP_OPENED);
     let cancelled = false;
     (async () => {
       const onboarded = await withTimeout(getOnboardingComplete(), SPLASH_CAP_MS, false);
