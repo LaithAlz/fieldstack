@@ -108,8 +108,10 @@ echo "==> Issues"
 awk -v dir="$WORKDIR" '
   /^## ISSUE-/{
     if (out) close(out)
-    match($0, /ISSUE-(F[0-9]+\.[0-9]+)/, m)
-    out = dir "/" m[1] ".md"
+    line = $0
+    sub(/^## ISSUE-/, "", line)   # "F1.1 — Story name"
+    sub(/ —.*$/, "", line)        # "F1.1"
+    out = dir "/" line ".md"
   }
   /^# Build order$/{
     if (out) close(out)
