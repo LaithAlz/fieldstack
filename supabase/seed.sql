@@ -1,0 +1,3 @@
+-- Intentionally empty.
+-- We seed via TypeScript instead — see scripts/seed.ts. This file exists only
+-- to silence the "no seed files matched pattern" warning from `supabase start`.
