@@ -8,16 +8,24 @@
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-import type { FieldSize } from "../types/api";
+import type { FieldSize, FieldSurface } from "../types/api";
 
 const KEYS = {
   onboardingComplete: "@fieldstack/onboarding_complete",
   sportPreference: "@fieldstack/sport_preference",
   lastLocation: "@fieldstack/last_location",
+  lastFilters: "@fieldstack/last_filters",
 } as const;
 
 export type SportPreference = FieldSize[] | null;
 export type StoredCoords = { lat: number; lng: number };
+
+export type StoredFilters = {
+  surface: FieldSurface[];
+  size: FieldSize[];
+  priceMax: number | null;
+  sort: "distance" | "price_asc" | "price_desc";
+};
 
 // ---------- onboarding flag ----------
 
@@ -80,4 +88,43 @@ export async function getLastLocation(): Promise<StoredCoords | null> {
 
 export async function setLastLocation(value: StoredCoords): Promise<void> {
   await AsyncStorage.setItem(KEYS.lastLocation, JSON.stringify(value));
+}
+
+// ---------- last applied search filters ----------
+
+const VALID_SURFACES: FieldSurface[] = ["turf", "grass", "concrete", "indoor"];
+const VALID_SIZES: FieldSize[] = ["5v5", "7v7", "11v11"];
+const VALID_SORTS = ["distance", "price_asc", "price_desc"] as const;
+
+function isValidStoredFilters(parsed: unknown): parsed is StoredFilters {
+  if (!parsed || typeof parsed !== "object") return false;
+  const p = parsed as Record<string, unknown>;
+  return (
+    Array.isArray(p.surface) &&
+    p.surface.every((s) => VALID_SURFACES.includes(s as FieldSurface)) &&
+    Array.isArray(p.size) &&
+    p.size.every((s) => VALID_SIZES.includes(s as FieldSize)) &&
+    (p.priceMax === null || typeof p.priceMax === "number") &&
+    typeof p.sort === "string" &&
+    (VALID_SORTS as readonly string[]).includes(p.sort)
+  );
+}
+
+export async function getLastFilters(): Promise<StoredFilters | null> {
+  try {
+    const raw = await AsyncStorage.getItem(KEYS.lastFilters);
+    if (raw === null) return null;
+    const parsed = JSON.parse(raw) as unknown;
+    return isValidStoredFilters(parsed) ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+export async function setLastFilters(value: StoredFilters): Promise<void> {
+  await AsyncStorage.setItem(KEYS.lastFilters, JSON.stringify(value));
+}
+
+export async function clearLastFilters(): Promise<void> {
+  await AsyncStorage.removeItem(KEYS.lastFilters);
 }
