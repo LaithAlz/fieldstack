@@ -38,7 +38,10 @@ export type Field = {
   is_active: boolean;
 };
 
-export type VenueWithFields = Venue & { fields: Field[] };
+// The list endpoint nests `fields` only; the single-venue endpoint also
+// nests `operator` (needed by the BookingBottomSheet for the operator-name
+// notice). Kept optional so a list-shaped venue still satisfies the type.
+export type VenueWithFields = Venue & { fields: Field[]; operator?: Operator };
 
 export type SearchResult = {
   field: Field;

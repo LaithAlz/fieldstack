@@ -4,7 +4,8 @@ import type { Tables, Enums } from "../../../types/database.js";
 
 export type Venue = Tables<"venues">;
 export type Field = Tables<"fields">;
-export type VenueWithFields = Venue & { fields: Field[] };
+export type Operator = Tables<"operators">;
+export type VenueWithFields = Venue & { fields: Field[]; operator?: Operator };
 
 const PROXIMITY_TTL_SECONDS = 60;
 
@@ -83,13 +84,16 @@ function proximityKey(lat: number, lng: number, radiusKm: number): string {
 }
 
 /**
- * Single venue with its active fields nested. Returns null if the venue
- * doesn't exist or isn't active.
+ * Single venue with its active fields and parent operator nested. Returns
+ * null if the venue doesn't exist or isn't active. The operator is embedded
+ * here (but not on the list endpoint) because the Venue Detail screen's
+ * booking sheet needs the operator name and a separate fetch would couple
+ * the sheet to network.
  */
 export async function getVenueWithFields(id: string): Promise<VenueWithFields | null> {
   const { data, error } = await supabase
     .from("venues")
-    .select("*, fields(*)")
+    .select("*, fields(*), operator:operators(*)")
     .eq("id", id)
     .eq("is_active", true)
     .eq("fields.is_active", true)
