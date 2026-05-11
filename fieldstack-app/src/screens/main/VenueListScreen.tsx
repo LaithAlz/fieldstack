@@ -1,8 +1,9 @@
+import { Ionicons } from "@expo/vector-icons";
 import type { BottomSheetModal } from "@gorhom/bottom-sheet";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useCallback, useEffect, useRef } from "react";
-import { FlatList, RefreshControl, StyleSheet, View } from "react-native";
+import { FlatList, Pressable, RefreshControl, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { EmptyState } from "../../components/EmptyState";
@@ -92,9 +93,26 @@ export function VenueListScreen() {
           permissionStatus={permissionStatus}
           onPress={openPicker}
         />
-        <Text size="xxl" weight="bold" accessibilityRole="header" style={styles.title}>
-          Venues
-        </Text>
+        <View style={styles.titleRow}>
+          <Text size="xxl" weight="bold" accessibilityRole="header" style={styles.title}>
+            Venues
+          </Text>
+          <Pressable
+            onPress={() => navigation.navigate("FieldSearch")}
+            accessibilityRole="button"
+            accessibilityLabel="Search fields"
+            hitSlop={spacing.sm}
+            style={({ pressed }) => [
+              styles.searchButton,
+              {
+                backgroundColor: colors.surfaceSecondary,
+                opacity: pressed ? 0.7 : 1,
+              },
+            ]}
+          >
+            <Ionicons name="search" size={20} color={colors.textPrimary} />
+          </Pressable>
+        </View>
       </View>
 
       {loading ? (
@@ -187,8 +205,20 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.md,
     gap: spacing.sm,
   },
+  titleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
   title: {
     letterSpacing: -0.5,
+  },
+  searchButton: {
+    width: 40,
+    height: 40,
+    borderRadius: borderRadius.xl,
+    alignItems: "center",
+    justifyContent: "center",
   },
   list: {
     paddingHorizontal: spacing.lg,
