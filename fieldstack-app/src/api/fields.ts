@@ -1,8 +1,8 @@
 import { get, type ApiResult } from "./client";
-import type { Field, Venue } from "../types/api";
+import type { Field, Operator, Venue } from "../types/api";
 
-export function getField(
-  id: string
-): Promise<ApiResult<Field & { venue: Venue }>> {
-  return get<Field & { venue: Venue }>(`/fields/${encodeURIComponent(id)}`);
+export type FieldWithVenue = Field & { venue: Venue & { operator?: Operator } };
+
+export function getField(id: string): Promise<ApiResult<FieldWithVenue>> {
+  return get<FieldWithVenue>(`/fields/${encodeURIComponent(id)}`);
 }

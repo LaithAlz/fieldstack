@@ -6,10 +6,9 @@
 
 import { useEffect, useRef, useState } from "react";
 
-import { getField } from "../api/fields";
-import type { Field, Venue } from "../types/api";
+import { getField, type FieldWithVenue } from "../api/fields";
 
-export type FieldWithVenue = Field & { venue: Venue };
+export type { FieldWithVenue };
 
 type UseFieldResult = {
   data: FieldWithVenue | null;
