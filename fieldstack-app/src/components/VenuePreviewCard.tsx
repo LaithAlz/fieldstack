@@ -14,8 +14,12 @@ import { Text } from "./Text";
 
 const PHOTO_SIZE = 72;
 
+// Strict minimum the card actually reads — lets callers pass either a full
+// Venue or the Pick subset that comes back on SearchResult.
+type PreviewVenue = Pick<Venue, "id" | "name" | "photos" | "lat" | "lng">;
+
 type Props = {
-  venue: Venue;
+  venue: PreviewVenue;
   fieldCount: number;
   userCoords?: Coords;
   onViewVenue: () => void;
