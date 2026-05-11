@@ -16,6 +16,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { searchFields, type SearchFieldsResult, type SearchSort } from "../api/search";
 import { EVENT_SEARCH_FILTERED, track } from "../lib/analytics";
+import type { Coords } from "../lib/location";
 import {
   clearLastFilters as clearStoredFilters,
   getLastFilters,
@@ -71,7 +72,12 @@ export type UseFieldSearchResult = {
   locationError: Error | null;
   setFilter: SetFilter;
   clearFilters: () => void;
-  setLocation: (text: string) => void;
+  /**
+   * Update the location text. The 500ms geocode runs unless explicit `coords`
+   * are passed — used by the screen to seed an initial location from
+   * `useLocation` without forcing a redundant geocode round-trip.
+   */
+  setLocation: (text: string, coords?: Coords) => void;
 };
 
 export function useFieldSearch(): UseFieldSearchResult {
@@ -89,6 +95,12 @@ export function useFieldSearch(): UseFieldSearchResult {
   // applied filters" event on cold start.
   const restoredRef = useRef(false);
   const requestId = useRef(0);
+  /**
+   * When `setLocation` is called with explicit coords, the next geocode
+   * effect run for that text should be skipped — the caller already knows
+   * the coordinates. Cleared after the matching run consumes it.
+   */
+  const skipGeocodeForRef = useRef<string | null>(null);
 
   // ---- Restore persisted state on mount ----------------------------------
   useEffect(() => {
@@ -125,6 +137,10 @@ export function useFieldSearch(): UseFieldSearchResult {
       return;
     }
     const text = location.text;
+    if (skipGeocodeForRef.current === text) {
+      skipGeocodeForRef.current = null;
+      return;
+    }
     const timer = setTimeout(async () => {
       try {
         const matches = await Location.geocodeAsync(text);
@@ -201,7 +217,13 @@ export function useFieldSearch(): UseFieldSearchResult {
     void clearStoredFilters();
   }, []);
 
-  const setLocation = useCallback((text: string) => {
+  const setLocation = useCallback((text: string, coords?: Coords) => {
+    if (coords) {
+      skipGeocodeForRef.current = text;
+      setLocationError(null);
+      setLocationState({ text, lat: coords.lat, lng: coords.lng });
+      return;
+    }
     // Reset coords until geocode resolves so the fetch effect doesn't fire
     // against the previous location while the user is still typing.
     setLocationState((prev) => ({ ...prev, text, lat: null, lng: null }));
