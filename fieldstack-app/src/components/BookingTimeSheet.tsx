@@ -12,6 +12,7 @@ import { StyleSheet, View } from "react-native";
 
 import { EVENT_BOOKING_REDIRECT_CONFIRMED, track } from "../lib/analytics";
 import { buildBookingUrl } from "../lib/bookingUrl";
+import { formatDurationHours } from "../lib/datetime";
 import { lightImpact } from "../lib/haptics";
 import { borderRadius, spacing } from "../theme/tokens";
 import { useTheme } from "../theme/useTheme";
@@ -172,7 +173,7 @@ export function BookingTimeSheet({
               </Text>
             </View>
             <Text size="sm" variant="tertiary" style={styles.estimateBreakdown}>
-              {formatDurationLabel(selectedDuration)} × ${pricePerHour}/hr · paid on{" "}
+              {formatDurationHours(selectedDuration)} × ${Math.round(pricePerHour ?? 0)}/hr · paid on{" "}
               {operatorName}
             </Text>
           </View>
@@ -215,11 +216,6 @@ export function BookingTimeSheet({
       </BottomSheetScrollView>
     </BottomSheetModal>
   );
-}
-
-function formatDurationLabel(hours: number): string {
-  if (hours === 1) return "1 hour";
-  return `${hours} hours`;
 }
 
 const styles = StyleSheet.create({

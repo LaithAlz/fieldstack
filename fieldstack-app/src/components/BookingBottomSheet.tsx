@@ -12,6 +12,7 @@ import { StyleSheet, View } from "react-native";
 
 import { EVENT_BOOKING_REDIRECT_CONFIRMED, track } from "../lib/analytics";
 import { buildBookingUrl } from "../lib/bookingUrl";
+import { formatDurationHours, formatEndTime, formatTime12h } from "../lib/datetime";
 import { lightImpact } from "../lib/haptics";
 import { borderRadius, spacing } from "../theme/tokens";
 import { useTheme } from "../theme/useTheme";
@@ -143,9 +144,9 @@ export function BookingBottomSheet({
   };
 
   const dateText = formatDateLong(selectedDate);
-  const timeText = formatTime(selectedTime);
+  const timeText = formatTime12h(selectedTime);
   const endTimeText = formatEndTime(selectedTime, selectedDuration);
-  const durationText = formatDuration(selectedDuration);
+  const durationText = formatDurationHours(selectedDuration);
   const fieldDescriptor = `${field.name} · ${SURFACE_LABEL[field.surface]} · ${SIZE_LABEL[field.size]}`;
   const pricePerHour = field.price_per_hour;
   const estimatedTotal =
@@ -191,13 +192,13 @@ export function BookingBottomSheet({
           {pricePerHour !== null && estimatedTotal !== null ? (
             <SummaryRow
               label="Estimated total"
-              value={`$${estimatedTotal}  ·  ${durationText} × $${Math.round(pricePerHour)}/hr`}
+              value={`$${estimatedTotal} · ${durationText} × $${Math.round(pricePerHour)}/hr`}
               emphasize
             />
           ) : null}
         </View>
 
-        <Text size="sm" variant="tertiary" style={styles.subjectNote}>
+        <Text size="sm" variant="tertiary" style={styles.disclaimerNote}>
           Final availability and price are confirmed on {operatorName}.
         </Text>
 
@@ -254,9 +255,8 @@ function SummaryRow({
 }
 
 // ---------------------------------------------------------------------------
-// Inline formatters — duplicates a few helpers from DateTimeRangePicker /
-// FieldAvailabilityCard. Will hoist to lib/datetime.ts when a third caller
-// needs the same shape (likely F5.3).
+// Date helper — kept inline because only one caller; the time helpers live
+// in lib/datetime.ts where they're shared with DateTimeRangePicker.
 // ---------------------------------------------------------------------------
 
 function formatDateLong(date: Date): string {
@@ -272,27 +272,6 @@ function formatDateLong(date: Date): string {
     month: "short",
     day: "numeric",
   });
-}
-
-function formatTime(time24: string): string {
-  const [h, m] = time24.split(":").map(Number);
-  const hour12 = h % 12 || 12;
-  const ampm = h < 12 ? "AM" : "PM";
-  if (m === 0) return `${hour12}:00 ${ampm}`;
-  return `${hour12}:${String(m).padStart(2, "0")} ${ampm}`;
-}
-
-function formatEndTime(startTime24: string, durationHours: number): string {
-  const [h, m] = startTime24.split(":").map(Number);
-  const totalMinutes = h * 60 + m + Math.round(durationHours * 60);
-  const endH = Math.floor(totalMinutes / 60) % 24;
-  const endM = totalMinutes % 60;
-  return formatTime(`${String(endH).padStart(2, "0")}:${String(endM).padStart(2, "0")}`);
-}
-
-function formatDuration(hours: number): string {
-  if (hours === 1) return "1 hour";
-  return `${hours} hours`;
 }
 
 // ---------------------------------------------------------------------------
@@ -326,7 +305,7 @@ const styles = StyleSheet.create({
   summary: {
     marginBottom: spacing.md,
   },
-  subjectNote: {
+  disclaimerNote: {
     marginBottom: spacing.lg,
   },
   row: {

@@ -2,6 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useMemo, useState } from "react";
 import { FlatList, Pressable, StyleSheet, View } from "react-native";
 
+import { formatEndTime } from "../lib/datetime";
 import { selection } from "../lib/haptics";
 import { borderRadius, fontSize, fontWeight, spacing } from "../theme/tokens";
 import { useTheme } from "../theme/useTheme";
@@ -130,12 +131,9 @@ export function DateTimeRangePicker({
           {hint}
         </Text>
       ) : (
-        <Text
-          size="sm"
-          variant="tertiary"
-          style={styles.endTime}
-          accessibilityLiveRegion="polite"
-        >
+        // Plain text (no live region) — TalkBack reads on focus; announcing
+        // every duration tap is chatty.
+        <Text size="sm" variant="tertiary" style={styles.endTime}>
           Ends at {formatEndTime(selectedStartTime, selectedDuration)}
         </Text>
       )}
@@ -317,16 +315,6 @@ function durationExceedsDay(startTime: string, durationHours: number): boolean {
   const endMinutes = startMinutes + durationHours * 60;
   // > 24*60 means it crosses midnight (>= 24:00 is not a valid same-day end).
   return endMinutes > 24 * 60;
-}
-
-function formatEndTime(startTime24: string, durationHours: number): string {
-  const [h, m] = startTime24.split(":").map(Number);
-  const totalMinutes = h * 60 + m + Math.round(durationHours * 60);
-  const endH = Math.floor(totalMinutes / 60) % 24;
-  const endM = totalMinutes % 60;
-  return formatTimeForDisplay(
-    `${pad(endH)}:${pad(endM)}`
-  );
 }
 
 function durationHint(): string {
