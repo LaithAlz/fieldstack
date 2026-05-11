@@ -2,6 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useMemo, useState } from "react";
 import { FlatList, Pressable, StyleSheet, View } from "react-native";
 
+import { formatEndTime } from "../lib/datetime";
 import { selection } from "../lib/haptics";
 import { borderRadius, fontSize, fontWeight, spacing } from "../theme/tokens";
 import { useTheme } from "../theme/useTheme";
@@ -129,7 +130,13 @@ export function DateTimeRangePicker({
         <Text size="sm" variant="danger" style={styles.hint} accessibilityLiveRegion="polite">
           {hint}
         </Text>
-      ) : null}
+      ) : (
+        // Plain text (no live region) — TalkBack reads on focus; announcing
+        // every duration tap is chatty.
+        <Text size="sm" variant="tertiary" style={styles.endTime}>
+          Ends at {formatEndTime(selectedStartTime, selectedDuration)}
+        </Text>
+      )}
     </View>
   );
 }
@@ -347,6 +354,10 @@ const styles = StyleSheet.create({
     marginRight: spacing.xs,
   },
   hint: {
+    paddingHorizontal: spacing.lg,
+    marginTop: spacing.sm,
+  },
+  endTime: {
     paddingHorizontal: spacing.lg,
     marginTop: spacing.sm,
   },
