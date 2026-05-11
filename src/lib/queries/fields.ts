@@ -1,7 +1,9 @@
 import { supabase } from "../supabase.js";
-import type { Field, FieldSurface, FieldSize, Venue } from "./venues.js";
+import type { Field, FieldSurface, FieldSize, Operator, Venue } from "./venues.js";
 
-export type FieldWithVenue = Field & { venue: Venue };
+export type FieldWithVenue = Field & {
+  venue: Venue & { operator?: Operator };
+};
 
 export type FieldFilters = {
   surface?: FieldSurface;
@@ -30,13 +32,16 @@ export async function listFieldsByVenue(
 }
 
 /**
- * Single field with its parent venue nested. Returns null if the field
- * doesn't exist or isn't active.
+ * Single field with its parent venue (and the venue's operator) nested.
+ * Returns null if the field doesn't exist or isn't active. The operator
+ * is embedded so the Field Detail screen's booking sheet can show the
+ * operator name without a second round-trip — same pattern as
+ * `getVenueWithFields`.
  */
 export async function getFieldWithVenue(id: string): Promise<FieldWithVenue | null> {
   const { data, error } = await supabase
     .from("fields")
-    .select("*, venue:venues(*)")
+    .select("*, venue:venues(*, operator:operators(*))")
     .eq("id", id)
     .eq("is_active", true)
     .maybeSingle();
@@ -48,4 +53,4 @@ export async function getFieldWithVenue(id: string): Promise<FieldWithVenue | nu
 }
 
 // Re-export so route handlers have one import path for query + types.
-export type { Field, FieldSurface, FieldSize, Venue } from "./venues.js";
+export type { Field, FieldSurface, FieldSize, Operator, Venue } from "./venues.js";
