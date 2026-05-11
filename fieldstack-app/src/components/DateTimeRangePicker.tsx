@@ -129,7 +129,16 @@ export function DateTimeRangePicker({
         <Text size="sm" variant="danger" style={styles.hint} accessibilityLiveRegion="polite">
           {hint}
         </Text>
-      ) : null}
+      ) : (
+        <Text
+          size="sm"
+          variant="tertiary"
+          style={styles.endTime}
+          accessibilityLiveRegion="polite"
+        >
+          Ends at {formatEndTime(selectedStartTime, selectedDuration)}
+        </Text>
+      )}
     </View>
   );
 }
@@ -310,6 +319,16 @@ function durationExceedsDay(startTime: string, durationHours: number): boolean {
   return endMinutes > 24 * 60;
 }
 
+function formatEndTime(startTime24: string, durationHours: number): string {
+  const [h, m] = startTime24.split(":").map(Number);
+  const totalMinutes = h * 60 + m + Math.round(durationHours * 60);
+  const endH = Math.floor(totalMinutes / 60) % 24;
+  const endM = totalMinutes % 60;
+  return formatTimeForDisplay(
+    `${pad(endH)}:${pad(endM)}`
+  );
+}
+
 function durationHint(): string {
   return "Booking can't extend past midnight. Try a shorter duration or earlier start.";
 }
@@ -347,6 +366,10 @@ const styles = StyleSheet.create({
     marginRight: spacing.xs,
   },
   hint: {
+    paddingHorizontal: spacing.lg,
+    marginTop: spacing.sm,
+  },
+  endTime: {
     paddingHorizontal: spacing.lg,
     marginTop: spacing.sm,
   },

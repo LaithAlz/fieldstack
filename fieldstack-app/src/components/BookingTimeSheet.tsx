@@ -119,6 +119,12 @@ export function BookingTimeSheet({
     }
   };
 
+  const pricePerHour = field.price_per_hour;
+  const estimatedTotal =
+    pricePerHour !== null
+      ? Math.round(pricePerHour * selectedDuration)
+      : null;
+
   const handleCopy = async () => {
     if (!failedUrl) return;
     try {
@@ -142,6 +148,9 @@ export function BookingTimeSheet({
         <Text size="lg" weight="bold" accessibilityRole="header" style={styles.title}>
           Pick a time
         </Text>
+        <Text size="sm" variant="tertiary" style={styles.subtitle}>
+          Final availability is confirmed on {operatorName}.
+        </Text>
 
         <DateTimeRangePicker
           selectedDate={selectedDate}
@@ -151,6 +160,23 @@ export function BookingTimeSheet({
           onStartTimeChange={onStartTimeChange}
           onDurationChange={onDurationChange}
         />
+
+        {estimatedTotal !== null ? (
+          <View style={[styles.estimate, { borderColor: colors.border }]}>
+            <View style={styles.estimateRow}>
+              <Text size="sm" variant="secondary">
+                Estimated total
+              </Text>
+              <Text size="lg" weight="bold" style={{ color: colors.brand }}>
+                ${estimatedTotal}
+              </Text>
+            </View>
+            <Text size="sm" variant="tertiary" style={styles.estimateBreakdown}>
+              {formatDurationLabel(selectedDuration)} × ${pricePerHour}/hr · paid on{" "}
+              {operatorName}
+            </Text>
+          </View>
+        ) : null}
 
         <View style={[styles.notice, { backgroundColor: colors.surfaceSecondary }]}>
           <Ionicons
@@ -180,7 +206,7 @@ export function BookingTimeSheet({
             />
           ) : (
             <Button
-              label="Confirm and book"
+              label={`Continue on ${operatorName}`}
               onPress={handleConfirm}
               accessibilityHint={`Opens ${operatorName} in your browser`}
             />
@@ -191,6 +217,11 @@ export function BookingTimeSheet({
   );
 }
 
+function formatDurationLabel(hours: number): string {
+  if (hours === 1) return "1 hour";
+  return `${hours} hours`;
+}
+
 const styles = StyleSheet.create({
   content: {
     paddingHorizontal: spacing.lg,
@@ -198,15 +229,31 @@ const styles = StyleSheet.create({
   },
   title: {
     marginTop: spacing.sm,
-    marginBottom: spacing.lg,
     letterSpacing: -0.3,
+  },
+  subtitle: {
+    marginBottom: spacing.lg,
+  },
+  estimate: {
+    marginTop: spacing.lg,
+    padding: spacing.md,
+    borderRadius: borderRadius.md,
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  estimateRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  estimateBreakdown: {
+    marginTop: spacing.xs,
   },
   notice: {
     flexDirection: "row",
     alignItems: "center",
     padding: spacing.md,
     borderRadius: borderRadius.md,
-    marginTop: spacing.lg,
+    marginTop: spacing.md,
   },
   noticeIcon: {
     marginRight: spacing.sm,

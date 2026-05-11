@@ -144,8 +144,12 @@ export function BookingBottomSheet({
 
   const dateText = formatDateLong(selectedDate);
   const timeText = formatTime(selectedTime);
+  const endTimeText = formatEndTime(selectedTime, selectedDuration);
   const durationText = formatDuration(selectedDuration);
   const fieldDescriptor = `${field.name} · ${SURFACE_LABEL[field.surface]} · ${SIZE_LABEL[field.size]}`;
+  const pricePerHour = field.price_per_hour;
+  const estimatedTotal =
+    pricePerHour !== null ? Math.round(pricePerHour * selectedDuration) : null;
 
   return (
     <BottomSheetModal
@@ -182,12 +186,20 @@ export function BookingBottomSheet({
         <View style={styles.summary}>
           <SummaryRow label="Field" value={fieldDescriptor} />
           <SummaryRow label="Venue" value={venue.name} />
-          <SummaryRow label="When" value={`${dateText} at ${timeText}`} />
+          <SummaryRow label="When" value={`${dateText} · ${timeText} – ${endTimeText}`} />
           <SummaryRow label="Duration" value={durationText} />
-          {field.price_per_hour !== null ? (
-            <SummaryRow label="Price" value={`$${Math.round(field.price_per_hour)}/hr`} />
+          {pricePerHour !== null && estimatedTotal !== null ? (
+            <SummaryRow
+              label="Estimated total"
+              value={`$${estimatedTotal}  ·  ${durationText} × $${Math.round(pricePerHour)}/hr`}
+              emphasize
+            />
           ) : null}
         </View>
+
+        <Text size="sm" variant="tertiary" style={styles.subjectNote}>
+          Final availability and price are confirmed on {operatorName}.
+        </Text>
 
         <View style={styles.cta}>
           {failedUrl ? (
@@ -199,7 +211,7 @@ export function BookingBottomSheet({
             />
           ) : (
             <Button
-              label="Confirm and continue"
+              label={`Continue on ${operatorName}`}
               onPress={handleConfirm}
               accessibilityHint={`Opens ${operatorName} in your browser`}
             />
@@ -214,14 +226,27 @@ export function BookingBottomSheet({
 // Internal summary row
 // ---------------------------------------------------------------------------
 
-function SummaryRow({ label, value }: { label: string; value: string }) {
+function SummaryRow({
+  label,
+  value,
+  emphasize = false,
+}: {
+  label: string;
+  value: string;
+  emphasize?: boolean;
+}) {
   const colors = useTheme();
   return (
     <View style={[styles.row, { borderBottomColor: colors.border }]}>
       <Text size="sm" variant="tertiary">
         {label}
       </Text>
-      <Text size="sm" weight="medium" style={styles.rowValue} numberOfLines={2}>
+      <Text
+        size={emphasize ? "md" : "sm"}
+        weight={emphasize ? "bold" : "medium"}
+        style={[styles.rowValue, emphasize && { color: colors.brand }]}
+        numberOfLines={2}
+      >
         {value}
       </Text>
     </View>
@@ -255,6 +280,14 @@ function formatTime(time24: string): string {
   const ampm = h < 12 ? "AM" : "PM";
   if (m === 0) return `${hour12}:00 ${ampm}`;
   return `${hour12}:${String(m).padStart(2, "0")} ${ampm}`;
+}
+
+function formatEndTime(startTime24: string, durationHours: number): string {
+  const [h, m] = startTime24.split(":").map(Number);
+  const totalMinutes = h * 60 + m + Math.round(durationHours * 60);
+  const endH = Math.floor(totalMinutes / 60) % 24;
+  const endM = totalMinutes % 60;
+  return formatTime(`${String(endH).padStart(2, "0")}:${String(endM).padStart(2, "0")}`);
 }
 
 function formatDuration(hours: number): string {
@@ -291,7 +324,10 @@ const styles = StyleSheet.create({
     flexShrink: 1,
   },
   summary: {
-    marginBottom: spacing.xl,
+    marginBottom: spacing.md,
+  },
+  subjectNote: {
+    marginBottom: spacing.lg,
   },
   row: {
     flexDirection: "row",
