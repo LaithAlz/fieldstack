@@ -11,6 +11,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { StyleSheet, View } from "react-native";
 
 import { EVENT_BOOKING_REDIRECT_CONFIRMED, track } from "../lib/analytics";
+import { useBookingHistory } from "../lib/bookingHistory";
 import { buildBookingUrl } from "../lib/bookingUrl";
 import { formatDurationHours } from "../lib/datetime";
 import { lightImpact } from "../lib/haptics";
@@ -64,6 +65,7 @@ export function BookingTimeSheet({
 }: Props) {
   const colors = useTheme();
   const toast = useToast();
+  const { record: recordAttempt } = useBookingHistory();
   const sheetRef = useRef<BottomSheetModal>(null);
   // Taller than BookingBottomSheet because the picker eats real estate.
   const snapPoints = useMemo(() => ["88%"], []);
@@ -113,6 +115,15 @@ export function BookingTimeSheet({
 
     try {
       await Linking.openURL(url);
+      // Record only on a successful handoff. Failed openURL → no history entry
+      // so the user isn't credited a phantom attempt.
+      void recordAttempt({
+        fieldId: field.id,
+        venueId: venue.id,
+        date: toIsoDate(selectedDate),
+        startTime: selectedTime,
+        duration: selectedDuration,
+      });
       onConfirm?.();
     } catch {
       setFailedUrl(url);
@@ -216,6 +227,13 @@ export function BookingTimeSheet({
       </BottomSheetScrollView>
     </BottomSheetModal>
   );
+}
+
+function toIsoDate(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
 }
 
 const styles = StyleSheet.create({
