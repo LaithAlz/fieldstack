@@ -24,6 +24,10 @@ import {
   PreferredSlotProvider,
   usePreferredSlot,
 } from "./src/lib/preferredSlot";
+import {
+  RecentlyViewedProvider,
+  useRecentlyViewed,
+} from "./src/lib/recentlyViewed";
 import { SavedVenuesProvider, useSavedVenues } from "./src/lib/savedVenues";
 import { getOnboardingComplete } from "./src/lib/storage";
 import { RootNavigator } from "./src/navigation/RootNavigator";
@@ -130,14 +134,16 @@ export default function App() {
               <PreferredSlotProvider>
                 <SavedVenuesProvider>
                   <BookingHistoryProvider>
-                    {/* Hold render until persisted state has hydrated, so deep
-                        links don't see empty defaults. */}
-                    <PersistenceGate>
-                      <NavigationContainer theme={navTheme}>
-                        <RootNavigator />
-                      </NavigationContainer>
-                      <StatusBar style="auto" />
-                    </PersistenceGate>
+                    <RecentlyViewedProvider>
+                      {/* Hold render until persisted state has hydrated, so
+                          deep links don't see empty defaults. */}
+                      <PersistenceGate>
+                        <NavigationContainer theme={navTheme}>
+                          <RootNavigator />
+                        </NavigationContainer>
+                        <StatusBar style="auto" />
+                      </PersistenceGate>
+                    </RecentlyViewedProvider>
                   </BookingHistoryProvider>
                 </SavedVenuesProvider>
               </PreferredSlotProvider>
@@ -153,6 +159,9 @@ function PersistenceGate({ children }: { children: React.ReactNode }) {
   const { hydrated: slotHydrated } = usePreferredSlot();
   const { hydrated: savedHydrated } = useSavedVenues();
   const { hydrated: historyHydrated } = useBookingHistory();
-  if (!slotHydrated || !savedHydrated || !historyHydrated) return null;
+  const { hydrated: recentHydrated } = useRecentlyViewed();
+  if (!slotHydrated || !savedHydrated || !historyHydrated || !recentHydrated) {
+    return null;
+  }
   return <>{children}</>;
 }

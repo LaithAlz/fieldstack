@@ -19,6 +19,7 @@ import { Text } from "../../components/Text";
 import { useLocation } from "../../hooks/useLocation";
 import { useVenue } from "../../hooks/useVenue";
 import { preferredSlotDate, usePreferredSlot } from "../../lib/preferredSlot";
+import { useRecentlyViewed } from "../../lib/recentlyViewed";
 import { useSavedVenues } from "../../lib/savedVenues";
 import { EVENT_VENUE_VIEWED, track } from "../../lib/analytics";
 import { formatDistance, haversineKm } from "../../lib/distance";
@@ -40,6 +41,7 @@ export function VenueDetailScreen({ route }: Props) {
   const { data: venue, isLoading, error } = useVenue(venueId);
   const { coords } = useLocation();
   const { isSaved, toggle: toggleSaved } = useSavedVenues();
+  const { recordView } = useRecentlyViewed();
   const savedForVenue = venue ? isSaved(venue.id) : false;
   const onToggleSave = venue ? () => void toggleSaved(venue.id) : undefined;
 
@@ -61,11 +63,15 @@ export function VenueDetailScreen({ route }: Props) {
   const [bookingField, setBookingField] = useState<Field | null>(null);
   const [bookingVisible, setBookingVisible] = useState(false);
 
-  // Fire venue_viewed once per unique venue id.
+  // Fire venue_viewed once per unique venue id + push into MRU list so the
+  // home screen surfaces it at the top of "Recently viewed".
   const loadedVenueId = venue?.id;
   useEffect(() => {
-    if (loadedVenueId) track(EVENT_VENUE_VIEWED, { venue_id: loadedVenueId });
-  }, [loadedVenueId]);
+    if (loadedVenueId) {
+      track(EVENT_VENUE_VIEWED, { venue_id: loadedVenueId });
+      recordView(loadedVenueId);
+    }
+  }, [loadedVenueId, recordView]);
 
   const distance = useMemo(() => {
     if (!venue || venue.lat === null || venue.lng === null) return null;

@@ -9,6 +9,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { EmptyState } from "../../components/EmptyState";
 import { LocationPickerSheet } from "../../components/LocationPickerSheet";
 import { LocationPill } from "../../components/LocationPill";
+import { RecentlyViewedRow } from "../../components/RecentlyViewedRow";
 import { SearchInput } from "../../components/SearchInput";
 import { Skeleton } from "../../components/Skeleton";
 import { Text } from "../../components/Text";
@@ -18,6 +19,7 @@ import { WhenPill } from "../../components/WhenPicker";
 import { useLocation } from "../../hooks/useLocation";
 import { useVenues } from "../../hooks/useVenues";
 import { useBookingHistory } from "../../lib/bookingHistory";
+import { useRecentlyViewed } from "../../lib/recentlyViewed";
 import { useSavedVenues } from "../../lib/savedVenues";
 import {
   getCurrentCoords,
@@ -47,6 +49,7 @@ export function VenueListScreen() {
   const { venues, loading, refreshing, error, refresh } = useVenues({ coords });
   const { saved: savedIds } = useSavedVenues();
   const { venueWasRecentlyAttempted } = useBookingHistory();
+  const { recent: recentIds } = useRecentlyViewed();
   const [nameQuery, setNameQuery] = useState("");
 
   const filteredVenues = useMemo(() => {
@@ -162,6 +165,17 @@ export function VenueListScreen() {
             { paddingBottom: insets.bottom + spacing.xl },
             filteredVenues.length === 0 && styles.listEmpty,
           ]}
+          ListHeaderComponent={
+            nameQuery.trim().length === 0 && recentIds.length > 0 ? (
+              <RecentlyViewedRow
+                recentIds={recentIds}
+                allVenues={venues}
+                onPressVenue={(id) =>
+                  navigation.navigate("VenueDetail", { venueId: id })
+                }
+              />
+            ) : null
+          }
           renderItem={({ item }) => (
             <VenueCard
               venue={item}
