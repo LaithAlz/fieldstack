@@ -1,7 +1,8 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
+  Animated,
   FlatList,
   type NativeScrollEvent,
   type NativeSyntheticEvent,
@@ -153,8 +154,10 @@ function Fallback({ width, height, tint, iconColor, accessibilityLabel }: Fallba
 // Internal: page indicator dots
 // ---------------------------------------------------------------------------
 
+const DOT_DIAMETER = 6;
+const DOT_ACTIVE_WIDTH = 20;
+
 function Dots({ count, active }: { count: number; active: number }) {
-  const colors = useTheme();
   return (
     <View
       style={styles.dotsRow}
@@ -163,19 +166,47 @@ function Dots({ count, active }: { count: number; active: number }) {
       importantForAccessibility="no-hide-descendants"
     >
       {Array.from({ length: count }).map((_, i) => (
-        <View
-          key={i}
-          style={[
-            styles.dot,
-            {
-              backgroundColor:
-                i === active ? "#FFFFFF" : "rgba(255, 255, 255, 0.5)",
-              borderColor: i === active ? colors.brand : "rgba(0, 0, 0, 0.25)",
-            },
-          ]}
-        />
+        <Dot key={i} isActive={i === active} />
       ))}
     </View>
+  );
+}
+
+// Single dot — animates width + opacity when its active state flips. Active
+// dot stretches into a small pill (Airbnb/Instagram pattern), inactive ones
+// shrink back to a circle. Width animation isn't native-driver-eligible, so
+// we run opacity separately on the native driver for a smoother feel.
+function Dot({ isActive }: { isActive: boolean }) {
+  const width = useRef(
+    new Animated.Value(isActive ? DOT_ACTIVE_WIDTH : DOT_DIAMETER)
+  ).current;
+  const opacity = useRef(new Animated.Value(isActive ? 1 : 0.5)).current;
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(width, {
+        toValue: isActive ? DOT_ACTIVE_WIDTH : DOT_DIAMETER,
+        duration: 220,
+        useNativeDriver: false,
+      }),
+      Animated.timing(opacity, {
+        toValue: isActive ? 1 : 0.5,
+        duration: 220,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [isActive, width, opacity]);
+
+  return (
+    <Animated.View
+      style={[
+        styles.dot,
+        {
+          width,
+          opacity,
+        },
+      ]}
+    />
   );
 }
 
@@ -194,9 +225,13 @@ const styles = StyleSheet.create({
     gap: spacing.xs + 2,
   },
   dot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+    height: DOT_DIAMETER,
+    borderRadius: DOT_DIAMETER / 2,
+    backgroundColor: "#FFFFFF",
+    // Hairline border guarantees contrast on bright photos cross-platform —
+    // iOS shadow renders as a halo on the round dot / a rectangle drop under
+    // the pill; Android ignores shadow*. Border works on both.
     borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "rgba(0, 0, 0, 0.25)",
   },
 });
