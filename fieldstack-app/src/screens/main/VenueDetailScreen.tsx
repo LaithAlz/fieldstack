@@ -19,6 +19,7 @@ import { Text } from "../../components/Text";
 import { useLocation } from "../../hooks/useLocation";
 import { useVenue } from "../../hooks/useVenue";
 import { preferredSlotDate, usePreferredSlot } from "../../lib/preferredSlot";
+import { useSavedVenues } from "../../lib/savedVenues";
 import { EVENT_VENUE_VIEWED, track } from "../../lib/analytics";
 import { formatDistance, haversineKm } from "../../lib/distance";
 import type { MainStackParamList } from "../../navigation/MainNavigator";
@@ -38,6 +39,9 @@ export function VenueDetailScreen({ route }: Props) {
 
   const { data: venue, isLoading, error } = useVenue(venueId);
   const { coords } = useLocation();
+  const { isSaved, toggle: toggleSaved } = useSavedVenues();
+  const savedForVenue = venue ? isSaved(venue.id) : false;
+  const onToggleSave = venue ? () => void toggleSaved(venue.id) : undefined;
 
   const initial = useState(() => {
     if (slot) {
@@ -77,7 +81,12 @@ export function VenueDetailScreen({ route }: Props) {
   if (isLoading) {
     return (
       <View style={[styles.root, { backgroundColor: colors.surface }]}>
-        <FloatingTopBar onBack={() => nav.goBack()} insets={insets} />
+        <FloatingTopBar
+          onBack={() => nav.goBack()}
+          insets={insets}
+          saved={savedForVenue}
+          onToggleSave={onToggleSave}
+        />
         <ScrollView contentContainerStyle={styles.scroll}>
           <Skeleton width="100%" height={220} borderRadius={0} />
           <View style={styles.body}>
@@ -138,7 +147,12 @@ export function VenueDetailScreen({ route }: Props) {
       >
         <View>
           <PhotoGallery photos={venue.photos} />
-          <FloatingTopBar onBack={() => nav.goBack()} insets={insets} />
+          <FloatingTopBar
+          onBack={() => nav.goBack()}
+          insets={insets}
+          saved={savedForVenue}
+          onToggleSave={onToggleSave}
+        />
         </View>
 
         <View style={styles.body}>
@@ -227,9 +241,18 @@ type FloatingTopBarProps = {
   insets: { top: number };
   /** When false, render in normal flow (used for error / loading states). */
   floating?: boolean;
+  /** Optional save action — when provided, renders a heart toggle on the right. */
+  saved?: boolean;
+  onToggleSave?: () => void;
 };
 
-function FloatingTopBar({ onBack, insets, floating = true }: FloatingTopBarProps) {
+function FloatingTopBar({
+  onBack,
+  insets,
+  floating = true,
+  saved = false,
+  onToggleSave,
+}: FloatingTopBarProps) {
   const colors = useTheme();
   return (
     <View
@@ -240,9 +263,17 @@ function FloatingTopBar({ onBack, insets, floating = true }: FloatingTopBarProps
               position: "absolute",
               top: insets.top + spacing.sm,
               left: spacing.lg,
+              right: spacing.lg,
               zIndex: 2,
+              flexDirection: "row",
+              justifyContent: "space-between",
             }
-          : { paddingTop: spacing.sm, paddingHorizontal: spacing.lg },
+          : {
+              paddingTop: spacing.sm,
+              paddingHorizontal: spacing.lg,
+              flexDirection: "row",
+              justifyContent: "space-between",
+            },
       ]}
     >
       <Pressable
@@ -257,6 +288,25 @@ function FloatingTopBar({ onBack, insets, floating = true }: FloatingTopBarProps
       >
         <Ionicons name="chevron-back" size={20} color={colors.textPrimary} />
       </Pressable>
+      {onToggleSave ? (
+        <Pressable
+          onPress={onToggleSave}
+          accessibilityRole="button"
+          accessibilityLabel={saved ? "Unsave venue" : "Save venue"}
+          accessibilityState={{ selected: saved }}
+          hitSlop={spacing.sm}
+          style={({ pressed }) => [
+            styles.circle,
+            { backgroundColor: colors.surface, opacity: pressed ? 0.7 : 1 },
+          ]}
+        >
+          <Ionicons
+            name={saved ? "heart" : "heart-outline"}
+            size={20}
+            color={saved ? colors.danger : colors.textPrimary}
+          />
+        </Pressable>
+      ) : null}
     </View>
   );
 }
