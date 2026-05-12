@@ -91,10 +91,7 @@ export function WhenPill() {
 // Internal: the bottom sheet wrapping DateTimeRangePicker
 // ---------------------------------------------------------------------------
 
-// eslint-disable-next-line @typescript-eslint/no-empty-object-type
-type SheetProps = {};
-
-const WhenPickerSheet = forwardRef<BottomSheetModal, SheetProps>((_props, ref) => {
+const WhenPickerSheet = forwardRef<BottomSheetModal>((_props, ref) => {
   const colors = useTheme();
   const { slot, setSlot } = usePreferredSlot();
   const defaults = useMemo(() => defaultDateTimeSelections(), []);
@@ -136,7 +133,14 @@ const WhenPickerSheet = forwardRef<BottomSheetModal, SheetProps>((_props, ref) =
       duration,
     };
     await setSlot(next);
-    if (typeof ref === "function") return;
+    // Support both forwarded ref shapes. Function refs are called with the
+    // current instance; object refs we read off .current.
+    if (typeof ref === "function") {
+      // Caller's responsibility to keep its own ref for dismiss — nothing
+      // sensible we can do without our own internal ref. WhenPill uses an
+      // object ref, so this branch is the safety net.
+      return;
+    }
     ref?.current?.dismiss();
   };
 

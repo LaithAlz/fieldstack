@@ -34,6 +34,8 @@ export type PreferredSlot = {
 
 type ContextValue = {
   slot: PreferredSlot | null;
+  /** False until the AsyncStorage read finishes (success or failure). */
+  hydrated: boolean;
   setSlot: (next: PreferredSlot) => Promise<void>;
   clear: () => Promise<void>;
 };
@@ -42,7 +44,7 @@ const PreferredSlotContext = createContext<ContextValue | null>(null);
 
 export function PreferredSlotProvider({ children }: { children: ReactNode }) {
   const [slot, setSlotState] = useState<PreferredSlot | null>(null);
-  const [, setHydrated] = useState(false);
+  const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -52,7 +54,17 @@ export function PreferredSlotProvider({ children }: { children: ReactNode }) {
         if (cancelled) return;
         if (raw) {
           const parsed = JSON.parse(raw) as unknown;
-          if (isPreferredSlot(parsed)) setSlotState(parsed);
+          if (isPreferredSlot(parsed)) {
+            // Past dates re-anchor to today so the time-of-day preference
+            // survives midnight rollovers without leaving the user on a date
+            // whose every slot is greyed out.
+            const refreshed = reanchorIfPast(parsed);
+            setSlotState(refreshed);
+            if (refreshed !== parsed) {
+              // Persist the refresh so the next hydration is consistent.
+              await AsyncStorage.setItem(KEY, JSON.stringify(refreshed));
+            }
+          }
         }
       } catch {
         // Read failure is fine — fall back to no preference.
@@ -83,7 +95,10 @@ export function PreferredSlotProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const value = useMemo<ContextValue>(() => ({ slot, setSlot, clear }), [slot, setSlot, clear]);
+  const value = useMemo<ContextValue>(
+    () => ({ slot, hydrated, setSlot, clear }),
+    [slot, hydrated, setSlot, clear]
+  );
 
   return (
     <PreferredSlotContext.Provider value={value}>
@@ -109,12 +124,36 @@ export function preferredSlotDate(slot: PreferredSlot): Date {
   return out;
 }
 
+const TIME_RE = /^\d{2}:\d{2}$/;
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+
 function isPreferredSlot(v: unknown): v is PreferredSlot {
   if (!v || typeof v !== "object") return false;
   const r = v as Record<string, unknown>;
   return (
     typeof r.date === "string" &&
+    DATE_RE.test(r.date) &&
     typeof r.startTime === "string" &&
-    typeof r.duration === "number"
+    TIME_RE.test(r.startTime) &&
+    typeof r.duration === "number" &&
+    Number.isFinite(r.duration) &&
+    r.duration > 0 &&
+    r.duration <= 6
   );
+}
+
+/** Re-anchor a slot whose date is in the past to today. Time + duration kept. */
+function reanchorIfPast(slot: PreferredSlot): PreferredSlot {
+  const stored = preferredSlotDate(slot);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  if (stored.getTime() >= today.getTime()) return slot;
+  return { ...slot, date: toIsoDate(today) };
+}
+
+function toIsoDate(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
 }
