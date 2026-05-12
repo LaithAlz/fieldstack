@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import {
   FlatList,
   Pressable,
@@ -67,7 +67,9 @@ export function RecentlyViewedRow({
 
 function Tile({ venue, onPress }: { venue: Venue; onPress: () => void }) {
   const colors = useTheme();
+  const [photoFailed, setPhotoFailed] = useState(false);
   const photoSrc = venue.photos[0];
+  const showFallback = !photoSrc || photoFailed;
 
   return (
     <Pressable
@@ -82,14 +84,7 @@ function Tile({ venue, onPress }: { venue: Venue; onPress: () => void }) {
           { backgroundColor: colors.surfaceSecondary },
         ]}
       >
-        {photoSrc ? (
-          <Image
-            source={photoSrc}
-            style={styles.photo}
-            contentFit="cover"
-            transition={150}
-          />
-        ) : (
+        {showFallback ? (
           <View
             accessibilityElementsHidden
             importantForAccessibility="no-hide-descendants"
@@ -97,6 +92,14 @@ function Tile({ venue, onPress }: { venue: Venue; onPress: () => void }) {
           >
             <Ionicons name="football" size={28} color={colors.brand} />
           </View>
+        ) : (
+          <Image
+            source={photoSrc}
+            style={styles.photo}
+            contentFit="cover"
+            transition={150}
+            onError={() => setPhotoFailed(true)}
+          />
         )}
       </View>
       <Text size="sm" weight="medium" numberOfLines={2} style={styles.name}>
