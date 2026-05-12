@@ -62,10 +62,12 @@ export function VenueCard({
 
   // Single combined a11y label so screen readers announce the card as a unit
   // rather than reading every nested element separately (REQ-F2.4).
+  // Identity first; state qualifiers and meta follow. Screen-reader users
+  // want to hear which venue this is before "saved" / "booked recently".
   const a11yLabel = [
+    venue.name,
     isSaved ? "Saved" : null,
     recentlyAttempted ? "Booked recently" : null,
-    venue.name,
     distance ? `${distance} away` : null,
     summary,
     priceRange,

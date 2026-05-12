@@ -75,10 +75,18 @@ export function BookingHistoryProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
+  // Persist on every change. Gated on `hydrated` so the empty initial state
+  // can't overwrite stored data before the read finishes.
+  useEffect(() => {
+    if (!hydrated) return;
+    void AsyncStorage.setItem(KEY, JSON.stringify(attempts)).catch(() => undefined);
+  }, [attempts, hydrated]);
+
   const record = useCallback(async (attempt: Omit<BookingAttempt, "attemptedAt">) => {
     const now = Date.now();
+    // Pure updater — side effects belong in the persistence useEffect above.
     setAttempts((prev) => {
-      // Collapse a same-field+venue entry within DEDUPE_WINDOW_MS into the new one.
+      // Collapse a same-field+venue entry within DEDUPE_WINDOW_MS.
       const filtered = prev.filter(
         (a) =>
           !(
@@ -87,9 +95,7 @@ export function BookingHistoryProvider({ children }: { children: ReactNode }) {
             now - a.attemptedAt < DEDUPE_WINDOW_MS
           )
       );
-      const next = [{ ...attempt, attemptedAt: now }, ...filtered].slice(0, MAX_ENTRIES);
-      void AsyncStorage.setItem(KEY, JSON.stringify(next)).catch(() => undefined);
-      return next;
+      return [{ ...attempt, attemptedAt: now }, ...filtered].slice(0, MAX_ENTRIES);
     });
   }, []);
 
@@ -134,17 +140,26 @@ export function useBookingHistory(): ContextValue {
   return ctx;
 }
 
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+const TIME_RE = /^\d{2}:\d{2}$/;
+
 function isBookingAttempt(v: unknown): v is BookingAttempt {
   if (!v || typeof v !== "object") return false;
   const r = v as Record<string, unknown>;
   return (
     typeof r.fieldId === "string" &&
+    r.fieldId.length > 0 &&
     typeof r.venueId === "string" &&
+    r.venueId.length > 0 &&
     typeof r.attemptedAt === "number" &&
     Number.isFinite(r.attemptedAt) &&
+    r.attemptedAt > 0 &&
     typeof r.date === "string" &&
+    DATE_RE.test(r.date) &&
     typeof r.startTime === "string" &&
+    TIME_RE.test(r.startTime) &&
     typeof r.duration === "number" &&
-    Number.isFinite(r.duration)
+    Number.isFinite(r.duration) &&
+    r.duration > 0
   );
 }
