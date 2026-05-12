@@ -228,10 +228,10 @@ const styles = StyleSheet.create({
     height: DOT_DIAMETER,
     borderRadius: DOT_DIAMETER / 2,
     backgroundColor: "#FFFFFF",
-    // Subtle inner shadow / outline reads on bright photos too.
-    shadowColor: "#000",
-    shadowOpacity: 0.3,
-    shadowRadius: 2,
-    shadowOffset: { width: 0, height: 1 },
+    // Hairline border guarantees contrast on bright photos cross-platform —
+    // iOS shadow renders as a halo on the round dot / a rectangle drop under
+    // the pill; Android ignores shadow*. Border works on both.
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "rgba(0, 0, 0, 0.25)",
   },
 });
