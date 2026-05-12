@@ -1,8 +1,7 @@
 /**
  * Location plumbing. We only ever ask for foreground permission — never
- * background. The Welcome → LocationPermission flow checks status silently
- * on mount and only triggers the system dialog when the user explicitly
- * taps "Enable location."
+ * background. The Welcome screen triggers the system dialog when the user
+ * explicitly taps "Enable location"; we never prompt silently on mount.
  */
 
 import * as Location from "expo-location";

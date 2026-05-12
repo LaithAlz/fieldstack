@@ -45,7 +45,11 @@ export function OnboardingScaffold({
     <View style={[styles.root, { backgroundColor: colors.surface, paddingTop: insets.top }]}>
       {/* Top bar — step dots left, optional Skip right. */}
       <View style={[styles.topBar, { paddingHorizontal: spacing.lg }]}>
-        <StepDots total={totalSteps} current={step} />
+        {totalSteps > 1 ? (
+          <StepDots total={totalSteps} current={step} />
+        ) : (
+          <View />
+        )}
         {onSkip ? (
           <Pressable
             onPress={onSkip}

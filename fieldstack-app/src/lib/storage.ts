@@ -12,12 +12,10 @@ import type { FieldSize, FieldSurface } from "../types/api";
 
 const KEYS = {
   onboardingComplete: "@fieldstack/onboarding_complete",
-  sportPreference: "@fieldstack/sport_preference",
   lastLocation: "@fieldstack/last_location",
   lastFilters: "@fieldstack/last_filters",
 } as const;
 
-export type SportPreference = FieldSize[] | null;
 export type StoredCoords = { lat: number; lng: number };
 
 export type StoredFilters = {
@@ -42,27 +40,6 @@ export async function setOnboardingComplete(value: boolean): Promise<void> {
     KEYS.onboardingComplete,
     value ? "true" : "false"
   );
-}
-
-// ---------- sport preference ----------
-
-export async function getSportPreference(): Promise<SportPreference> {
-  try {
-    const raw = await AsyncStorage.getItem(KEYS.sportPreference);
-    if (raw === null) return null;
-    const parsed = JSON.parse(raw) as unknown;
-    return Array.isArray(parsed) ? (parsed as FieldSize[]) : null;
-  } catch {
-    return null;
-  }
-}
-
-export async function setSportPreference(value: SportPreference): Promise<void> {
-  if (value === null || value.length === 0) {
-    await AsyncStorage.removeItem(KEYS.sportPreference);
-  } else {
-    await AsyncStorage.setItem(KEYS.sportPreference, JSON.stringify(value));
-  }
 }
 
 // ---------- last known location ----------

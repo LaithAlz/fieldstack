@@ -16,7 +16,6 @@ import { FieldAvailabilityCard } from "../../components/FieldAvailabilityCard";
 import { PhotoGallery } from "../../components/PhotoGallery";
 import { Skeleton } from "../../components/Skeleton";
 import { Text } from "../../components/Text";
-import { useToast } from "../../components/Toast";
 import { useLocation } from "../../hooks/useLocation";
 import { useVenue } from "../../hooks/useVenue";
 import { EVENT_VENUE_VIEWED, track } from "../../lib/analytics";
@@ -36,7 +35,6 @@ export function VenueDetailScreen({ route }: Props) {
   const colors = useTheme();
   const insets = useSafeAreaInsets();
   const nav = useNavigation<Nav>();
-  const toast = useToast();
 
   const { data: venue, isLoading, error } = useVenue(venueId);
   const { coords } = useLocation();
@@ -59,10 +57,6 @@ export function VenueDetailScreen({ route }: Props) {
     return formatDistance(haversineKm(coords, { lat: venue.lat, lng: venue.lng }));
   }, [coords, venue]);
 
-  const handleHeartLongPress = () => {
-    toast.show("Saving venues lands in v2.", { type: "info" });
-  };
-
   const handleBook = (field: Field) => {
     setBookingField(field);
     setBookingVisible(true);
@@ -72,7 +66,7 @@ export function VenueDetailScreen({ route }: Props) {
   if (isLoading) {
     return (
       <View style={[styles.root, { backgroundColor: colors.surface }]}>
-        <FloatingTopBar onBack={() => nav.goBack()} onHeartLongPress={handleHeartLongPress} insets={insets} />
+        <FloatingTopBar onBack={() => nav.goBack()} insets={insets} />
         <ScrollView contentContainerStyle={styles.scroll}>
           <Skeleton width="100%" height={220} borderRadius={0} />
           <View style={styles.body}>
@@ -95,7 +89,6 @@ export function VenueDetailScreen({ route }: Props) {
       <View style={[styles.root, { backgroundColor: colors.surface, paddingTop: insets.top }]}>
         <FloatingTopBar
           onBack={() => nav.goBack()}
-          onHeartLongPress={handleHeartLongPress}
           insets={insets}
           floating={false}
         />
@@ -134,11 +127,7 @@ export function VenueDetailScreen({ route }: Props) {
       >
         <View>
           <PhotoGallery photos={venue.photos} />
-          <FloatingTopBar
-            onBack={() => nav.goBack()}
-            onHeartLongPress={handleHeartLongPress}
-            insets={insets}
-          />
+          <FloatingTopBar onBack={() => nav.goBack()} insets={insets} />
         </View>
 
         <View style={styles.body}>
@@ -219,23 +208,17 @@ export function VenueDetailScreen({ route }: Props) {
 }
 
 // ---------------------------------------------------------------------------
-// Floating top bar — overlay on the photo gallery
+// Floating back button — overlay on the photo gallery
 // ---------------------------------------------------------------------------
 
 type FloatingTopBarProps = {
   onBack: () => void;
-  onHeartLongPress: () => void;
   insets: { top: number };
   /** When false, render in normal flow (used for error / loading states). */
   floating?: boolean;
 };
 
-function FloatingTopBar({
-  onBack,
-  onHeartLongPress,
-  insets,
-  floating = true,
-}: FloatingTopBarProps) {
+function FloatingTopBar({ onBack, insets, floating = true }: FloatingTopBarProps) {
   const colors = useTheme();
   return (
     <View
@@ -245,72 +228,25 @@ function FloatingTopBar({
           ? {
               position: "absolute",
               top: insets.top + spacing.sm,
-              left: 0,
-              right: 0,
+              left: spacing.lg,
+              zIndex: 2,
             }
-          : { paddingTop: spacing.sm },
+          : { paddingTop: spacing.sm, paddingHorizontal: spacing.lg },
       ]}
     >
-      <CircleButton
-        accessibilityLabel="Go back"
-        icon="chevron-back"
+      <Pressable
         onPress={onBack}
-        bg={colors.surface}
-        fg={colors.textPrimary}
-      />
-      <CircleButton
-        accessibilityLabel="Save venue. Coming soon."
-        accessibilityHint="This feature is not available yet. Long press to learn more."
-        accessibilityState={{ disabled: true }}
-        icon="heart-outline"
-        onLongPress={onHeartLongPress}
-        bg={colors.surface}
-        fg={colors.textTertiary}
-      />
+        accessibilityRole="button"
+        accessibilityLabel="Go back"
+        hitSlop={spacing.sm}
+        style={({ pressed }) => [
+          styles.circle,
+          { backgroundColor: colors.surface, opacity: pressed ? 0.7 : 1 },
+        ]}
+      >
+        <Ionicons name="chevron-back" size={20} color={colors.textPrimary} />
+      </Pressable>
     </View>
-  );
-}
-
-type CircleButtonProps = {
-  icon: React.ComponentProps<typeof Ionicons>["name"];
-  onPress?: () => void;
-  onLongPress?: () => void;
-  bg: string;
-  fg: string;
-  accessibilityLabel: string;
-  accessibilityHint?: string;
-  accessibilityState?: { disabled?: boolean };
-};
-
-function CircleButton({
-  icon,
-  onPress,
-  onLongPress,
-  bg,
-  fg,
-  accessibilityLabel,
-  accessibilityHint,
-  accessibilityState,
-}: CircleButtonProps) {
-  return (
-    <Pressable
-      onPress={onPress}
-      onLongPress={onLongPress}
-      accessibilityRole="button"
-      accessibilityLabel={accessibilityLabel}
-      accessibilityHint={accessibilityHint}
-      accessibilityState={accessibilityState}
-      hitSlop={spacing.sm}
-      style={({ pressed }) => [
-        styles.circle,
-        {
-          backgroundColor: bg,
-          opacity: pressed ? 0.7 : 1,
-        },
-      ]}
-    >
-      <Ionicons name={icon} size={20} color={fg} />
-    </Pressable>
   );
 }
 
@@ -327,8 +263,6 @@ const styles = StyleSheet.create({
   },
   topBar: {
     flexDirection: "row",
-    justifyContent: "space-between",
-    paddingHorizontal: spacing.lg,
   },
   circle: {
     width: 40,

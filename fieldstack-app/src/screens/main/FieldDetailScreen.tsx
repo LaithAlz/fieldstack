@@ -18,7 +18,6 @@ import { PhotoGallery } from "../../components/PhotoGallery";
 import { Skeleton } from "../../components/Skeleton";
 import { StickyFooter } from "../../components/StickyFooter";
 import { Text } from "../../components/Text";
-import { useToast } from "../../components/Toast";
 import { useField } from "../../hooks/useField";
 import {
   EVENT_BOOKING_CTA_TAPPED,
@@ -56,7 +55,6 @@ export function FieldDetailScreen({ route }: Props) {
   const colors = useTheme();
   const insets = useSafeAreaInsets();
   const nav = useNavigation<Nav>();
-  const toast = useToast();
 
   const { data: field, isLoading, error } = useField(fieldId);
 
@@ -71,10 +69,6 @@ export function FieldDetailScreen({ route }: Props) {
   useEffect(() => {
     if (loadedFieldId) track(EVENT_FIELD_VIEWED, { field_id: loadedFieldId });
   }, [loadedFieldId]);
-
-  const handleHeartLongPress = () => {
-    toast.show("Saving fields lands in v2.", { type: "info" });
-  };
 
   const handleBookPress = () => {
     if (!field) return;
@@ -157,34 +151,14 @@ export function FieldDetailScreen({ route }: Props) {
         </View>
 
         <View style={styles.body}>
-          {/* Title row: field name + disabled heart */}
-          <View style={styles.titleRow}>
-            <Text
-              size="xl"
-              weight="bold"
-              accessibilityRole="header"
-              style={styles.title}
-            >
-              {field.name}
-            </Text>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Save field. Coming soon."
-              accessibilityHint="This feature is not available yet. Long press to learn more."
-              accessibilityState={{ disabled: true }}
-              onLongPress={handleHeartLongPress}
-              hitSlop={spacing.sm}
-              style={({ pressed }) => [
-                styles.heart,
-                {
-                  backgroundColor: colors.surfaceSecondary,
-                  opacity: pressed ? 0.7 : 1,
-                },
-              ]}
-            >
-              <Ionicons name="heart-outline" size={20} color={colors.textTertiary} />
-            </Pressable>
-          </View>
+          <Text
+            size="xl"
+            weight="bold"
+            accessibilityRole="header"
+            style={styles.title}
+          >
+            {field.name}
+          </Text>
 
           {/* Surface / size badges */}
           <View style={styles.badges}>
@@ -382,22 +356,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.lg,
   },
-  titleRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: spacing.md,
-  },
   title: {
-    flex: 1,
     letterSpacing: -0.3,
-  },
-  heart: {
-    width: 36,
-    height: 36,
-    borderRadius: borderRadius.xl,
-    alignItems: "center",
-    justifyContent: "center",
   },
   badges: {
     flexDirection: "row",
