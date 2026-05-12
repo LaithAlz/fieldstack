@@ -1,5 +1,11 @@
 import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
+import {
+  Inter_400Regular,
+  Inter_500Medium,
+  Inter_600SemiBold,
+} from "@expo-google-fonts/inter";
 import { NavigationContainer, DefaultTheme, DarkTheme } from "@react-navigation/native";
+import { useFonts } from "expo-font";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
 import { useEffect, useState } from "react";
@@ -35,6 +41,14 @@ export default function App() {
   const [initialIsOnboarded, setInitialIsOnboarded] = useState(false);
   const scheme = useColorScheme();
 
+  // Inter — fall back to system font during the brief load. The splash holds
+  // until both the font loader and the onboarding read finish (or 2 s lapses).
+  const [fontsLoaded] = useFonts({
+    Inter_400Regular,
+    Inter_500Medium,
+    Inter_600SemiBold,
+  });
+
   useEffect(() => {
     track(EVENT_APP_OPENED);
     let cancelled = false;
@@ -43,17 +57,21 @@ export default function App() {
       if (cancelled) return;
       setInitialIsOnboarded(onboarded);
       setIsReady(true);
-      // SplashScreen.hideAsync can reject if already hidden — swallow.
-      SplashScreen.hideAsync().catch(() => undefined);
     })();
     return () => {
       cancelled = true;
     };
   }, []);
 
-  if (!isReady) {
-    // Keep the screen blank — Expo's native splash is still on top until
-    // hideAsync() runs above. Returning null here avoids any flash.
+  // Keep the native splash up until both gates are open. SplashScreen.hideAsync
+  // can reject if already hidden — swallow.
+  useEffect(() => {
+    if (isReady && fontsLoaded) {
+      SplashScreen.hideAsync().catch(() => undefined);
+    }
+  }, [isReady, fontsLoaded]);
+
+  if (!isReady || !fontsLoaded) {
     return null;
   }
 

@@ -36,6 +36,16 @@ export const fontWeight = {
 } as const;
 export type FontWeight = typeof fontWeight;
 
+// Inter family names map to the variants loaded in App.tsx via expo-font.
+// Each weight is a distinct font file because RN can't synthesize bold from
+// a single regular .ttf reliably across platforms.
+export const fontFamily = {
+  regular: "Inter_400Regular",
+  medium: "Inter_500Medium",
+  bold: "Inter_600SemiBold",
+} as const;
+export type FontFamily = typeof fontFamily;
+
 /**
  * Single shape both light and dark must satisfy. Adding a new color here
  * forces both palettes to define it — keeps them in lockstep.

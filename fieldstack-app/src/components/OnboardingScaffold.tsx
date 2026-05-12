@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { fontSize, fontWeight, spacing } from "../theme/tokens";
+import { fontFamily, fontSize, fontWeight, spacing } from "../theme/tokens";
 import { useTheme } from "../theme/useTheme";
 
 import { StepDots } from "./StepDots";
@@ -109,6 +109,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xl,
   },
   title: {
+    fontFamily: fontFamily.bold,
     fontSize: fontSize.xxl,
     fontWeight: fontWeight.bold,
     textAlign: "center",
@@ -116,6 +117,7 @@ const styles = StyleSheet.create({
     letterSpacing: -0.5,
   },
   body: {
+    fontFamily: fontFamily.regular,
     fontSize: fontSize.lg,
     lineHeight: fontSize.lg * 1.4,
     textAlign: "center",
@@ -130,6 +132,7 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   skipLabel: {
+    fontFamily: fontFamily.medium,
     fontSize: fontSize.md,
     fontWeight: fontWeight.medium,
   },

@@ -12,7 +12,7 @@ import {
 import { useOnboarding } from "../../lib/onboardingContext";
 import { setLastLocation } from "../../lib/storage";
 import type { OnboardingStackParamList } from "../../navigation/OnboardingNavigator";
-import { fontSize, fontWeight, spacing } from "../../theme/tokens";
+import { fontFamily, fontSize, fontWeight, spacing } from "../../theme/tokens";
 import { useTheme } from "../../theme/useTheme";
 
 type Props = NativeStackScreenProps<OnboardingStackParamList, "Welcome">;
@@ -87,6 +87,7 @@ const styles = StyleSheet.create({
     gap: spacing.lg,
   },
   wordmark: {
+    fontFamily: fontFamily.bold,
     fontSize: fontSize.xl,
     fontWeight: fontWeight.bold,
     letterSpacing: -0.5,
