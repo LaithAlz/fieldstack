@@ -20,7 +20,6 @@ import type { Coords } from "../lib/location";
 import {
   clearLastFilters as clearStoredFilters,
   getLastFilters,
-  getSportPreference,
   setLastFilters,
   type StoredFilters,
 } from "../lib/storage";
@@ -106,17 +105,9 @@ export function useFieldSearch(): UseFieldSearchResult {
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const [stored, sportPref] = await Promise.all([
-        getLastFilters(),
-        getSportPreference(),
-      ]);
+      const stored = await getLastFilters();
       if (cancelled) return;
-      if (stored) {
-        setFilters(stored);
-      } else if (sportPref && sportPref.length > 0) {
-        // REQ-F1.6: seed from sport preference when no filters have been saved.
-        setFilters({ ...DEFAULT_FILTERS, size: sportPref });
-      }
+      if (stored) setFilters(stored);
       restoredRef.current = true;
     })();
     return () => {
