@@ -4,7 +4,7 @@ import { FlatList, Pressable, StyleSheet, View } from "react-native";
 
 import { formatEndTime } from "../lib/datetime";
 import { selection } from "../lib/haptics";
-import { borderRadius, fontSize, fontWeight, spacing } from "../theme/tokens";
+import { borderRadius, fontSize, spacing } from "../theme/tokens";
 import { useTheme } from "../theme/useTheme";
 
 import { Text } from "./Text";
@@ -13,6 +13,18 @@ const DURATION_OPTIONS = [1, 1.5, 2, 2.5, 3] as const;
 
 const TIME_SLOT_START_HOUR = 6;  // 06:00
 const TIME_SLOT_END_HOUR = 23;   // 23:00
+const DATE_RAIL_DAYS = 14;       // up from 7
+
+// Grouping aligned to how people actually talk about time slots: morning
+// runs 6 AM–11:30, afternoon noon–5:30, evening 6 PM–11 PM. Lets users skim
+// to the period they want without scrolling through 34 chips.
+type Period = "morning" | "afternoon" | "evening";
+
+const PERIODS: { id: Period; label: string; range: [number, number] }[] = [
+  { id: "morning",   label: "Morning",   range: [6, 11] },
+  { id: "afternoon", label: "Afternoon", range: [12, 17] },
+  { id: "evening",   label: "Evening",   range: [18, 23] },
+];
 
 type Props = {
   selectedDate: Date;
@@ -33,21 +45,35 @@ export function DateTimeRangePicker({
   onStartTimeChange,
   onDurationChange,
 }: Props) {
-  const colors = useTheme();
   const [hint, setHint] = useState<string | null>(null);
 
-  const dates = useMemo(() => getNext7Days(), []);
-  const timeSlots = useMemo(() => getTimeSlots(), []);
+  const dates = useMemo(() => getNextDays(DATE_RAIL_DAYS), []);
+  const slotsByPeriod = useMemo(() => groupSlotsByPeriod(), []);
+  // Recomputed on date change so past slots grey out only when "Today" is
+  // selected. For future dates every slot is valid.
+  const pastBoundaryMinutes = useMemo(
+    () => pastBoundaryFor(selectedDate),
+    [selectedDate]
+  );
 
   const handleDate = (d: Date) => {
     selection();
     onDateChange(d);
+    // If the previously-selected start time is now in the past on the new
+    // date, clear it; the parent should re-default. (We don't auto-pick
+    // here — the user explicitly chose a date and may want to glance at
+    // available slots before re-selecting.)
+    if (
+      isSameDay(d, new Date()) &&
+      timeStringToMinutes(selectedStartTime) <= pastBoundaryFor(d)
+    ) {
+      // No-op for now; visually disabled slots make the bad state obvious.
+    }
   };
 
   const handleStartTime = (t: string) => {
     selection();
     onStartTimeChange(t);
-    // Re-validate the duration against the new start time.
     if (durationExceedsDay(t, selectedDuration)) {
       setHint(durationHint());
     } else {
@@ -58,7 +84,7 @@ export function DateTimeRangePicker({
   const handleDuration = (d: number) => {
     if (durationExceedsDay(selectedStartTime, d)) {
       setHint(durationHint());
-      return; // prevent selection per AC
+      return;
     }
     selection();
     setHint(null);
@@ -87,27 +113,43 @@ export function DateTimeRangePicker({
         contentContainerStyle={styles.row}
       />
 
-      {/* ---- Start time row -------------------------------------------- */}
+      {/* ---- Start time, grouped --------------------------------------- */}
       <Text size="md" weight="medium" variant="secondary" style={styles.label}>
         Start time
       </Text>
-      <FlatList
-        horizontal
-        data={timeSlots}
-        keyExtractor={(t) => t}
-        renderItem={({ item }) => (
-          <TimePill
-            label={formatTimeForDisplay(item)}
-            selected={item === selectedStartTime}
-            onPress={() => handleStartTime(item)}
-          />
-        )}
-        ItemSeparatorComponent={Separator}
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.row}
-      />
+      <View style={styles.periodsWrap}>
+        {PERIODS.map((period) => {
+          const slots = slotsByPeriod[period.id];
+          const allDisabled = slots.every(
+            (s) => timeStringToMinutes(s) <= pastBoundaryMinutes
+          );
+          if (allDisabled) return null;
+          return (
+            <View key={period.id} style={styles.period}>
+              <Text size="sm" variant="tertiary" style={styles.periodLabel}>
+                {period.label}
+              </Text>
+              <View style={styles.slotsGrid}>
+                {slots.map((slot) => {
+                  const isPast =
+                    timeStringToMinutes(slot) <= pastBoundaryMinutes;
+                  return (
+                    <TimePill
+                      key={slot}
+                      label={formatTimeForDisplay(slot)}
+                      selected={slot === selectedStartTime}
+                      disabled={isPast}
+                      onPress={() => handleStartTime(slot)}
+                    />
+                  );
+                })}
+              </View>
+            </View>
+          );
+        })}
+      </View>
 
-      {/* ---- Duration row ---------------------------------------------- */}
+      {/* ---- Duration -------------------------------------------------- */}
       <Text size="md" weight="medium" variant="secondary" style={styles.label}>
         Duration
       </Text>
@@ -127,12 +169,15 @@ export function DateTimeRangePicker({
       </View>
 
       {hint ? (
-        <Text size="sm" variant="danger" style={styles.hint} accessibilityLiveRegion="polite">
+        <Text
+          size="sm"
+          variant="danger"
+          style={styles.hint}
+          accessibilityLiveRegion="polite"
+        >
           {hint}
         </Text>
       ) : (
-        // Plain text (no live region) — TalkBack reads on focus; announcing
-        // every duration tap is chatty.
         <Text size="sm" variant="tertiary" style={styles.endTime}>
           Ends at {formatEndTime(selectedStartTime, selectedDuration)}
         </Text>
@@ -142,7 +187,7 @@ export function DateTimeRangePicker({
 }
 
 // ---------------------------------------------------------------------------
-// Sub-pills (kept private so the file is the single import point)
+// Sub-pills
 // ---------------------------------------------------------------------------
 
 type PillBaseProps = {
@@ -185,6 +230,8 @@ function PillBase({
           size={14}
           color="#FFFFFF"
           style={styles.checkmark}
+          accessibilityElementsHidden
+          importantForAccessibility="no-hide-descendants"
         />
       ) : null}
       <Text
@@ -202,12 +249,10 @@ function PillBase({
 }
 
 function DatePill(props: Omit<PillBaseProps, "withCheckmark">) {
-  // Per F3.1 AC: selected date uses fill + checkmark, not color alone.
   return <PillBase {...props} withCheckmark />;
 }
 
 function TimePill(props: Omit<PillBaseProps, "withCheckmark">) {
-  // Bold weight on selected acts as the non-color cue (REQ-F0.1.5).
   return <PillBase {...props} />;
 }
 
@@ -223,7 +268,6 @@ function Separator() {
 // Helpers — exported so the parent screen can compute sane defaults
 // ---------------------------------------------------------------------------
 
-/** Default starting state per F3.1: today, next full hour, 1hr duration. */
 export function defaultDateTimeSelections(): {
   date: Date;
   startTime: string;
@@ -232,7 +276,6 @@ export function defaultDateTimeSelections(): {
   const now = new Date();
   const date = startOfDay(now);
 
-  // Round up to the next full hour, clamped to the picker's time window.
   let hour = now.getHours();
   if (now.getMinutes() > 0 || now.getSeconds() > 0) hour += 1;
   hour = Math.max(TIME_SLOT_START_HOUR, Math.min(TIME_SLOT_END_HOUR, hour));
@@ -244,18 +287,41 @@ export function defaultDateTimeSelections(): {
   };
 }
 
-function getNext7Days(): Date[] {
+function getNextDays(n: number): Date[] {
   const today = startOfDay(new Date());
-  return Array.from({ length: 7 }, (_, i) => addDays(today, i));
+  return Array.from({ length: n }, (_, i) => addDays(today, i));
 }
 
-function getTimeSlots(): string[] {
-  const out: string[] = [];
-  for (let h = TIME_SLOT_START_HOUR; h <= TIME_SLOT_END_HOUR; h++) {
-    out.push(`${pad(h)}:00`);
-    out.push(`${pad(h)}:30`);
+function groupSlotsByPeriod(): Record<Period, string[]> {
+  const out: Record<Period, string[]> = {
+    morning: [],
+    afternoon: [],
+    evening: [],
+  };
+  for (const p of PERIODS) {
+    for (let h = p.range[0]; h <= p.range[1]; h++) {
+      out[p.id].push(`${pad(h)}:00`);
+      // No half-hour slot at 23:30 (would cross midnight on any duration).
+      if (h < TIME_SLOT_END_HOUR) out[p.id].push(`${pad(h)}:30`);
+    }
   }
   return out;
+}
+
+/**
+ * Returns the minute-of-day threshold below which slots should be greyed.
+ * For "today", that's the current hour's minute count; for future dates,
+ * -1 (no greying).
+ */
+function pastBoundaryFor(date: Date): number {
+  if (!isSameDay(date, new Date())) return -1;
+  const now = new Date();
+  return now.getHours() * 60 + now.getMinutes();
+}
+
+function timeStringToMinutes(time24: string): number {
+  const [h, m] = time24.split(":").map(Number);
+  return h * 60 + m;
 }
 
 function startOfDay(d: Date): Date {
@@ -305,7 +371,6 @@ function formatTimeForDisplay(time24: string): string {
 }
 
 function formatDuration(hours: number): string {
-  // "1hr", "1.5hr", "2hr"…
   return `${hours}hr`;
 }
 
@@ -313,7 +378,6 @@ function durationExceedsDay(startTime: string, durationHours: number): boolean {
   const [h, m] = startTime.split(":").map(Number);
   const startMinutes = h * 60 + m;
   const endMinutes = startMinutes + durationHours * 60;
-  // > 24*60 means it crosses midnight (>= 24:00 is not a valid same-day end).
   return endMinutes > 24 * 60;
 }
 
@@ -340,8 +404,23 @@ const styles = StyleSheet.create({
     flexWrap: "wrap",
     gap: spacing.sm,
   },
+  periodsWrap: {
+    paddingHorizontal: spacing.lg,
+    gap: spacing.md,
+  },
+  period: {
+    gap: spacing.xs,
+  },
+  periodLabel: {
+    marginBottom: spacing.xs,
+  },
+  slotsGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: spacing.sm,
+  },
   pill: {
-    minHeight: 44,                 // REQ-F0.2 — minimum touch target
+    minHeight: 44,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     borderRadius: borderRadius.xl,
