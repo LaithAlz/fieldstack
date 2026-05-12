@@ -58,20 +58,18 @@ export function SavedVenuesProvider({ children }: { children: ReactNode }) {
 
   const isSaved = useCallback((id: string) => saved.has(id), [saved]);
 
-  const toggle = useCallback(
-    async (id: string) => {
-      const next = new Set(saved);
+  // Functional setter pattern — rapid taps must not race on a stale snapshot.
+  // Persist inside the updater so the disk write always reflects the actual
+  // resulting state, not whatever was captured at call time.
+  const toggle = useCallback(async (id: string) => {
+    setSaved((prev) => {
+      const next = new Set(prev);
       if (next.has(id)) next.delete(id);
       else next.add(id);
-      setSaved(next);
-      try {
-        await AsyncStorage.setItem(KEY, JSON.stringify(Array.from(next)));
-      } catch {
-        // Persist failure is non-fatal; UI reflects the in-memory change.
-      }
-    },
-    [saved]
-  );
+      void AsyncStorage.setItem(KEY, JSON.stringify(Array.from(next))).catch(() => undefined);
+      return next;
+    });
+  }, []);
 
   const value = useMemo<ContextValue>(
     () => ({ saved, hydrated, isSaved, toggle }),

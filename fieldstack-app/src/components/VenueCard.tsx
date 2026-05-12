@@ -55,7 +55,7 @@ export function VenueCard({ venue, userCoords, isSaved = false, onPress }: Props
   // Single combined a11y label so screen readers announce the card as a unit
   // rather than reading every nested element separately (REQ-F2.4).
   const a11yLabel = [
-    isSaved ? "Saved." : null,
+    isSaved ? "Saved" : null,
     venue.name,
     distance ? `${distance} away` : null,
     summary,
@@ -78,30 +78,34 @@ export function VenueCard({ venue, userCoords, isSaved = false, onPress }: Props
         },
       ]}
     >
-      <View
-        style={[
-          styles.photoWrap,
-          { backgroundColor: colors.surfaceSecondary },
-        ]}
-      >
-        {showFallback ? (
-          <View
-            // Decorative — the venue name in the card already covers the meaning.
-            accessibilityElementsHidden
-            importantForAccessibility="no-hide-descendants"
-            style={[styles.fallback, { backgroundColor: colors.brand + "14" }]}
-          >
-            <Ionicons name="football" size={36} color={colors.brand} />
-          </View>
-        ) : (
-          <Image
-            source={photoSrc}
-            style={styles.photo}
-            contentFit="cover"
-            transition={150}
-            onError={() => setPhotoFailed(true)}
-          />
-        )}
+      <View style={styles.photoBlock}>
+        <View
+          style={[
+            styles.photoWrap,
+            { backgroundColor: colors.surfaceSecondary },
+          ]}
+        >
+          {showFallback ? (
+            <View
+              // Decorative — the venue name in the card already covers the meaning.
+              accessibilityElementsHidden
+              importantForAccessibility="no-hide-descendants"
+              style={[styles.fallback, { backgroundColor: colors.brand + "14" }]}
+            >
+              <Ionicons name="football" size={36} color={colors.brand} />
+            </View>
+          ) : (
+            <Image
+              source={photoSrc}
+              style={styles.photo}
+              contentFit="cover"
+              transition={150}
+              onError={() => setPhotoFailed(true)}
+            />
+          )}
+        </View>
+        {/* Badge lives outside photoWrap so its shadow / elevation isn't
+            clipped by the photo's overflow: hidden. */}
         {isSaved ? (
           <View
             accessibilityElementsHidden
@@ -165,6 +169,10 @@ const styles = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth,
     gap: spacing.md,
   },
+  photoBlock: {
+    width: PHOTO_SIZE,
+    height: PHOTO_SIZE,
+  },
   photoWrap: {
     width: PHOTO_SIZE,
     height: PHOTO_SIZE,
@@ -173,8 +181,8 @@ const styles = StyleSheet.create({
   },
   savedBadge: {
     position: "absolute",
-    top: spacing.xs,
-    right: spacing.xs,
+    top: -spacing.xs / 2,
+    right: -spacing.xs / 2,
     width: 22,
     height: 22,
     borderRadius: 11,
