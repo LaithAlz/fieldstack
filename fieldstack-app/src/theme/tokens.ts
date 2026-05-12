@@ -64,9 +64,13 @@ export type ThemeColors = {
   overlay: string;
 };
 
+// Brand shifted from emerald-600 to green-700/500 — emerald reads as generic
+// SaaS; green has a touch more warmth that pairs with a pitch/grass mental
+// model without going full neon. Success stays in the emerald family so the
+// brand vs "completed" semantics remain visually distinct.
 const lightColors: ThemeColors = {
-  brand: "#059669",            // emerald-600
-  brandDark: "#047857",        // emerald-700, for pressed states
+  brand: "#15803D",            // green-700
+  brandDark: "#166534",        // green-800, for pressed states
   surface: "#FFFFFF",
   surfaceSecondary: "#F4F4F5", // zinc-100, for cards / grouped sections
   textPrimary: "#18181B",      // zinc-900
@@ -79,8 +83,8 @@ const lightColors: ThemeColors = {
 };
 
 const darkColors: ThemeColors = {
-  brand: "#10B981",            // emerald-500, brighter for contrast on dark surfaces
-  brandDark: "#059669",        // emerald-600
+  brand: "#22C55E",            // green-500, brighter for contrast on dark
+  brandDark: "#16A34A",        // green-600
   surface: "#09090B",          // zinc-950
   surfaceSecondary: "#18181B", // zinc-900
   textPrimary: "#FAFAFA",      // zinc-50
