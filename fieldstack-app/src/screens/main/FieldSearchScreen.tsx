@@ -289,30 +289,25 @@ export function FieldSearchScreen() {
                 {filters.surface.map((s) => (
                   <RemoveChip
                     key={`surface-${s}`}
-                    label={s.charAt(0).toUpperCase() + s.slice(1)}
+                    label={SURFACE_OPTIONS.find((o) => o.id === s)?.label ?? s}
                     onPress={() =>
-                      setFilter(
-                        "surface",
-                        filters.surface.filter((x) => x !== s)
-                      )
+                      // Functional form — rapid taps must read fresh state.
+                      setFilter("surface", (prev) => prev.filter((x) => x !== s))
                     }
                   />
                 ))}
                 {filters.size.map((s) => (
                   <RemoveChip
                     key={`size-${s}`}
-                    label={s === "5v5" ? "5-a-side" : s === "7v7" ? "7-a-side" : "11-a-side"}
+                    label={SIZE_OPTIONS.find((o) => o.id === s)?.label ?? s}
                     onPress={() =>
-                      setFilter(
-                        "size",
-                        filters.size.filter((x) => x !== s)
-                      )
+                      setFilter("size", (prev) => prev.filter((x) => x !== s))
                     }
                   />
                 ))}
                 {filters.priceMax !== null ? (
                   <RemoveChip
-                    label={`Under $${filters.priceMax}`}
+                    label={PRICE_OPTIONS.find((o) => o.id === priceBucket)?.label ?? `Under $${filters.priceMax}`}
                     onPress={() => setFilter("priceMax", null)}
                   />
                 ) : null}
@@ -436,7 +431,13 @@ function RemoveChip({ label, onPress }: { label: string; onPress: () => void }) 
         },
       ]}
     >
-      <Ionicons name="close" size={14} color={colors.textSecondary} />
+      <Ionicons
+        name="close"
+        size={14}
+        color={colors.textSecondary}
+        accessibilityElementsHidden
+        importantForAccessibility="no-hide-descendants"
+      />
       <Text size="sm" weight="medium" style={{ color: colors.textPrimary }}>
         {label}
       </Text>

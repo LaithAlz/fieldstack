@@ -57,7 +57,9 @@ const DEFAULT_LOCATION: FieldSearchLocation = {
 
 export type SetFilter = <K extends keyof FieldSearchFilters>(
   key: K,
-  value: FieldSearchFilters[K]
+  // Functional form mirrors React's useState — required when callers chain
+  // updates faster than React can re-render (e.g. rapid empty-state chip taps).
+  value: FieldSearchFilters[K] | ((prev: FieldSearchFilters[K]) => FieldSearchFilters[K])
 ) => void;
 
 export type UseFieldSearchResult = {
@@ -200,7 +202,10 @@ export function useFieldSearch(): UseFieldSearchResult {
 
   // ---- Mutators ----------------------------------------------------------
   const setFilter: SetFilter = useCallback((key, value) => {
-    setFilters((prev) => ({ ...prev, [key]: value }));
+    setFilters((prev) => ({
+      ...prev,
+      [key]: typeof value === "function" ? (value as (p: typeof prev[typeof key]) => typeof prev[typeof key])(prev[key]) : value,
+    }));
   }, []);
 
   const clearFilters = useCallback(() => {

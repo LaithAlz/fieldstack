@@ -148,15 +148,33 @@ export function VenueListScreen() {
           ItemSeparatorComponent={() => <View style={{ height: spacing.md }} />}
           ListEmptyComponent={
             <EmptyState
-              icon="location-outline"
-              title="Nothing nearby"
-              description={
-                coords
-                  ? "We didn't find any fields in this area. Try another neighbourhood or search by field type."
-                  : "Share your location or pick a neighbourhood to see fields near you."
+              icon={permissionStatus === "denied" ? "lock-closed-outline" : "location-outline"}
+              title={
+                permissionStatus === "denied"
+                  ? "Location is off"
+                  : coords
+                    ? "Nothing nearby"
+                    : "Pick an area to start"
               }
-              actionLabel={coords ? "Change area" : "Pick an area"}
-              onAction={openPicker}
+              description={
+                permissionStatus === "denied"
+                  ? "Enable location in Settings to see fields near you, or pick a neighbourhood manually."
+                  : coords
+                    ? "We didn't find any fields in this area. Try another neighbourhood."
+                    : "We need a location to show you fields. Pick a neighbourhood or share your location."
+              }
+              actionLabel={
+                permissionStatus === "denied"
+                  ? "Open settings"
+                  : coords
+                    ? "Change area"
+                    : "Pick an area"
+              }
+              onAction={
+                permissionStatus === "denied"
+                  ? () => void openLocationSettings()
+                  : openPicker
+              }
             />
           }
           refreshControl={
