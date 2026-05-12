@@ -8,7 +8,7 @@ import {
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Pressable, StyleSheet, View } from "react-native";
+import { Animated, Pressable, StyleSheet, View } from "react-native";
 import MapView, { Marker, type Region } from "react-native-maps";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -88,6 +88,26 @@ export function MapViewScreen() {
   const [showSearchHere, setShowSearchHere] = useState(false);
   const [selectedVenueId, setSelectedVenueId] = useState<string | null>(null);
   const sheetRef = useRef<BottomSheetModal>(null);
+  const mapRef = useRef<MapView>(null);
+
+  // Drives the fade/slide-in for the "Search this area" pill.
+  const searchHereOpacity = useRef(new Animated.Value(0)).current;
+  const searchHereOffset = useRef(new Animated.Value(-8)).current;
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(searchHereOpacity, {
+        toValue: showSearchHere ? 1 : 0,
+        duration: 200,
+        useNativeDriver: true,
+      }),
+      Animated.timing(searchHereOffset, {
+        toValue: showSearchHere ? 0 : -8,
+        duration: 200,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [showSearchHere, searchHereOpacity, searchHereOffset]);
 
   const markers = useMemo(() => groupByVenue(results), [results]);
   const selectedMarker = selectedVenueId
@@ -122,6 +142,29 @@ export function MapViewScreen() {
 
   const handleMarkerPress = (venueId: string) => {
     setSelectedVenueId(venueId);
+    // Re-center so the pin sits above the bottom sheet (sheet snap = 180px).
+    // We shift the camera target south of the pin so the pin lands in the
+    // upper-middle of the visible area.
+    const marker = markers.find((m) => m.venue.id === venueId);
+    if (
+      marker &&
+      marker.venue.lat !== null &&
+      marker.venue.lng !== null &&
+      mapRef.current
+    ) {
+      const cached = getLastRegion();
+      const latDelta = cached?.latitudeDelta ?? DEFAULT_DELTA;
+      const lngDelta = cached?.longitudeDelta ?? DEFAULT_DELTA;
+      mapRef.current.animateToRegion(
+        {
+          latitude: marker.venue.lat - latDelta * 0.2,
+          longitude: marker.venue.lng,
+          latitudeDelta: latDelta,
+          longitudeDelta: lngDelta,
+        },
+        300
+      );
+    }
   };
 
   const handleMapPress = () => {
@@ -145,6 +188,7 @@ export function MapViewScreen() {
   return (
     <View style={styles.root}>
       <MapView
+        ref={mapRef}
         style={StyleSheet.absoluteFill}
         initialRegion={initialRegion}
         onRegionChangeComplete={handleRegionChange}
@@ -196,12 +240,20 @@ export function MapViewScreen() {
           <Ionicons name="list" size={20} color={colors.textPrimary} />
         </Pressable>
 
-        {/* "Search this area" — appears center after a meaningful pan */}
-        {showSearchHere ? (
+        {/* "Search this area" — fades + slides in after a meaningful pan */}
+        <Animated.View
+          pointerEvents={showSearchHere ? "auto" : "none"}
+          style={{
+            opacity: searchHereOpacity,
+            transform: [{ translateY: searchHereOffset }],
+          }}
+        >
           <Pressable
             onPress={handleSearchHere}
             accessibilityRole="button"
             accessibilityLabel="Search this area"
+            accessibilityElementsHidden={!showSearchHere}
+            importantForAccessibility={showSearchHere ? "yes" : "no-hide-descendants"}
             style={({ pressed }) => [
               styles.searchHere,
               {
@@ -220,7 +272,7 @@ export function MapViewScreen() {
               Search this area
             </Text>
           </Pressable>
-        ) : null}
+        </Animated.View>
 
         {/* Spacer so the icon button stays pinned at the left. */}
         <View style={{ width: 40 }} />
