@@ -267,8 +267,12 @@ export function FieldSearchScreen() {
         <View style={styles.emptyWrap}>
           <EmptyState
             icon="search-outline"
-            title="No fields match your filters"
-            description="Try clearing filters or expanding your area."
+            title={hasAnyFilter ? "No fields match your filters" : "No fields here"}
+            description={
+              hasAnyFilter
+                ? "Try removing a filter or widening your search."
+                : "Try a different area or check back soon."
+            }
             actionLabel={hasAnyFilter ? "Clear filters" : "Widen radius"}
             onAction={
               hasAnyFilter
@@ -277,19 +281,56 @@ export function FieldSearchScreen() {
             }
           />
           {hasAnyFilter ? (
-            <Pressable
-              onPress={() => setLocation("", undefined)}
-              accessibilityRole="button"
-              accessibilityLabel="Widen radius"
-              style={({ pressed }) => [
-                styles.secondaryCta,
-                { opacity: pressed ? 0.6 : 1 },
-              ]}
-            >
-              <Text size="md" weight="medium" style={{ color: colors.brand }}>
-                Widen radius
+            <View style={styles.removeSuggestions}>
+              <Text size="sm" variant="tertiary" style={styles.removeLabel}>
+                Try removing
               </Text>
-            </Pressable>
+              <View style={styles.removeChips}>
+                {filters.surface.map((s) => (
+                  <RemoveChip
+                    key={`surface-${s}`}
+                    label={s.charAt(0).toUpperCase() + s.slice(1)}
+                    onPress={() =>
+                      setFilter(
+                        "surface",
+                        filters.surface.filter((x) => x !== s)
+                      )
+                    }
+                  />
+                ))}
+                {filters.size.map((s) => (
+                  <RemoveChip
+                    key={`size-${s}`}
+                    label={s === "5v5" ? "5-a-side" : s === "7v7" ? "7-a-side" : "11-a-side"}
+                    onPress={() =>
+                      setFilter(
+                        "size",
+                        filters.size.filter((x) => x !== s)
+                      )
+                    }
+                  />
+                ))}
+                {filters.priceMax !== null ? (
+                  <RemoveChip
+                    label={`Under $${filters.priceMax}`}
+                    onPress={() => setFilter("priceMax", null)}
+                  />
+                ) : null}
+              </View>
+              <Pressable
+                onPress={() => setLocation("", undefined)}
+                accessibilityRole="button"
+                accessibilityLabel="Widen radius"
+                style={({ pressed }) => [
+                  styles.secondaryCta,
+                  { opacity: pressed ? 0.6 : 1 },
+                ]}
+              >
+                <Text size="md" weight="medium" style={{ color: colors.brand }}>
+                  Widen radius
+                </Text>
+              </Pressable>
+            </View>
           ) : null}
         </View>
       ) : (
@@ -375,6 +416,35 @@ export function FieldSearchScreen() {
 }
 
 // ---------------------------------------------------------------------------
+// Tappable chip used in the empty state to clear one filter at a time. Reads
+// "× Indoor" with a leading dismiss glyph so the affordance is unambiguous.
+
+function RemoveChip({ label, onPress }: { label: string; onPress: () => void }) {
+  const colors = useTheme();
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={`Remove ${label} filter`}
+      hitSlop={spacing.xs}
+      style={({ pressed }) => [
+        styles.removeChip,
+        {
+          backgroundColor: colors.surfaceSecondary,
+          borderColor: colors.border,
+          opacity: pressed ? 0.7 : 1,
+        },
+      ]}
+    >
+      <Ionicons name="close" size={14} color={colors.textSecondary} />
+      <Text size="sm" weight="medium" style={{ color: colors.textPrimary }}>
+        {label}
+      </Text>
+    </Pressable>
+  );
+}
+
+// ---------------------------------------------------------------------------
 
 const styles = StyleSheet.create({
   root: {
@@ -429,6 +499,30 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.lg,
+  },
+  removeSuggestions: {
+    paddingHorizontal: spacing.lg,
+    marginTop: spacing.md,
+    alignItems: "center",
+  },
+  removeLabel: {
+    marginBottom: spacing.sm,
+  },
+  removeChips: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "center",
+    gap: spacing.sm,
+  },
+  removeChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.xs,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs + 2,
+    borderRadius: borderRadius.xl,
+    borderWidth: StyleSheet.hairlineWidth,
+    minHeight: 32,
   },
   mapButtonWrap: {
     position: "absolute",

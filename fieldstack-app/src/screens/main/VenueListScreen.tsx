@@ -148,10 +148,14 @@ export function VenueListScreen() {
           ItemSeparatorComponent={() => <View style={{ height: spacing.md }} />}
           ListEmptyComponent={
             <EmptyState
-              icon="search-outline"
-              title="No venues yet"
-              description="Try a different area or check back soon."
-              actionLabel="Change area"
+              icon="location-outline"
+              title="Nothing nearby"
+              description={
+                coords
+                  ? "We didn't find any fields in this area. Try another neighbourhood or search by field type."
+                  : "Share your location or pick a neighbourhood to see fields near you."
+              }
+              actionLabel={coords ? "Change area" : "Pick an area"}
               onAction={openPicker}
             />
           }
