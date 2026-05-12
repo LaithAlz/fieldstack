@@ -24,6 +24,7 @@ import {
   EVENT_FIELD_VIEWED,
   track,
 } from "../../lib/analytics";
+import { preferredSlotDate, usePreferredSlot } from "../../lib/preferredSlot";
 import type { MainStackParamList } from "../../navigation/MainNavigator";
 import { borderRadius, spacing } from "../../theme/tokens";
 import { useTheme } from "../../theme/useTheme";
@@ -48,19 +49,32 @@ const SIZE_LABEL: Record<FieldSize, string> = {
 const LIGHTING_AMENITY_KEYS = new Set(["lights", "lighting"]);
 const INDOOR_AMENITY_KEYS = new Set(["indoor"]);
 
-const DEFAULTS = defaultDateTimeSelections();
-
 export function FieldDetailScreen({ route }: Props) {
   const { fieldId } = route.params;
   const colors = useTheme();
   const insets = useSafeAreaInsets();
   const nav = useNavigation<Nav>();
+  const { slot } = usePreferredSlot();
 
   const { data: field, isLoading, error } = useField(fieldId);
 
-  const [selectedDate, setSelectedDate] = useState<Date>(DEFAULTS.date);
-  const [selectedTime, setSelectedTime] = useState<string>(DEFAULTS.startTime);
-  const [selectedDuration, setSelectedDuration] = useState<number>(DEFAULTS.duration);
+  // Initial selection seeded from preferred slot when present, else the
+  // standard "today + next full hour" default. Computed once at mount so
+  // the user's in-sheet edits aren't reset when the context re-renders.
+  const initial = useState(() => {
+    if (slot) {
+      return {
+        date: preferredSlotDate(slot),
+        startTime: slot.startTime,
+        duration: slot.duration,
+      };
+    }
+    return defaultDateTimeSelections();
+  })[0];
+
+  const [selectedDate, setSelectedDate] = useState<Date>(initial.date);
+  const [selectedTime, setSelectedTime] = useState<string>(initial.startTime);
+  const [selectedDuration, setSelectedDuration] = useState<number>(initial.duration);
 
   const [bookingOpen, setBookingOpen] = useState(false);
 

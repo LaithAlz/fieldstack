@@ -16,6 +16,10 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { ToastProvider } from "./src/components/Toast";
 import { EVENT_APP_OPENED, track } from "./src/lib/analytics";
 import { OnboardingProvider } from "./src/lib/onboardingContext";
+import {
+  PreferredSlotProvider,
+  usePreferredSlot,
+} from "./src/lib/preferredSlot";
 import { getOnboardingComplete } from "./src/lib/storage";
 import { RootNavigator } from "./src/navigation/RootNavigator";
 import { colors } from "./src/theme/tokens";
@@ -118,14 +122,27 @@ export default function App() {
         <BottomSheetModalProvider>
           <ToastProvider>
             <OnboardingProvider initialIsOnboarded={initialIsOnboarded}>
-              <NavigationContainer theme={navTheme}>
-                <RootNavigator />
-              </NavigationContainer>
-              <StatusBar style="auto" />
+              <PreferredSlotProvider>
+                {/* Wait for the slot to hydrate so deep-links into Field
+                    /Venue detail don't seed defaults instead of the saved
+                    preference. */}
+                <SlotGate>
+                  <NavigationContainer theme={navTheme}>
+                    <RootNavigator />
+                  </NavigationContainer>
+                  <StatusBar style="auto" />
+                </SlotGate>
+              </PreferredSlotProvider>
             </OnboardingProvider>
           </ToastProvider>
         </BottomSheetModalProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );
+}
+
+function SlotGate({ children }: { children: React.ReactNode }) {
+  const { hydrated } = usePreferredSlot();
+  if (!hydrated) return null;
+  return <>{children}</>;
 }
