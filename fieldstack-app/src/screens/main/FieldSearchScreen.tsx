@@ -143,6 +143,21 @@ export function FieldSearchScreen() {
     [nav]
   );
 
+  // Field IDs that share the lowest price in the current result set. Returns
+  // an empty set when fewer than 2 priced results exist, since "best price"
+  // doesn't mean anything against a single comparison.
+  const bestPriceFieldIds = useMemo<ReadonlySet<string>>(() => {
+    const priced = results.filter(
+      (r): r is SearchResult & { field: { price_per_hour: number } } =>
+        r.field.price_per_hour !== null
+    );
+    if (priced.length < 2) return new Set();
+    const min = Math.min(...priced.map((r) => r.field.price_per_hour));
+    return new Set(
+      priced.filter((r) => r.field.price_per_hour === min).map((r) => r.field.id)
+    );
+  }, [results]);
+
   const priceLabelForChip = (() => {
     if (priceBucket === "any") return "Price";
     const opt = PRICE_OPTIONS.find((o) => o.id === priceBucket);
@@ -336,6 +351,7 @@ export function FieldSearchScreen() {
             <FieldSearchCard
               result={item}
               userCoords={userCoords}
+              isBestPrice={bestPriceFieldIds.has(item.field.id)}
               onPress={() => handleCardPress(item)}
             />
           )}

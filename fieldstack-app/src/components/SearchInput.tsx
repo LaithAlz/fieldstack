@@ -6,7 +6,9 @@ import { useTheme } from "../theme/useTheme";
 
 import { Text } from "./Text";
 
-const PLACEHOLDER = "Search by city, neighbourhood, or postal code";
+const DEFAULT_PLACEHOLDER = "Search by city, neighbourhood, or postal code";
+const DEFAULT_A11Y_LABEL = "Search location";
+const DEFAULT_A11Y_HINT = "Type a city, neighbourhood, or postal code to filter fields";
 
 type Props = {
   value: string;
@@ -15,18 +17,24 @@ type Props = {
   /** Inline error hint shown below the input. Does not clear input text. */
   error?: string | null;
   placeholder?: string;
+  accessibilityLabel?: string;
+  accessibilityHint?: string;
 };
 
 /**
- * Pure presentational location search bar. Debouncing, geocoding, and any
- * downstream side effects belong to the parent (typically `useFieldSearch`).
+ * Pure presentational search bar. Debouncing, geocoding, and any downstream
+ * side effects belong to the parent. Defaults read as a location search; pass
+ * `accessibilityLabel`/`accessibilityHint` to re-purpose for other queries
+ * (e.g. venue name search on the home list).
  */
 export function SearchInput({
   value,
   onChangeText,
   onSubmit,
   error,
-  placeholder = PLACEHOLDER,
+  placeholder = DEFAULT_PLACEHOLDER,
+  accessibilityLabel = DEFAULT_A11Y_LABEL,
+  accessibilityHint = DEFAULT_A11Y_HINT,
 }: Props) {
   const colors = useTheme();
   const hasText = value.length > 0;
@@ -56,8 +64,8 @@ export function SearchInput({
           onSubmitEditing={onSubmit}
           placeholder={placeholder}
           placeholderTextColor={colors.textTertiary}
-          accessibilityLabel="Search location"
-          accessibilityHint="Type a city, neighbourhood, or postal code to filter fields"
+          accessibilityLabel={accessibilityLabel}
+          accessibilityHint={accessibilityHint}
           autoCorrect={false}
           autoCapitalize="words"
           returnKeyType="search"
