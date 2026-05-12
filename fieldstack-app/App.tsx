@@ -1,5 +1,11 @@
 import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
+import {
+  Inter_400Regular,
+  Inter_500Medium,
+  Inter_600SemiBold,
+} from "@expo-google-fonts/inter";
 import { NavigationContainer, DefaultTheme, DarkTheme } from "@react-navigation/native";
+import { useFonts } from "expo-font";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
 import { useEffect, useState } from "react";
@@ -33,7 +39,18 @@ function withTimeout<T>(promise: Promise<T>, ms: number, fallback: T): Promise<T
 export default function App() {
   const [isReady, setIsReady] = useState(false);
   const [initialIsOnboarded, setInitialIsOnboarded] = useState(false);
+  const [fontTimeoutHit, setFontTimeoutHit] = useState(false);
   const scheme = useColorScheme();
+
+  // Inter — fall back to system font during the brief load. If the font fetch
+  // fails (cold install + no network), `fontError` becomes non-null and we
+  // open the gate anyway so the app isn't stranded on the splash.
+  const [fontsLoaded, fontError] = useFonts({
+    Inter_400Regular,
+    Inter_500Medium,
+    Inter_600SemiBold,
+  });
+  const fontsGateOpen = fontsLoaded || fontError !== null;
 
   useEffect(() => {
     track(EVENT_APP_OPENED);
@@ -43,17 +60,29 @@ export default function App() {
       if (cancelled) return;
       setInitialIsOnboarded(onboarded);
       setIsReady(true);
-      // SplashScreen.hideAsync can reject if already hidden — swallow.
-      SplashScreen.hideAsync().catch(() => undefined);
     })();
     return () => {
       cancelled = true;
     };
   }, []);
 
-  if (!isReady) {
-    // Keep the screen blank — Expo's native splash is still on top until
-    // hideAsync() runs above. Returning null here avoids any flash.
+  // Keep the native splash up until both gates are open. SplashScreen.hideAsync
+  // can reject if already hidden — swallow.
+  useEffect(() => {
+    if (isReady && fontsGateOpen) {
+      SplashScreen.hideAsync().catch(() => undefined);
+    }
+  }, [isReady, fontsGateOpen]);
+
+  // Hard timeout on the font wait — if neither loaded nor errored within the
+  // splash cap, fall back to system font rather than orphaning the splash.
+  useEffect(() => {
+    if (fontsGateOpen) return;
+    const id = setTimeout(() => setFontTimeoutHit(true), SPLASH_CAP_MS);
+    return () => clearTimeout(id);
+  }, [fontsGateOpen]);
+
+  if (!isReady || (!fontsGateOpen && !fontTimeoutHit)) {
     return null;
   }
 

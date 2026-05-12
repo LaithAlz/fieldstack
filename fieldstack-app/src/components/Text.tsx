@@ -1,6 +1,6 @@
 import { Text as RNText, type TextProps as RNTextProps } from "react-native";
 
-import { fontSize, fontWeight } from "../theme/tokens";
+import { fontFamily, fontSize, fontWeight } from "../theme/tokens";
 import { useTheme } from "../theme/useTheme";
 
 export type TextSize = keyof typeof fontSize;
@@ -54,8 +54,12 @@ export function Text({
       {...rest}
       style={[
         {
+          fontFamily: fontFamily[weight],
           fontSize: fontSize[size],
           lineHeight: Math.round(fontSize[size] * LINE_HEIGHT_RATIO[size]),
+          // fontWeight kept for fallback when Inter hasn't loaded yet or on
+          // platforms where the family doesn't exist. RN ignores conflicting
+          // weight when fontFamily resolves.
           fontWeight: fontWeight[weight],
           color: colorByVariant[variant],
         },

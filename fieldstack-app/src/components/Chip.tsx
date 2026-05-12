@@ -1,7 +1,7 @@
 import { Pressable, StyleSheet, Text } from "react-native";
 
 import { selection } from "../lib/haptics";
-import { borderRadius, fontSize, fontWeight, spacing } from "../theme/tokens";
+import { borderRadius, fontFamily, fontSize, fontWeight, spacing } from "../theme/tokens";
 import { useTheme } from "../theme/useTheme";
 
 type Props = {
@@ -60,6 +60,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   label: {
+    fontFamily: fontFamily.medium,
     fontSize: fontSize.md,
     fontWeight: fontWeight.medium,
   },
