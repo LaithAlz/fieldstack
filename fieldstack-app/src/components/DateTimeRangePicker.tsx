@@ -1,5 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { FlatList, Pressable, StyleSheet, View } from "react-native";
 
 import { formatEndTime } from "../lib/datetime";
@@ -46,28 +46,29 @@ export function DateTimeRangePicker({
   onDurationChange,
 }: Props) {
   const [hint, setHint] = useState<string | null>(null);
+  // Ticks every minute so the date rail rolls "Today" over at midnight and
+  // past-slot greying doesn't go stale when the sheet sits open.
+  const now = useNowTick(60_000);
 
-  const dates = useMemo(() => getNextDays(DATE_RAIL_DAYS), []);
+  const dates = useMemo(() => getNextDays(DATE_RAIL_DAYS, now), [now]);
   const slotsByPeriod = useMemo(() => groupSlotsByPeriod(), []);
-  // Recomputed on date change so past slots grey out only when "Today" is
-  // selected. For future dates every slot is valid.
   const pastBoundaryMinutes = useMemo(
-    () => pastBoundaryFor(selectedDate),
-    [selectedDate]
+    () => pastBoundaryFor(selectedDate, now),
+    [selectedDate, now]
   );
 
   const handleDate = (d: Date) => {
     selection();
     onDateChange(d);
-    // If the previously-selected start time is now in the past on the new
-    // date, clear it; the parent should re-default. (We don't auto-pick
-    // here — the user explicitly chose a date and may want to glance at
-    // available slots before re-selecting.)
+    // Switching to Today with a start time that's already past: auto-advance
+    // to the next valid full hour so the parent state doesn't carry a value
+    // that would silently book a past slot.
     if (
-      isSameDay(d, new Date()) &&
-      timeStringToMinutes(selectedStartTime) <= pastBoundaryFor(d)
+      isSameDay(d, now) &&
+      timeStringToMinutes(selectedStartTime) <= pastBoundaryFor(d, now)
     ) {
-      // No-op for now; visually disabled slots make the bad state obvious.
+      const nextSlot = nextValidSlot(now);
+      if (nextSlot !== null) onStartTimeChange(nextSlot);
     }
   };
 
@@ -274,22 +275,54 @@ export function defaultDateTimeSelections(): {
   duration: number;
 } {
   const now = new Date();
-  const date = startOfDay(now);
-
   let hour = now.getHours();
   if (now.getMinutes() > 0 || now.getSeconds() > 0) hour += 1;
-  hour = Math.max(TIME_SLOT_START_HOUR, Math.min(TIME_SLOT_END_HOUR, hour));
 
+  // After 23:00 there's no full hour left today within the picker's window —
+  // roll over to tomorrow's 6 AM rather than land on a soon-past slot.
+  if (hour > TIME_SLOT_END_HOUR) {
+    return {
+      date: startOfDay(addDays(now, 1)),
+      startTime: `${pad(TIME_SLOT_START_HOUR)}:00`,
+      duration: 1,
+    };
+  }
+
+  hour = Math.max(TIME_SLOT_START_HOUR, hour);
   return {
-    date,
+    date: startOfDay(now),
     startTime: `${pad(hour)}:00`,
     duration: 1,
   };
 }
 
-function getNextDays(n: number): Date[] {
-  const today = startOfDay(new Date());
+function getNextDays(n: number, now: Date): Date[] {
+  const today = startOfDay(now);
   return Array.from({ length: n }, (_, i) => addDays(today, i));
+}
+
+/** Next valid slot ≥ now, in HH:mm. Null when past the picker's day window. */
+function nextValidSlot(now: Date): string | null {
+  let hour = now.getHours();
+  if (now.getMinutes() > 0 || now.getSeconds() > 0) hour += 1;
+  hour = Math.max(TIME_SLOT_START_HOUR, hour);
+  if (hour > TIME_SLOT_END_HOUR) return null;
+  return `${pad(hour)}:00`;
+}
+
+/**
+ * Lightweight clock-tick: returns a Date that updates every `intervalMs`.
+ * Used to refresh date-rail labels and past-slot greying without polling
+ * on every render. Falsifies the "static memo" trap when the sheet stays
+ * open through a minute / midnight boundary.
+ */
+function useNowTick(intervalMs: number): Date {
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), intervalMs);
+    return () => clearInterval(id);
+  }, [intervalMs]);
+  return now;
 }
 
 function groupSlotsByPeriod(): Record<Period, string[]> {
@@ -313,9 +346,8 @@ function groupSlotsByPeriod(): Record<Period, string[]> {
  * For "today", that's the current hour's minute count; for future dates,
  * -1 (no greying).
  */
-function pastBoundaryFor(date: Date): number {
-  if (!isSameDay(date, new Date())) return -1;
-  const now = new Date();
+function pastBoundaryFor(date: Date, now: Date): number {
+  if (!isSameDay(date, now)) return -1;
   return now.getHours() * 60 + now.getMinutes();
 }
 
