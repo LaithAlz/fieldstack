@@ -108,6 +108,8 @@ export function VenueListScreen() {
           value={nameQuery}
           onChangeText={setNameQuery}
           placeholder="Search venues by name"
+          accessibilityLabel="Search venues"
+          accessibilityHint="Type a venue name to filter the list"
         />
         <Pressable
           onPress={() => navigation.navigate("FieldSearch")}
@@ -128,7 +130,7 @@ export function VenueListScreen() {
 
       {loading ? (
         <ListSkeleton />
-      ) : error && filteredVenues.length === 0 ? (
+      ) : error && venues.length === 0 ? (
         // Initial-load failure — retry button instead of just leaving the
         // empty state's "Change area" action, since the network is the issue
         // rather than the location.

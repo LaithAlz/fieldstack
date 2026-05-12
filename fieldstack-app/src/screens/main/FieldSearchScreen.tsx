@@ -143,18 +143,19 @@ export function FieldSearchScreen() {
     [nav]
   );
 
-  // Lowest price across the current result set. Used to badge the cheapest
-  // card. Ties go to whichever appears first in the API's ordering.
-  const bestPriceFieldId = useMemo<string | null>(() => {
-    let best: { id: string; price: number } | null = null;
-    for (const r of results) {
-      const price = r.field.price_per_hour;
-      if (price === null) continue;
-      if (best === null || price < best.price) {
-        best = { id: r.field.id, price };
-      }
-    }
-    return best?.id ?? null;
+  // Field IDs that share the lowest price in the current result set. Returns
+  // an empty set when fewer than 2 priced results exist, since "best price"
+  // doesn't mean anything against a single comparison.
+  const bestPriceFieldIds = useMemo<ReadonlySet<string>>(() => {
+    const priced = results.filter(
+      (r): r is SearchResult & { field: { price_per_hour: number } } =>
+        r.field.price_per_hour !== null
+    );
+    if (priced.length < 2) return new Set();
+    const min = Math.min(...priced.map((r) => r.field.price_per_hour));
+    return new Set(
+      priced.filter((r) => r.field.price_per_hour === min).map((r) => r.field.id)
+    );
   }, [results]);
 
   const priceLabelForChip = (() => {
@@ -350,7 +351,7 @@ export function FieldSearchScreen() {
             <FieldSearchCard
               result={item}
               userCoords={userCoords}
-              isBestPrice={item.field.id === bestPriceFieldId}
+              isBestPrice={bestPriceFieldIds.has(item.field.id)}
               onPress={() => handleCardPress(item)}
             />
           )}
