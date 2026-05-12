@@ -20,6 +20,7 @@ import {
   PreferredSlotProvider,
   usePreferredSlot,
 } from "./src/lib/preferredSlot";
+import { SavedVenuesProvider, useSavedVenues } from "./src/lib/savedVenues";
 import { getOnboardingComplete } from "./src/lib/storage";
 import { RootNavigator } from "./src/navigation/RootNavigator";
 import { colors } from "./src/theme/tokens";
@@ -123,15 +124,16 @@ export default function App() {
           <ToastProvider>
             <OnboardingProvider initialIsOnboarded={initialIsOnboarded}>
               <PreferredSlotProvider>
-                {/* Wait for the slot to hydrate so deep-links into Field
-                    /Venue detail don't seed defaults instead of the saved
-                    preference. */}
-                <SlotGate>
-                  <NavigationContainer theme={navTheme}>
-                    <RootNavigator />
-                  </NavigationContainer>
-                  <StatusBar style="auto" />
-                </SlotGate>
+                <SavedVenuesProvider>
+                  {/* Hold render until persisted state has hydrated, so deep
+                      links don't see empty defaults. */}
+                  <PersistenceGate>
+                    <NavigationContainer theme={navTheme}>
+                      <RootNavigator />
+                    </NavigationContainer>
+                    <StatusBar style="auto" />
+                  </PersistenceGate>
+                </SavedVenuesProvider>
               </PreferredSlotProvider>
             </OnboardingProvider>
           </ToastProvider>
@@ -141,8 +143,9 @@ export default function App() {
   );
 }
 
-function SlotGate({ children }: { children: React.ReactNode }) {
-  const { hydrated } = usePreferredSlot();
-  if (!hydrated) return null;
+function PersistenceGate({ children }: { children: React.ReactNode }) {
+  const { hydrated: slotHydrated } = usePreferredSlot();
+  const { hydrated: savedHydrated } = useSavedVenues();
+  if (!slotHydrated || !savedHydrated) return null;
   return <>{children}</>;
 }

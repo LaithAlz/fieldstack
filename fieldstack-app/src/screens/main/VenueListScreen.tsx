@@ -17,6 +17,7 @@ import { VenueCard } from "../../components/VenueCard";
 import { WhenPill } from "../../components/WhenPicker";
 import { useLocation } from "../../hooks/useLocation";
 import { useVenues } from "../../hooks/useVenues";
+import { useSavedVenues } from "../../lib/savedVenues";
 import {
   getCurrentCoords,
   openLocationSettings,
@@ -43,13 +44,19 @@ export function VenueListScreen() {
     setManualLocation,
   } = useLocation();
   const { venues, loading, refreshing, error, refresh } = useVenues({ coords });
+  const { saved: savedIds } = useSavedVenues();
   const [nameQuery, setNameQuery] = useState("");
 
   const filteredVenues = useMemo(() => {
     const q = nameQuery.trim().toLowerCase();
-    if (!q) return venues;
-    return venues.filter((v) => v.name.toLowerCase().includes(q));
-  }, [venues, nameQuery]);
+    const base = q ? venues.filter((v) => v.name.toLowerCase().includes(q)) : venues;
+    // Saved venues float to the top while keeping the API's relative ordering.
+    if (savedIds.size === 0) return base;
+    const saved = base.filter((v) => savedIds.has(v.id));
+    const rest = base.filter((v) => !savedIds.has(v.id));
+    return [...saved, ...rest];
+  }, [venues, nameQuery, savedIds]);
+
 
   // Surface refetch failures as a toast — keep existing data on screen.
   useEffect(() => {
@@ -157,6 +164,7 @@ export function VenueListScreen() {
             <VenueCard
               venue={item}
               userCoords={coords}
+              isSaved={savedIds.has(item.id)}
               onPress={() => handleCardPress(item)}
             />
           )}
