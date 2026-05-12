@@ -11,6 +11,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { StyleSheet, View } from "react-native";
 
 import { EVENT_BOOKING_REDIRECT_CONFIRMED, track } from "../lib/analytics";
+import { useBookingHistory } from "../lib/bookingHistory";
 import { buildBookingUrl } from "../lib/bookingUrl";
 import { formatDurationHours, formatEndTime, formatTime12h } from "../lib/datetime";
 import { lightImpact } from "../lib/haptics";
@@ -76,6 +77,7 @@ export function BookingBottomSheet({
 }: Props) {
   const colors = useTheme();
   const toast = useToast();
+  const { record: recordAttempt } = useBookingHistory();
   const sheetRef = useRef<BottomSheetModal>(null);
   const snapPoints = useMemo(() => ["62%"], []);
   const [failedUrl, setFailedUrl] = useState<string | null>(null);
@@ -126,6 +128,13 @@ export function BookingBottomSheet({
 
     try {
       await Linking.openURL(url);
+      void recordAttempt({
+        fieldId: field.id,
+        venueId: venue.id,
+        date: toIsoDate(selectedDate),
+        startTime: selectedTime,
+        duration: selectedDuration,
+      });
       onConfirm?.();
     } catch {
       setFailedUrl(url);
@@ -258,6 +267,13 @@ function SummaryRow({
 // Date helper — kept inline because only one caller; the time helpers live
 // in lib/datetime.ts where they're shared with DateTimeRangePicker.
 // ---------------------------------------------------------------------------
+
+function toIsoDate(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
 
 function formatDateLong(date: Date): string {
   const today = new Date();

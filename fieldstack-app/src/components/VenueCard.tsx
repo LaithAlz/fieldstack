@@ -26,10 +26,18 @@ type Props = {
   userCoords?: Coords;
   /** True if this venue is in the user's saved set — shows a heart overlay. */
   isSaved?: boolean;
+  /** True if the user attempted a booking at this venue in the recent window. */
+  recentlyAttempted?: boolean;
   onPress: () => void;
 };
 
-export function VenueCard({ venue, userCoords, isSaved = false, onPress }: Props) {
+export function VenueCard({
+  venue,
+  userCoords,
+  isSaved = false,
+  recentlyAttempted = false,
+  onPress,
+}: Props) {
   const colors = useTheme();
   const [photoFailed, setPhotoFailed] = useState(false);
 
@@ -54,9 +62,12 @@ export function VenueCard({ venue, userCoords, isSaved = false, onPress }: Props
 
   // Single combined a11y label so screen readers announce the card as a unit
   // rather than reading every nested element separately (REQ-F2.4).
+  // Identity first; state qualifiers and meta follow. Screen-reader users
+  // want to hear which venue this is before "saved" / "booked recently".
   const a11yLabel = [
-    isSaved ? "Saved" : null,
     venue.name,
+    isSaved ? "Saved" : null,
+    recentlyAttempted ? "Booked recently" : null,
     distance ? `${distance} away` : null,
     summary,
     priceRange,
@@ -118,6 +129,18 @@ export function VenueCard({ venue, userCoords, isSaved = false, onPress }: Props
       </View>
 
       <View style={styles.body}>
+        {recentlyAttempted ? (
+          <View
+            accessibilityElementsHidden
+            importantForAccessibility="no-hide-descendants"
+            style={[styles.recentPill, { backgroundColor: colors.brand + "1A" }]}
+          >
+            <Ionicons name="time-outline" size={10} color={colors.brand} />
+            <Text size="xs" weight="bold" style={{ color: colors.brand }}>
+              BOOKED RECENTLY
+            </Text>
+          </View>
+        ) : null}
         <View style={styles.titleRow}>
           <Text size="lg" weight="bold" numberOfLines={1} style={styles.title}>
             {venue.name}
@@ -226,5 +249,15 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: spacing.xs,
     marginTop: spacing.sm,
+  },
+  recentPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    alignSelf: "flex-start",
+    paddingHorizontal: spacing.xs + 2,
+    paddingVertical: 2,
+    borderRadius: borderRadius.sm,
+    marginBottom: spacing.xs,
   },
 });

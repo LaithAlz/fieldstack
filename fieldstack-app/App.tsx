@@ -15,6 +15,10 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { ToastProvider } from "./src/components/Toast";
 import { EVENT_APP_OPENED, track } from "./src/lib/analytics";
+import {
+  BookingHistoryProvider,
+  useBookingHistory,
+} from "./src/lib/bookingHistory";
 import { OnboardingProvider } from "./src/lib/onboardingContext";
 import {
   PreferredSlotProvider,
@@ -125,14 +129,16 @@ export default function App() {
             <OnboardingProvider initialIsOnboarded={initialIsOnboarded}>
               <PreferredSlotProvider>
                 <SavedVenuesProvider>
-                  {/* Hold render until persisted state has hydrated, so deep
-                      links don't see empty defaults. */}
-                  <PersistenceGate>
-                    <NavigationContainer theme={navTheme}>
-                      <RootNavigator />
-                    </NavigationContainer>
-                    <StatusBar style="auto" />
-                  </PersistenceGate>
+                  <BookingHistoryProvider>
+                    {/* Hold render until persisted state has hydrated, so deep
+                        links don't see empty defaults. */}
+                    <PersistenceGate>
+                      <NavigationContainer theme={navTheme}>
+                        <RootNavigator />
+                      </NavigationContainer>
+                      <StatusBar style="auto" />
+                    </PersistenceGate>
+                  </BookingHistoryProvider>
                 </SavedVenuesProvider>
               </PreferredSlotProvider>
             </OnboardingProvider>
@@ -146,6 +152,7 @@ export default function App() {
 function PersistenceGate({ children }: { children: React.ReactNode }) {
   const { hydrated: slotHydrated } = usePreferredSlot();
   const { hydrated: savedHydrated } = useSavedVenues();
-  if (!slotHydrated || !savedHydrated) return null;
+  const { hydrated: historyHydrated } = useBookingHistory();
+  if (!slotHydrated || !savedHydrated || !historyHydrated) return null;
   return <>{children}</>;
 }

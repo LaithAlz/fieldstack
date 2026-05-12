@@ -17,6 +17,7 @@ import { VenueCard } from "../../components/VenueCard";
 import { WhenPill } from "../../components/WhenPicker";
 import { useLocation } from "../../hooks/useLocation";
 import { useVenues } from "../../hooks/useVenues";
+import { useBookingHistory } from "../../lib/bookingHistory";
 import { useSavedVenues } from "../../lib/savedVenues";
 import {
   getCurrentCoords,
@@ -45,6 +46,7 @@ export function VenueListScreen() {
   } = useLocation();
   const { venues, loading, refreshing, error, refresh } = useVenues({ coords });
   const { saved: savedIds } = useSavedVenues();
+  const { venueWasRecentlyAttempted } = useBookingHistory();
   const [nameQuery, setNameQuery] = useState("");
 
   const filteredVenues = useMemo(() => {
@@ -165,6 +167,7 @@ export function VenueListScreen() {
               venue={item}
               userCoords={coords}
               isSaved={savedIds.has(item.id)}
+              recentlyAttempted={venueWasRecentlyAttempted(item.id)}
               onPress={() => handleCardPress(item)}
             />
           )}
