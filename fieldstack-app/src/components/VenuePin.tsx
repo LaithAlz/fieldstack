@@ -1,4 +1,5 @@
-import { StyleSheet, View } from "react-native";
+import { useEffect, useRef } from "react";
+import { Animated, StyleSheet } from "react-native";
 
 import { fontSize, fontWeight } from "../theme/tokens";
 import { useTheme } from "../theme/useTheme";
@@ -7,6 +8,7 @@ import { Text } from "./Text";
 
 const PIN_SIZE = 32;
 const PIN_SIZE_SELECTED = 40;
+const SCALE_RATIO = PIN_SIZE_SELECTED / PIN_SIZE;
 
 type Props = {
   /** Field count rendered inside the pin. */
@@ -19,44 +21,52 @@ type Props = {
 
 /**
  * Map marker visual for a venue. Pure presentational — the parent wraps it
- * in `react-native-maps`'s `<Marker>` (or whatever map primitive it uses)
- * and supplies the coordinates + press handler.
+ * in `react-native-maps`'s `<Marker>`. Selection animates the scale with a
+ * spring rather than jumping sizes, so the active pin reads as alive.
  */
 export function VenuePin({ fieldCount, venueName, selected = false }: Props) {
   const colors = useTheme();
-  const size = selected ? PIN_SIZE_SELECTED : PIN_SIZE;
+  const scale = useRef(new Animated.Value(selected ? SCALE_RATIO : 1)).current;
   const labelSuffix = fieldCount === 1 ? "1 field" : `${fieldCount} fields`;
 
+  useEffect(() => {
+    Animated.spring(scale, {
+      toValue: selected ? SCALE_RATIO : 1,
+      useNativeDriver: true,
+      friction: 6,
+      tension: 120,
+    }).start();
+  }, [selected, scale]);
+
   return (
-    <View
+    <Animated.View
       accessibilityRole="button"
       accessibilityLabel={`${venueName}, ${labelSuffix}`}
       accessibilityState={{ selected }}
       style={[
         styles.pin,
         {
-          width: size,
-          height: size,
-          borderRadius: size / 2,
+          width: PIN_SIZE,
+          height: PIN_SIZE,
+          borderRadius: PIN_SIZE / 2,
           backgroundColor: colors.brand,
           borderColor: selected ? colors.surface : "transparent",
           borderWidth: selected ? 3 : 0,
-          // Drop shadow lifts the pin off the map so it stays readable on
-          // satellite/dark map styles.
-          shadowOpacity: selected ? 0.25 : 0.18,
+          shadowOpacity: selected ? 0.3 : 0.18,
+          transform: [{ scale }],
         },
       ]}
     >
       <Text
         style={{
           color: "#FFFFFF",
-          fontSize: selected ? fontSize.md : fontSize.sm,
+          fontSize: fontSize.sm,
           fontWeight: fontWeight.bold,
         }}
       >
         {fieldCount}
       </Text>
-    </View>
+    </Animated.View>
   );
 }
 
