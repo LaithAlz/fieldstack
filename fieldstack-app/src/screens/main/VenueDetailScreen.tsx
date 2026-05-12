@@ -18,6 +18,7 @@ import { Skeleton } from "../../components/Skeleton";
 import { Text } from "../../components/Text";
 import { useLocation } from "../../hooks/useLocation";
 import { useVenue } from "../../hooks/useVenue";
+import { preferredSlotDate, usePreferredSlot } from "../../lib/preferredSlot";
 import { EVENT_VENUE_VIEWED, track } from "../../lib/analytics";
 import { formatDistance, haversineKm } from "../../lib/distance";
 import type { MainStackParamList } from "../../navigation/MainNavigator";
@@ -28,20 +29,30 @@ import type { Field } from "../../types/api";
 type Props = NativeStackScreenProps<MainStackParamList, "VenueDetail">;
 type Nav = NativeStackNavigationProp<MainStackParamList>;
 
-const DEFAULTS = defaultDateTimeSelections();
-
 export function VenueDetailScreen({ route }: Props) {
   const { venueId } = route.params;
   const colors = useTheme();
   const insets = useSafeAreaInsets();
   const nav = useNavigation<Nav>();
+  const { slot } = usePreferredSlot();
 
   const { data: venue, isLoading, error } = useVenue(venueId);
   const { coords } = useLocation();
 
-  const [selectedDate, setSelectedDate] = useState(DEFAULTS.date);
-  const [selectedTime, setSelectedTime] = useState(DEFAULTS.startTime);
-  const [selectedDuration, setSelectedDuration] = useState(DEFAULTS.duration);
+  const initial = useState(() => {
+    if (slot) {
+      return {
+        date: preferredSlotDate(slot),
+        startTime: slot.startTime,
+        duration: slot.duration,
+      };
+    }
+    return defaultDateTimeSelections();
+  })[0];
+
+  const [selectedDate, setSelectedDate] = useState(initial.date);
+  const [selectedTime, setSelectedTime] = useState(initial.startTime);
+  const [selectedDuration, setSelectedDuration] = useState(initial.duration);
 
   const [bookingField, setBookingField] = useState<Field | null>(null);
   const [bookingVisible, setBookingVisible] = useState(false);

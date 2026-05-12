@@ -14,6 +14,7 @@ import { Skeleton } from "../../components/Skeleton";
 import { Text } from "../../components/Text";
 import { useToast } from "../../components/Toast";
 import { VenueCard } from "../../components/VenueCard";
+import { WhenPill } from "../../components/WhenPicker";
 import { useLocation } from "../../hooks/useLocation";
 import { useVenues } from "../../hooks/useVenues";
 import {
@@ -104,6 +105,7 @@ export function VenueListScreen() {
         <Text size="xxl" weight="bold" accessibilityRole="header" style={styles.title}>
           Venues
         </Text>
+        <WhenPill />
         <SearchInput
           value={nameQuery}
           onChangeText={setNameQuery}
