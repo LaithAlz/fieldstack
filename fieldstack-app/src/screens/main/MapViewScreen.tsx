@@ -89,6 +89,10 @@ export function MapViewScreen() {
   const [selectedVenueId, setSelectedVenueId] = useState<string | null>(null);
   const sheetRef = useRef<BottomSheetModal>(null);
   const mapRef = useRef<MapView>(null);
+  // Set true right before a programmatic animateToRegion; cleared by the
+  // resulting onRegionChangeComplete. Prevents the pin-tap re-center from
+  // tripping the "Search this area" pill via the distance threshold check.
+  const isProgrammaticPanRef = useRef(false);
 
   // Drives the fade/slide-in for the "Search this area" pill.
   const searchHereOpacity = useRef(new Animated.Value(0)).current;
@@ -122,6 +126,12 @@ export function MapViewScreen() {
 
   const handleRegionChange = useCallback((region: Region) => {
     setLastRegion(region);
+    // Skip the pan-distance check when the camera just moved because of a
+    // programmatic re-center (pin tap). The user didn't pan.
+    if (isProgrammaticPanRef.current) {
+      isProgrammaticPanRef.current = false;
+      return;
+    }
     const dist = haversineKm(
       { lat: region.latitude, lng: region.longitude },
       { lat: lastSearchCenterRef.current.lat, lng: lastSearchCenterRef.current.lng }
@@ -155,6 +165,7 @@ export function MapViewScreen() {
       const cached = getLastRegion();
       const latDelta = cached?.latitudeDelta ?? DEFAULT_DELTA;
       const lngDelta = cached?.longitudeDelta ?? DEFAULT_DELTA;
+      isProgrammaticPanRef.current = true;
       mapRef.current.animateToRegion(
         {
           latitude: marker.venue.lat - latDelta * 0.2,
@@ -196,8 +207,10 @@ export function MapViewScreen() {
         showsUserLocation
         showsMyLocationButton={false}
       >
-        {markers.map((m) =>
-          m.venue.lat !== null && m.venue.lng !== null ? (
+        {markers.map((m) => {
+          if (m.venue.lat === null || m.venue.lng === null) return null;
+          const isSelected = selectedVenueId === m.venue.id;
+          return (
             <Marker
               key={m.venue.id}
               coordinate={{ latitude: m.venue.lat, longitude: m.venue.lng }}
@@ -207,16 +220,19 @@ export function MapViewScreen() {
                 e.stopPropagation();
                 handleMarkerPress(m.venue.id);
               }}
-              tracksViewChanges={false}
+              // react-native-maps snapshots markers when tracksViewChanges is
+              // false. Enable tracking only on the selected pin so its spring
+              // animation propagates to the native marker.
+              tracksViewChanges={isSelected}
             >
               <VenuePin
                 fieldCount={m.fieldCount}
                 venueName={m.venue.name}
-                selected={selectedVenueId === m.venue.id}
+                selected={isSelected}
               />
             </Marker>
-          ) : null
-        )}
+          );
+        })}
       </MapView>
 
       {/* List view button — top-left */}
