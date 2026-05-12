@@ -2,13 +2,14 @@ import { Ionicons } from "@expo/vector-icons";
 import type { BottomSheetModal } from "@gorhom/bottom-sheet";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { FlatList, Pressable, RefreshControl, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { EmptyState } from "../../components/EmptyState";
 import { LocationPickerSheet } from "../../components/LocationPickerSheet";
 import { LocationPill } from "../../components/LocationPill";
+import { SearchInput } from "../../components/SearchInput";
 import { Skeleton } from "../../components/Skeleton";
 import { Text } from "../../components/Text";
 import { useToast } from "../../components/Toast";
@@ -41,6 +42,13 @@ export function VenueListScreen() {
     setManualLocation,
   } = useLocation();
   const { venues, loading, refreshing, error, refresh } = useVenues({ coords });
+  const [nameQuery, setNameQuery] = useState("");
+
+  const filteredVenues = useMemo(() => {
+    const q = nameQuery.trim().toLowerCase();
+    if (!q) return venues;
+    return venues.filter((v) => v.name.toLowerCase().includes(q));
+  }, [venues, nameQuery]);
 
   // Surface refetch failures as a toast — keep existing data on screen.
   useEffect(() => {
@@ -93,31 +101,34 @@ export function VenueListScreen() {
           permissionStatus={permissionStatus}
           onPress={openPicker}
         />
-        <View style={styles.titleRow}>
-          <Text size="xxl" weight="bold" accessibilityRole="header" style={styles.title}>
-            Venues
+        <Text size="xxl" weight="bold" accessibilityRole="header" style={styles.title}>
+          Venues
+        </Text>
+        <SearchInput
+          value={nameQuery}
+          onChangeText={setNameQuery}
+          placeholder="Search venues by name"
+        />
+        <Pressable
+          onPress={() => navigation.navigate("FieldSearch")}
+          accessibilityRole="button"
+          accessibilityLabel="Filter by surface, size, or price"
+          hitSlop={spacing.xs}
+          style={({ pressed }) => [
+            styles.filterLink,
+            { opacity: pressed ? 0.6 : 1 },
+          ]}
+        >
+          <Ionicons name="options-outline" size={16} color={colors.brand} />
+          <Text size="sm" weight="medium" style={{ color: colors.brand }}>
+            Filter by surface, size, or price
           </Text>
-          <Pressable
-            onPress={() => navigation.navigate("FieldSearch")}
-            accessibilityRole="button"
-            accessibilityLabel="Search fields"
-            hitSlop={spacing.sm}
-            style={({ pressed }) => [
-              styles.searchButton,
-              {
-                backgroundColor: colors.surfaceSecondary,
-                opacity: pressed ? 0.7 : 1,
-              },
-            ]}
-          >
-            <Ionicons name="search" size={20} color={colors.textPrimary} />
-          </Pressable>
-        </View>
+        </Pressable>
       </View>
 
       {loading ? (
         <ListSkeleton />
-      ) : error && venues.length === 0 ? (
+      ) : error && filteredVenues.length === 0 ? (
         // Initial-load failure — retry button instead of just leaving the
         // empty state's "Change area" action, since the network is the issue
         // rather than the location.
@@ -130,13 +141,13 @@ export function VenueListScreen() {
         />
       ) : (
         <FlatList<VenueWithFields>
-          data={venues}
+          data={filteredVenues}
           keyExtractor={(v) => v.id}
           contentContainerStyle={[
             styles.list,
             // Pad the bottom so the last card doesn't hug the home indicator.
             { paddingBottom: insets.bottom + spacing.xl },
-            venues.length === 0 && styles.listEmpty,
+            filteredVenues.length === 0 && styles.listEmpty,
           ]}
           renderItem={({ item }) => (
             <VenueCard
@@ -147,35 +158,45 @@ export function VenueListScreen() {
           )}
           ItemSeparatorComponent={() => <View style={{ height: spacing.md }} />}
           ListEmptyComponent={
-            <EmptyState
-              icon={permissionStatus === "denied" ? "lock-closed-outline" : "location-outline"}
-              title={
-                permissionStatus === "denied"
-                  ? "Location is off"
-                  : coords
-                    ? "Nothing nearby"
-                    : "Pick an area to start"
-              }
-              description={
-                permissionStatus === "denied"
-                  ? "Enable location in Settings to see fields near you, or pick a neighbourhood manually."
-                  : coords
-                    ? "We didn't find any fields in this area. Try another neighbourhood."
-                    : "We need a location to show you fields. Pick a neighbourhood or share your location."
-              }
-              actionLabel={
-                permissionStatus === "denied"
-                  ? "Open settings"
-                  : coords
-                    ? "Change area"
-                    : "Pick an area"
-              }
-              onAction={
-                permissionStatus === "denied"
-                  ? () => void openLocationSettings()
-                  : openPicker
-              }
-            />
+            nameQuery.trim().length > 0 ? (
+              <EmptyState
+                icon="search-outline"
+                title={`No venues match "${nameQuery.trim()}"`}
+                description="Try a different name or clear the search."
+                actionLabel="Clear search"
+                onAction={() => setNameQuery("")}
+              />
+            ) : (
+              <EmptyState
+                icon={permissionStatus === "denied" ? "lock-closed-outline" : "location-outline"}
+                title={
+                  permissionStatus === "denied"
+                    ? "Location is off"
+                    : coords
+                      ? "Nothing nearby"
+                      : "Pick an area to start"
+                }
+                description={
+                  permissionStatus === "denied"
+                    ? "Enable location in Settings to see fields near you, or pick a neighbourhood manually."
+                    : coords
+                      ? "We didn't find any fields in this area. Try another neighbourhood."
+                      : "We need a location to show you fields. Pick a neighbourhood or share your location."
+                }
+                actionLabel={
+                  permissionStatus === "denied"
+                    ? "Open settings"
+                    : coords
+                      ? "Change area"
+                      : "Pick an area"
+                }
+                onAction={
+                  permissionStatus === "denied"
+                    ? () => void openLocationSettings()
+                    : openPicker
+                }
+              />
+            )
           }
           refreshControl={
             <RefreshControl
@@ -227,20 +248,15 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.md,
     gap: spacing.sm,
   },
-  titleRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
   title: {
     letterSpacing: -0.5,
   },
-  searchButton: {
-    width: 40,
-    height: 40,
-    borderRadius: borderRadius.xl,
+  filterLink: {
+    flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
+    alignSelf: "flex-start",
+    gap: spacing.xs,
+    paddingVertical: spacing.xs,
   },
   list: {
     paddingHorizontal: spacing.lg,

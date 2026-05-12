@@ -31,6 +31,8 @@ type Props = {
   result: SearchResult;
   /** Optional — when provided alongside venue lat/lng, distance is rendered. */
   userCoords?: Coords;
+  /** True when this card is the lowest-price result in the current list. */
+  isBestPrice?: boolean;
   onPress: () => void;
 };
 
@@ -39,7 +41,7 @@ type Props = {
  * computed inline only when both `userCoords` and venue coords are present;
  * the parent controls navigation and analytics on press.
  */
-export function FieldSearchCard({ result, userCoords, onPress }: Props) {
+export function FieldSearchCard({ result, userCoords, isBestPrice, onPress }: Props) {
   const colors = useTheme();
   const [photoFailed, setPhotoFailed] = useState(false);
 
@@ -59,6 +61,7 @@ export function FieldSearchCard({ result, userCoords, onPress }: Props) {
   const a11yLabel = [
     field.name,
     `at ${venue.name}`,
+    isBestPrice ? "best price in results" : null,
     priceText ? `${priceText.replace("/hr", " per hour")}` : null,
   ]
     .filter(Boolean)
@@ -121,11 +124,25 @@ export function FieldSearchCard({ result, userCoords, onPress }: Props) {
           ) : (
             <View />
           )}
-          {priceText ? (
-            <Text size="md" weight="medium" style={{ color: colors.brand }}>
-              {priceText}
-            </Text>
-          ) : null}
+          <View style={styles.priceWrap}>
+            {isBestPrice ? (
+              <View
+                style={[
+                  styles.bestPriceBadge,
+                  { backgroundColor: colors.brand + "1A", borderColor: colors.brand },
+                ]}
+              >
+                <Text size="xs" weight="bold" style={{ color: colors.brand }}>
+                  BEST PRICE
+                </Text>
+              </View>
+            ) : null}
+            {priceText ? (
+              <Text size="md" weight="medium" style={{ color: colors.brand }}>
+                {priceText}
+              </Text>
+            ) : null}
+          </View>
         </View>
       </View>
     </Pressable>
@@ -174,5 +191,16 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     marginTop: spacing.xs,
     gap: spacing.sm,
+  },
+  priceWrap: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.xs,
+  },
+  bestPriceBadge: {
+    paddingHorizontal: spacing.xs + 2,
+    paddingVertical: 2,
+    borderRadius: borderRadius.sm,
+    borderWidth: StyleSheet.hairlineWidth,
   },
 });
