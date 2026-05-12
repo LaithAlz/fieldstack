@@ -1,7 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Pressable, StyleSheet, TextInput, View } from "react-native";
 
-import { borderRadius, fontSize, spacing } from "../theme/tokens";
+import { borderRadius, fontFamily, fontSize, spacing } from "../theme/tokens";
 import { useTheme } from "../theme/useTheme";
 
 import { Text } from "./Text";
@@ -115,6 +115,7 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
+    fontFamily: fontFamily.regular,
     fontSize: fontSize.md,
     paddingVertical: 0,
   },
