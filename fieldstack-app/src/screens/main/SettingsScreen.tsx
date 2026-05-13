@@ -1,7 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import * as Clipboard from "expo-clipboard";
 import Constants from "expo-constants";
 import * as Linking from "expo-linking";
 import { Alert, Pressable, ScrollView, StyleSheet, View } from "react-native";
@@ -9,6 +9,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Text } from "../../components/Text";
 import { useToast } from "../../components/Toast";
+import { useAppReset } from "../../lib/appReset";
 import type { MeStackParamList } from "../../navigation/MainNavigator";
 import { borderRadius, spacing } from "../../theme/tokens";
 import { useTheme } from "../../theme/useTheme";
@@ -25,6 +26,7 @@ export function SettingsScreen() {
   const insets = useSafeAreaInsets();
   const nav = useNavigation<Nav>();
   const toast = useToast();
+  const resetApp = useAppReset();
 
   const version = Constants.expoConfig?.version ?? "1.0.0";
 
@@ -41,7 +43,10 @@ export function SettingsScreen() {
     try {
       await Linking.openURL(url);
     } catch {
-      toast.show("No mail app configured.", { type: "error" });
+      // No mail client — at least give the user the address so they can
+      // send from somewhere else.
+      await Clipboard.setStringAsync(SUPPORT_EMAIL).catch(() => undefined);
+      toast.show(`Email copied: ${SUPPORT_EMAIL}`, { type: "info" });
     }
   };
 
@@ -56,10 +61,11 @@ export function SettingsScreen() {
           style: "destructive",
           onPress: async () => {
             try {
-              await AsyncStorage.clear();
-              toast.show("Cleared. Relaunch the app to start fresh.", {
-                type: "success",
-              });
+              // useAppReset coordinates the four provider clear()s — this
+              // updates both AsyncStorage and the in-memory state so the
+              // user sees the wipe land immediately, no relaunch needed.
+              await resetApp();
+              toast.show("Cleared.", { type: "success" });
             } catch {
               toast.show("Couldn't clear data.", { type: "error" });
             }
@@ -178,6 +184,8 @@ function Row({
         name={icon}
         size={20}
         color={destructive ? colors.danger : colors.textSecondary}
+        accessibilityElementsHidden
+        importantForAccessibility="no-hide-descendants"
       />
       <Text
         size="md"
@@ -189,7 +197,13 @@ function Row({
       >
         {label}
       </Text>
-      <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
+      <Ionicons
+        name="chevron-forward"
+        size={16}
+        color={colors.textTertiary}
+        accessibilityElementsHidden
+        importantForAccessibility="no-hide-descendants"
+      />
     </Pressable>
   );
 }
