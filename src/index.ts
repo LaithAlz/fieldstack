@@ -4,6 +4,7 @@ import cors from "@fastify/cors";
 import { ZodError } from "zod";
 import { ApiError } from "./lib/errors.js";
 import { redis } from "./lib/redis.js";
+import { verifyJWT } from "./lib/verifyJWT.js";
 import { venuesRoutes } from "./routes/venues.js";
 import { fieldsRoutes } from "./routes/fields.js";
 import { searchRoutes } from "./routes/search.js";
@@ -22,6 +23,17 @@ const app = Fastify({
 });
 
 await app.register(cors, { origin: true });
+
+// Global JWT preHandler. Permissive: attaches `req.user` when the
+// Authorization bearer token validates, leaves it null otherwise. Public
+// reads (venues / fields / search) keep working for guests; future
+// user-scoped endpoints opt in by checking `req.user` themselves.
+//
+// No server-side auth routes exist today (the client talks to Supabase
+// directly for sign-in / sign-up / sign-out), so the "skip auth routes"
+// exemption is moot. If we ever add /auth/* on this server, exempt them
+// explicitly via app.register with a scoped preHandler instead.
+app.addHook("preHandler", verifyJWT);
 
 // Centralized error → response shape. Routes throw ApiError for known cases;
 // Zod parse failures bubble up as ZodError; anything else is a 500.
