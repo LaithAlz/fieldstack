@@ -18,6 +18,7 @@ import { VenueCard } from "../../components/VenueCard";
 import { WhenPill } from "../../components/WhenPicker";
 import { useLocation } from "../../hooks/useLocation";
 import { useVenues } from "../../hooks/useVenues";
+import { lightImpact } from "../../lib/haptics";
 import { useBookingHistory } from "../../lib/bookingHistory";
 import { useRecentlyViewed } from "../../lib/recentlyViewed";
 import { useSavedVenues } from "../../lib/savedVenues";
@@ -46,7 +47,14 @@ export function VenueListScreen() {
     permissionStatus,
     setManualLocation,
   } = useLocation();
-  const { venues, loading, refreshing, error, refresh } = useVenues({ coords });
+  const { venues, loading, refreshing, error, refresh: refetchVenues } = useVenues({ coords });
+
+  // Tactile feedback when the user triggers a refresh — matches standard
+  // iOS/Android pull-to-refresh feel. Respects Reduce Motion via lightImpact.
+  const refresh = useCallback(async () => {
+    lightImpact();
+    await refetchVenues();
+  }, [refetchVenues]);
   const { saved: savedIds } = useSavedVenues();
   const { venueWasRecentlyAttempted } = useBookingHistory();
   const { recent: recentIds } = useRecentlyViewed();
