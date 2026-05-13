@@ -114,9 +114,32 @@ export function VenueListScreen() {
           permissionStatus={permissionStatus}
           onPress={openPicker}
         />
-        <Text size="xxl" weight="bold" accessibilityRole="header" style={styles.title}>
-          Venues
-        </Text>
+        <View style={styles.titleRow}>
+          <Text
+            size="xxl"
+            weight="bold"
+            accessibilityRole="header"
+            numberOfLines={1}
+            style={styles.title}
+          >
+            Venues
+          </Text>
+          <Pressable
+            onPress={() => navigation.navigate("MapView")}
+            accessibilityRole="button"
+            accessibilityLabel="Map view"
+            hitSlop={spacing.sm}
+            style={({ pressed }) => [
+              styles.mapButton,
+              {
+                backgroundColor: colors.surfaceSecondary,
+                opacity: pressed ? 0.7 : 1,
+              },
+            ]}
+          >
+            <Ionicons name="map-outline" size={20} color={colors.textPrimary} />
+          </Pressable>
+        </View>
         <WhenPill />
         <SearchInput
           value={nameQuery}
@@ -277,8 +300,21 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.md,
     gap: spacing.sm,
   },
+  titleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
   title: {
+    flexShrink: 1,
     letterSpacing: -0.5,
+  },
+  mapButton: {
+    width: 40,
+    height: 40,
+    borderRadius: borderRadius.xl,
+    alignItems: "center",
+    justifyContent: "center",
   },
   filterLink: {
     flexDirection: "row",
