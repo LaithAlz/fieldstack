@@ -50,10 +50,31 @@ create policy "users delete own saved venues"
 create table if not exists user_preferred_slot (
   user_id    uuid primary key references auth.users(id) on delete cascade,
   slot_date  date not null,
-  start_time text not null,
+  -- HH:mm 24-hour. Regex enforced because text columns don't otherwise
+  -- prevent garbage from corrupting the format.
+  start_time text not null check (start_time ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'),
   duration   numeric(3, 1) not null check (duration > 0 and duration <= 6),
   updated_at timestamptz not null default now()
 );
+
+-- updated_at maintenance — default only fires on insert. Trigger keeps it
+-- fresh on every UPDATE without the client having to pass it explicitly.
+create or replace function set_user_preferred_slot_updated_at()
+returns trigger
+language plpgsql
+as $$
+begin
+  new.updated_at := now();
+  return new;
+end;
+$$;
+
+drop trigger if exists trg_user_preferred_slot_updated_at
+  on user_preferred_slot;
+create trigger trg_user_preferred_slot_updated_at
+  before update on user_preferred_slot
+  for each row
+  execute function set_user_preferred_slot_updated_at();
 
 alter table user_preferred_slot enable row level security;
 
@@ -89,7 +110,7 @@ create table if not exists user_booking_history (
   venue_id     uuid not null references venues(id) on delete cascade,
   attempted_at timestamptz not null default now(),
   slot_date    date not null,
-  start_time   text not null,
+  start_time   text not null check (start_time ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'),
   duration     numeric(3, 1) not null check (duration > 0 and duration <= 6)
 );
 
