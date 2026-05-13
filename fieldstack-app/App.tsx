@@ -13,6 +13,7 @@ import { useColorScheme } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
+import { ErrorBoundary } from "./src/components/ErrorBoundary";
 import { ToastProvider } from "./src/components/Toast";
 import { EVENT_APP_OPENED, track } from "./src/lib/analytics";
 import {
@@ -128,28 +129,34 @@ export default function App() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
-        <BottomSheetModalProvider>
-          <ToastProvider>
-            <OnboardingProvider initialIsOnboarded={initialIsOnboarded}>
-              <PreferredSlotProvider>
-                <SavedVenuesProvider>
-                  <BookingHistoryProvider>
-                    <RecentlyViewedProvider>
-                      {/* Hold render until persisted state has hydrated, so
-                          deep links don't see empty defaults. */}
-                      <PersistenceGate>
-                        <NavigationContainer theme={navTheme}>
-                          <RootNavigator />
-                        </NavigationContainer>
-                        <StatusBar style="auto" />
-                      </PersistenceGate>
-                    </RecentlyViewedProvider>
-                  </BookingHistoryProvider>
-                </SavedVenuesProvider>
-              </PreferredSlotProvider>
-            </OnboardingProvider>
-          </ToastProvider>
-        </BottomSheetModalProvider>
+        {/* ErrorBoundary sits inside SafeAreaProvider (so the fallback
+            respects notches) but outside everything else, so any crash in
+            providers / nav / screens lands on the friendly screen instead
+            of a white blank. */}
+        <ErrorBoundary>
+          <BottomSheetModalProvider>
+            <ToastProvider>
+              <OnboardingProvider initialIsOnboarded={initialIsOnboarded}>
+                <PreferredSlotProvider>
+                  <SavedVenuesProvider>
+                    <BookingHistoryProvider>
+                      <RecentlyViewedProvider>
+                        {/* Hold render until persisted state has hydrated,
+                            so deep links don't see empty defaults. */}
+                        <PersistenceGate>
+                          <NavigationContainer theme={navTheme}>
+                            <RootNavigator />
+                          </NavigationContainer>
+                          <StatusBar style="auto" />
+                        </PersistenceGate>
+                      </RecentlyViewedProvider>
+                    </BookingHistoryProvider>
+                  </SavedVenuesProvider>
+                </PreferredSlotProvider>
+              </OnboardingProvider>
+            </ToastProvider>
+          </BottomSheetModalProvider>
+        </ErrorBoundary>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );
