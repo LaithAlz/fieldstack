@@ -28,6 +28,11 @@ await app.register(cors, { origin: true });
 // Authorization bearer token validates, leaves it null otherwise. Public
 // reads (venues / fields / search) keep working for guests; future
 // user-scoped endpoints opt in by checking `req.user` themselves.
+//
+// No server-side auth routes exist today (the client talks to Supabase
+// directly for sign-in / sign-up / sign-out), so the "skip auth routes"
+// exemption is moot. If we ever add /auth/* on this server, exempt them
+// explicitly via app.register with a scoped preHandler instead.
 app.addHook("preHandler", verifyJWT);
 
 // Centralized error → response shape. Routes throw ApiError for known cases;

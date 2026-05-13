@@ -45,8 +45,9 @@ export async function verifyJWT(
     if (error || !data.user) return;
     req.user = data.user;
   } catch (err) {
-    // Network failures here shouldn't kill the request; the route runs
-    // unauthenticated. Log so we can spot recurring outages.
-    req.log.warn({ err }, "verifyJWT: supabase.auth.getUser threw");
+    // Network failures shouldn't kill the request; the route runs
+    // unauthenticated. Debug-level so a Supabase outage doesn't spam paged
+    // logs — warn is reserved for unexpected conditions.
+    req.log.debug({ err }, "verifyJWT: supabase.auth.getUser threw");
   }
 }
