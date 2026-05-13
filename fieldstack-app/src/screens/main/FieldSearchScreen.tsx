@@ -13,61 +13,24 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { EmptyState } from "../../components/EmptyState";
 import { FieldSearchCard } from "../../components/FieldSearchCard";
-import { FilterBottomSheet, type FilterOption } from "../../components/FilterBottomSheet";
-import { FilterChip } from "../../components/FilterChip";
+import { FilterChipBar } from "../../components/FilterChipBar";
 import { SearchInput } from "../../components/SearchInput";
 import { Skeleton } from "../../components/Skeleton";
 import { Text } from "../../components/Text";
 import { useFieldSearch } from "../../hooks/useFieldSearch";
 import { useLocation } from "../../hooks/useLocation";
+import {
+  PRICE_OPTIONS,
+  priceMaxToBucket,
+  SIZE_OPTIONS,
+  SURFACE_OPTIONS,
+} from "../../lib/filters";
 import type { MainStackParamList } from "../../navigation/MainNavigator";
 import { borderRadius, spacing } from "../../theme/tokens";
 import { useTheme } from "../../theme/useTheme";
-import type { FieldSize, FieldSurface, SearchResult } from "../../types/api";
+import type { SearchResult } from "../../types/api";
 
 type Nav = NativeStackNavigationProp<MainStackParamList, "FieldSearch">;
-
-// ---------- Filter option definitions ---------------------------------------
-
-const SURFACE_OPTIONS: FilterOption<FieldSurface>[] = [
-  { id: "turf", label: "Turf" },
-  { id: "grass", label: "Grass" },
-  { id: "concrete", label: "Concrete" },
-  { id: "indoor", label: "Indoor" },
-];
-
-const SIZE_OPTIONS: FilterOption<FieldSize>[] = [
-  { id: "5v5", label: "5-a-side" },
-  { id: "7v7", label: "7-a-side" },
-  { id: "11v11", label: "11-a-side" },
-];
-
-// Price encoded as the upper bound to keep `priceMax` semantics on the wire.
-// `"any"` is the no-filter sentinel; `"120plus"` is also a no-filter request
-// today (the API doesn't accept a min) — flagged in the inline comment.
-type PriceBucket = "any" | "under80" | "to120" | "120plus";
-
-const PRICE_OPTIONS: FilterOption<PriceBucket>[] = [
-  { id: "any", label: "Any price" },
-  { id: "under80", label: "Under $80" },
-  { id: "to120", label: "$80–$120" },
-  { id: "120plus", label: "$120+" },
-];
-
-function bucketToPriceMax(bucket: PriceBucket): number | null {
-  if (bucket === "under80") return 80;
-  if (bucket === "to120") return 120;
-  // "any" and "120plus" both clear the cap. "$120+" should ideally pair with
-  // a price_min filter — backend doesn't support that yet, so it behaves as
-  // "any" until the API grows the field.
-  return null;
-}
-
-function priceMaxToBucket(priceMax: number | null): PriceBucket {
-  if (priceMax === 80) return "under80";
-  if (priceMax === 120) return "to120";
-  return "any";
-}
 
 const SKELETON_COUNT = 5;
 const SKELETON_HEIGHT = 96;
@@ -109,15 +72,6 @@ export function FieldSearchScreen() {
     seededRef.current = true;
   }, [locationLoading, userLocationLabel, userCoords, location.text.length, setLocation]);
 
-  // Filter sheet visibility — one boolean per filter group rather than a
-  // tagged-union "which sheet is open" so the type-narrowed `mode` props on
-  // FilterBottomSheet stay clean.
-  const [surfaceOpen, setSurfaceOpen] = useState(false);
-  const [sizeOpen, setSizeOpen] = useState(false);
-  const [priceOpen, setPriceOpen] = useState(false);
-
-  const priceBucket = priceMaxToBucket(filters.priceMax);
-
   const activeFilterCount =
     filters.surface.length +
     filters.size.length +
@@ -158,12 +112,6 @@ export function FieldSearchScreen() {
     );
   }, [results]);
 
-  const priceLabelForChip = (() => {
-    if (priceBucket === "any") return "Price";
-    const opt = PRICE_OPTIONS.find((o) => o.id === priceBucket);
-    return opt ? opt.label : "Price";
-  })();
-
   return (
     <View style={[styles.root, { backgroundColor: colors.surface }]}>
       {/* ---------- Sticky top bar ---------- */}
@@ -177,64 +125,13 @@ export function FieldSearchScreen() {
           },
         ]}
       >
-        <View style={styles.topRow}>
-          <View style={styles.searchWrap}>
-            <SearchInput
-              value={location.text}
-              onChangeText={(t) => setLocation(t)}
-              error={locationError?.message ?? null}
-            />
-          </View>
-          <Pressable
-            onPress={() => setSurfaceOpen(true)}
-            accessibilityRole="button"
-            accessibilityLabel="Filters"
-            hitSlop={spacing.sm}
-            style={({ pressed }) => [
-              styles.filterIcon,
-              {
-                backgroundColor: hasAnyFilter
-                  ? colors.brand
-                  : colors.surfaceSecondary,
-                opacity: pressed ? 0.7 : 1,
-              },
-            ]}
-          >
-            <Ionicons
-              name="options-outline"
-              size={20}
-              color={hasAnyFilter ? "#FFFFFF" : colors.textPrimary}
-            />
-          </Pressable>
-        </View>
+        <SearchInput
+          value={location.text}
+          onChangeText={(t) => setLocation(t)}
+          error={locationError?.message ?? null}
+        />
 
-        {/* Inline filter chips */}
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.chips}
-        >
-          <FilterChip
-            label={filters.surface.length > 0 ? "Surface" : "Surface"}
-            isActive={filters.surface.length > 0}
-            count={filters.surface.length}
-            onPress={() => setSurfaceOpen(true)}
-            onClear={() => setFilter("surface", [])}
-          />
-          <FilterChip
-            label="Size"
-            isActive={filters.size.length > 0}
-            count={filters.size.length}
-            onPress={() => setSizeOpen(true)}
-            onClear={() => setFilter("size", [])}
-          />
-          <FilterChip
-            label={priceLabelForChip}
-            isActive={priceBucket !== "any"}
-            onPress={() => setPriceOpen(true)}
-            onClear={() => setFilter("priceMax", null)}
-          />
-        </ScrollView>
+        <FilterChipBar filters={filters} setFilter={setFilter} />
 
         {/* Count + clear-all row */}
         <View style={styles.countRow}>
@@ -322,7 +219,11 @@ export function FieldSearchScreen() {
                 ))}
                 {filters.priceMax !== null ? (
                   <RemoveChip
-                    label={PRICE_OPTIONS.find((o) => o.id === priceBucket)?.label ?? `Under $${filters.priceMax}`}
+                    label={
+                      PRICE_OPTIONS.find(
+                        (o) => o.id === priceMaxToBucket(filters.priceMax)
+                      )?.label ?? `Under $${filters.priceMax}`
+                    }
                     onPress={() => setFilter("priceMax", null)}
                   />
                 ) : null}
@@ -394,34 +295,6 @@ export function FieldSearchScreen() {
         </Pressable>
       </View>
 
-      {/* ---------- Filter sheets ---------- */}
-      <FilterBottomSheet
-        visible={surfaceOpen}
-        title="Surface"
-        mode="multi"
-        options={SURFACE_OPTIONS}
-        selected={filters.surface}
-        onSelect={(next) => setFilter("surface", next)}
-        onDismiss={() => setSurfaceOpen(false)}
-      />
-      <FilterBottomSheet
-        visible={sizeOpen}
-        title="Size"
-        mode="multi"
-        options={SIZE_OPTIONS}
-        selected={filters.size}
-        onSelect={(next) => setFilter("size", next)}
-        onDismiss={() => setSizeOpen(false)}
-      />
-      <FilterBottomSheet
-        visible={priceOpen}
-        title="Price"
-        mode="single"
-        options={PRICE_OPTIONS}
-        selected={priceBucket}
-        onSelect={(next) => setFilter("priceMax", bucketToPriceMax(next ?? "any"))}
-        onDismiss={() => setPriceOpen(false)}
-      />
     </View>
   );
 }
@@ -472,26 +345,6 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.sm,
     borderBottomWidth: StyleSheet.hairlineWidth,
     gap: spacing.sm,
-  },
-  topRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.sm,
-  },
-  searchWrap: {
-    flex: 1,
-  },
-  filterIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: borderRadius.lg,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  chips: {
-    flexDirection: "row",
-    gap: spacing.sm,
-    paddingVertical: spacing.xs,
   },
   countRow: {
     flexDirection: "row",
