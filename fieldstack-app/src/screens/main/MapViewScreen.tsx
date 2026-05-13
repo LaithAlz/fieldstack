@@ -37,17 +37,32 @@ const DEFAULT_TORONTO: Region = {
 };
 
 // One pin per venue, even when the venue has multiple matching fields.
+// `minPrice` is the lowest per-hour price across that venue's priced fields,
+// or null when no field at the venue has a price.
 type VenueMarker = {
   venue: SearchResult["venue"];
   fieldCount: number;
+  minPrice: number | null;
 };
 
 function groupByVenue(results: SearchResult[]): VenueMarker[] {
   const map = new Map<string, VenueMarker>();
   for (const r of results) {
+    const price = r.field.price_per_hour;
     const existing = map.get(r.venue.id);
-    if (existing) existing.fieldCount += 1;
-    else map.set(r.venue.id, { venue: r.venue, fieldCount: 1 });
+    if (existing) {
+      existing.fieldCount += 1;
+      if (price !== null) {
+        existing.minPrice =
+          existing.minPrice === null ? price : Math.min(existing.minPrice, price);
+      }
+    } else {
+      map.set(r.venue.id, {
+        venue: r.venue,
+        fieldCount: 1,
+        minPrice: price,
+      });
+    }
   }
   return Array.from(map.values());
 }
@@ -211,9 +226,18 @@ export function MapViewScreen() {
         {markers.map((m) => {
           if (m.venue.lat === null || m.venue.lng === null) return null;
           const isSelected = selectedVenueId === m.venue.id;
+          // Treat free / zero-price fields as "no price" so the pin falls back
+          // to a count circle instead of rendering "$0", which reads as a
+          // missing-data glitch.
+          const hasPositivePrice = m.minPrice !== null && m.minPrice > 0;
+          // Encode the mode + price into the key so react-native-maps forces
+          // a marker remount (and a fresh bitmap snapshot) when filters flip
+          // a venue's price or count. Without this, `tracksViewChanges` stays
+          // false on non-selected pins and the stale snapshot persists.
+          const markerKey = `${m.venue.id}-${hasPositivePrice ? `p${m.minPrice}` : `c${m.fieldCount}`}`;
           return (
             <Marker
-              key={m.venue.id}
+              key={markerKey}
               coordinate={{ latitude: m.venue.lat, longitude: m.venue.lng }}
               onPress={(e) => {
                 // Without stopPropagation the MapView's onPress also fires
@@ -226,11 +250,22 @@ export function MapViewScreen() {
               // animation propagates to the native marker.
               tracksViewChanges={isSelected}
             >
-              <VenuePin
-                fieldCount={m.fieldCount}
-                venueName={m.venue.name}
-                selected={isSelected}
-              />
+              {hasPositivePrice && m.minPrice !== null ? (
+                <VenuePin
+                  mode="price"
+                  price={m.minPrice}
+                  fieldCount={m.fieldCount}
+                  venueName={m.venue.name}
+                  selected={isSelected}
+                />
+              ) : (
+                <VenuePin
+                  mode="count"
+                  fieldCount={m.fieldCount}
+                  venueName={m.venue.name}
+                  selected={isSelected}
+                />
+              )}
             </Marker>
           );
         })}
