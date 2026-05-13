@@ -166,18 +166,11 @@ export function MapViewScreen() {
     });
   }, [selectedIndex]);
 
-  // Default-select the first marker when results land so the centered card
-  // matches the highlighted pin from frame one (Airbnb pattern). Re-runs only
-  // when the first marker's identity changes — not on every result reorder.
-  const firstMarkerId = markers[0]?.venue.id;
-  useEffect(() => {
-    if (firstMarkerId && selectedVenueId === null) {
-      setSelectedVenueId(firstMarkerId);
-    }
-    // selectedVenueId intentionally excluded so user-cleared selection
-    // (handleMapPress) doesn't snap back to the first card.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [firstMarkerId]);
+  // Note: previously we default-selected the first marker on results-load
+  // for visual parity with Airbnb's carousel. With clustering on at city
+  // zoom most pins live inside a cluster bubble — selecting one would show
+  // a card as "active" with no visible pin anchor on the map, which reads
+  // as a glitch. Let the user pick by swipe / tap instead.
 
   const handleRegionChange = useCallback((region: Region) => {
     setLastRegion(region);
@@ -286,11 +279,21 @@ export function MapViewScreen() {
         showsUserLocation
         showsMyLocationButton={false}
         clusterColor={colors.brand}
-        clusterTextColor={"#FFFFFF"}
+        // surface is white in light mode (vs green-700 brand: ~5:1 — passes
+        // AA) and near-black in dark mode (vs green-500 brand: ~10:1). White
+        // alone fails AA against the dark-mode brand at 2.15:1.
+        clusterTextColor={colors.surface}
         // Bump min before clustering kicks in — single pins read fine; pairs
         // also OK; 3+ overlap-prone clusters benefit from the count circle.
         minPoints={3}
         radius={50}
+        onClusterPress={() => {
+          // Cluster tap → lib calls fitToCoordinates → our
+          // onRegionChangeComplete fires. Flag it as programmatic so the
+          // "Search this area" pill doesn't flash from a fit-induced pan.
+          programmaticScrollRef.current = false;
+          isProgrammaticPanRef.current = true;
+        }}
       >
         {markers.map((m) => {
           if (m.venue.lat === null || m.venue.lng === null) return null;
