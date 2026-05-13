@@ -18,6 +18,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { FilterChipBar } from "../../components/FilterChipBar";
 import { ResultCountPill } from "../../components/ResultCountPill";
+import { SearchInput } from "../../components/SearchInput";
 import { Text } from "../../components/Text";
 import { VenueMapCard, VENUE_MAP_CARD_WIDTH } from "../../components/VenueMapCard";
 import { VenuePin } from "../../components/VenuePin";
@@ -84,7 +85,15 @@ export function MapViewScreen() {
   const nav = useNavigation<Nav>();
 
   const { coords: userCoords } = useLocation();
-  const { results, isLoading, filters, setFilter, setLocation } = useFieldSearch();
+  const {
+    results,
+    isLoading,
+    filters,
+    location,
+    locationError,
+    setFilter,
+    setLocation,
+  } = useFieldSearch();
 
   // Initial region: prior session position if we have one, else user coords,
   // else downtown Toronto.
@@ -343,12 +352,20 @@ export function MapViewScreen() {
         })}
       </ClusteredMapView>
 
-      {/* Top overlay: list-view icon + filter chips */}
+      {/* Top overlay: search bar (with list-view icon) + filter chips */}
       <View
         pointerEvents="box-none"
         style={[styles.topOverlay, { top: insets.top + spacing.sm }]}
       >
-        <View style={styles.topRow} pointerEvents="box-none">
+        <View style={styles.searchRow} pointerEvents="box-none">
+          <View style={styles.searchWrap} pointerEvents="auto">
+            <SearchInput
+              value={location.text}
+              onChangeText={(t) => setLocation(t)}
+              error={locationError?.message ?? null}
+              placeholder="Search city, neighbourhood, or postal"
+            />
+          </View>
           <Pressable
             onPress={() => nav.goBack()}
             accessibilityRole="button"
@@ -364,16 +381,14 @@ export function MapViewScreen() {
           >
             <Ionicons name="list" size={20} color={colors.textPrimary} />
           </Pressable>
+        </View>
 
-          {/* box-none so map gestures pass through the empty space between
-              chips; each chip's own Pressable still receives taps. */}
-          <View style={styles.chipsWrap} pointerEvents="box-none">
-            <FilterChipBar
-              filters={filters}
-              setFilter={setFilter}
-              contentStyle={styles.chipsContent}
-            />
-          </View>
+        <View style={styles.chipsWrap} pointerEvents="box-none">
+          <FilterChipBar
+            filters={filters}
+            setFilter={setFilter}
+            contentStyle={styles.chipsContent}
+          />
         </View>
 
         {/* Result count — live-updates as filters / pan apply */}
@@ -473,14 +488,18 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
   },
-  topRow: {
+  searchRow: {
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: spacing.lg,
     gap: spacing.sm,
   },
-  chipsWrap: {
+  searchWrap: {
     flex: 1,
+  },
+  chipsWrap: {
+    paddingHorizontal: spacing.lg,
+    marginTop: spacing.sm,
   },
   chipsContent: {
     paddingVertical: 0,
