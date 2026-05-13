@@ -1,30 +1,39 @@
 import { Ionicons } from "@expo/vector-icons";
-import {
-  BottomSheetBackdrop,
-  type BottomSheetBackdropProps,
-  BottomSheetModal,
-  BottomSheetView,
-} from "@gorhom/bottom-sheet";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Animated, Pressable, StyleSheet, View } from "react-native";
+import {
+  Animated,
+  Dimensions,
+  FlatList,
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
+  Pressable,
+  StyleSheet,
+  View,
+} from "react-native";
 import MapView, { Marker, type Region } from "react-native-maps";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { FilterChipBar } from "../../components/FilterChipBar";
 import { ResultCountPill } from "../../components/ResultCountPill";
 import { Text } from "../../components/Text";
+import { VenueMapCard, VENUE_MAP_CARD_WIDTH } from "../../components/VenueMapCard";
 import { VenuePin } from "../../components/VenuePin";
-import { VenuePreviewCard } from "../../components/VenuePreviewCard";
 import { useFieldSearch } from "../../hooks/useFieldSearch";
 import { useLocation } from "../../hooks/useLocation";
 import { haversineKm } from "../../lib/distance";
 import { getLastRegion, setLastRegion } from "../../lib/mapState";
+import { useSavedVenues } from "../../lib/savedVenues";
 import type { MainStackParamList } from "../../navigation/MainNavigator";
 import { borderRadius, spacing } from "../../theme/tokens";
 import { useTheme } from "../../theme/useTheme";
 import type { SearchResult } from "../../types/api";
+
+const SCREEN_WIDTH = Dimensions.get("window").width;
+const CARD_GAP = 12;
+const CARD_SNAP = VENUE_MAP_CARD_WIDTH + CARD_GAP;
+const CARD_SIDE_PEEK = (SCREEN_WIDTH - VENUE_MAP_CARD_WIDTH) / 2;
 
 type Nav = NativeStackNavigationProp<MainStackParamList, "MapView">;
 
@@ -104,8 +113,14 @@ export function MapViewScreen() {
 
   const [showSearchHere, setShowSearchHere] = useState(false);
   const [selectedVenueId, setSelectedVenueId] = useState<string | null>(null);
-  const sheetRef = useRef<BottomSheetModal>(null);
   const mapRef = useRef<MapView>(null);
+  const carouselRef = useRef<FlatList<VenueMarker>>(null);
+  // Set true right before a programmatic scrollToOffset on the carousel; the
+  // resulting onMomentumScrollEnd reads + clears it. Without this, an animated
+  // scroll-to-card can settle one sub-pixel index off and re-flip the
+  // selection back to the neighbour, ping-ponging with the pin tap.
+  const programmaticScrollRef = useRef(false);
+  const { isSaved, toggle: toggleSaved } = useSavedVenues();
   // Set true right before a programmatic animateToRegion; cleared by the
   // resulting onRegionChangeComplete. Prevents the pin-tap re-center from
   // tripping the "Search this area" pill via the distance threshold check.
@@ -131,15 +146,37 @@ export function MapViewScreen() {
   }, [showSearchHere, searchHereOpacity, searchHereOffset]);
 
   const markers = useMemo(() => groupByVenue(results), [results]);
-  const selectedMarker = selectedVenueId
-    ? markers.find((m) => m.venue.id === selectedVenueId) ?? null
-    : null;
+  const selectedIndex = useMemo(
+    () =>
+      selectedVenueId
+        ? markers.findIndex((m) => m.venue.id === selectedVenueId)
+        : -1,
+    [markers, selectedVenueId]
+  );
 
-  // Sheet visibility follows selectedVenueId.
+  // Pin tap → scroll the carousel to that card so card + pin stay in sync.
+  // Guard against scrolling before the FlatList has measured (offset === -1).
   useEffect(() => {
-    if (selectedMarker) sheetRef.current?.present();
-    else sheetRef.current?.dismiss();
-  }, [selectedMarker]);
+    if (selectedIndex < 0) return;
+    programmaticScrollRef.current = true;
+    carouselRef.current?.scrollToOffset({
+      offset: selectedIndex * CARD_SNAP,
+      animated: true,
+    });
+  }, [selectedIndex]);
+
+  // Default-select the first marker when results land so the centered card
+  // matches the highlighted pin from frame one (Airbnb pattern). Re-runs only
+  // when the first marker's identity changes — not on every result reorder.
+  const firstMarkerId = markers[0]?.venue.id;
+  useEffect(() => {
+    if (firstMarkerId && selectedVenueId === null) {
+      setSelectedVenueId(firstMarkerId);
+    }
+    // selectedVenueId intentionally excluded so user-cleared selection
+    // (handleMapPress) doesn't snap back to the first card.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [firstMarkerId]);
 
   const handleRegionChange = useCallback((region: Region) => {
     setLastRegion(region);
@@ -185,7 +222,10 @@ export function MapViewScreen() {
       isProgrammaticPanRef.current = true;
       mapRef.current.animateToRegion(
         {
-          latitude: marker.venue.lat - latDelta * 0.2,
+          // 0.12 keeps the pin above the ~140pt carousel without throwing it
+          // off the top of the visible map. Previously 0.2 — sized for the
+          // old 180pt BottomSheet preview.
+          latitude: marker.venue.lat - latDelta * 0.12,
           longitude: marker.venue.lng,
           latitudeDelta: latDelta,
           longitudeDelta: lngDelta,
@@ -199,19 +239,34 @@ export function MapViewScreen() {
     setSelectedVenueId(null);
   };
 
-  const renderBackdrop = useCallback(
-    (props: BottomSheetBackdropProps) => (
-      <BottomSheetBackdrop
-        {...props}
-        appearsOnIndex={0}
-        disappearsOnIndex={-1}
-        opacity={0.2}
-      />
-    ),
-    []
+  // Carousel → pin sync. When the user swipes the cards horizontally, snap
+  // the selection to whichever card is now centered. Uses momentum-scroll-end
+  // rather than onScroll so we don't fire mid-flick (would re-center the map
+  // on every intermediate index).
+  const handleCarouselMomentumEnd = useCallback(
+    (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+      // Ignore the momentum-end from our own scrollToOffset; otherwise a sub-
+      // pixel landing can flip selection back to the neighbour, ping-ponging
+      // against the pin-tap effect.
+      if (programmaticScrollRef.current) {
+        programmaticScrollRef.current = false;
+        return;
+      }
+      const idx = Math.round(e.nativeEvent.contentOffset.x / CARD_SNAP);
+      const venueId = markers[idx]?.venue.id;
+      if (venueId && venueId !== selectedVenueId) {
+        setSelectedVenueId(venueId);
+      }
+    },
+    [markers, selectedVenueId]
   );
 
-  const snapPoints = useMemo(() => [180], []);
+  const handleCardPress = useCallback(
+    (venueId: string) => {
+      nav.navigate("VenueDetail", { venueId });
+    },
+    [nav]
+  );
 
   return (
     <View style={styles.root}>
@@ -355,33 +410,40 @@ export function MapViewScreen() {
         </Animated.View>
       </View>
 
-      {/* Preview card sheet */}
-      <BottomSheetModal
-        ref={sheetRef}
-        snapPoints={snapPoints}
-        onChange={(i) => {
-          if (i === -1) setSelectedVenueId(null);
-        }}
-        enablePanDownToClose
-        backdropComponent={renderBackdrop}
-        backgroundStyle={{ backgroundColor: colors.surface }}
-        handleIndicatorStyle={{ backgroundColor: colors.border }}
-      >
-        <BottomSheetView style={styles.sheetContent}>
-          {selectedMarker ? (
-            <VenuePreviewCard
-              venue={selectedMarker.venue}
-              fieldCount={selectedMarker.fieldCount}
-              userCoords={userCoords}
-              onViewVenue={() => {
-                const id = selectedMarker.venue.id;
-                setSelectedVenueId(null);
-                nav.navigate("VenueDetail", { venueId: id });
-              }}
-            />
-          ) : null}
-        </BottomSheetView>
-      </BottomSheetModal>
+      {/* Bottom result carousel — snap-to-card, pin↔card sync */}
+      {markers.length > 0 ? (
+        <View
+          pointerEvents="box-none"
+          style={[styles.carouselWrap, { paddingBottom: insets.bottom + spacing.md }]}
+        >
+          <FlatList
+            ref={carouselRef}
+            data={markers}
+            keyExtractor={(m) => m.venue.id}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            // snapToInterval (vs pagingEnabled) so each card snaps even though
+            // CARD_SNAP is narrower than the screen — gives the peek-next-card
+            // feel that Airbnb / Hotel Tonight use.
+            snapToInterval={CARD_SNAP}
+            decelerationRate="fast"
+            contentContainerStyle={styles.carouselContent}
+            ItemSeparatorComponent={() => <View style={{ width: CARD_GAP }} />}
+            onMomentumScrollEnd={handleCarouselMomentumEnd}
+            renderItem={({ item }) => (
+              <VenueMapCard
+                venue={item.venue}
+                fieldCount={item.fieldCount}
+                minPrice={item.minPrice}
+                userCoords={userCoords}
+                isSaved={isSaved(item.venue.id)}
+                onPress={() => handleCardPress(item.venue.id)}
+                onToggleSave={() => void toggleSaved(item.venue.id)}
+              />
+            )}
+          />
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -439,8 +501,13 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     elevation: 3,
   },
-  sheetContent: {
-    paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.lg,
+  carouselWrap: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+  carouselContent: {
+    paddingHorizontal: CARD_SIDE_PEEK,
   },
 });
