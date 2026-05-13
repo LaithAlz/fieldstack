@@ -143,9 +143,15 @@ export function MapViewScreen() {
   const [showSearchHere, setShowSearchHere] = useState(false);
   const [selectedVenueId, setSelectedVenueId] = useState<string | null>(null);
   // Tracked alongside the persisted ref so React can derive `visibleMarkers`
-  // from the current camera bounds — "12 venues" should reflect what's on
-  // screen, not the total result set.
-  const [currentRegion, setCurrentRegion] = useState<Region>(initialRegion);
+  // from the current camera bounds — "X venues" should reflect what's in
+  // the visible region, not the total result set.
+  //
+  // Seed from getLastRegion() if available so a returning user sees the
+  // correct count on first paint instead of a "0 venues" flash before the
+  // map's first onRegionChangeComplete fires.
+  const [currentRegion, setCurrentRegion] = useState<Region>(
+    () => getLastRegion() ?? initialRegion
+  );
   const mapRef = useRef<MapView>(null);
   const carouselRef = useRef<FlatList<VenueMarker>>(null);
   // Set true right before a programmatic scrollToOffset on the carousel; the
@@ -181,9 +187,13 @@ export function MapViewScreen() {
   const markers = useMemo(() => groupByVenue(results), [results]);
 
   // Markers within the current camera bounds. Drives the ResultCountPill so
-  // "X venues" matches what's actually on screen, not the unfiltered result
-  // set. The carousel intentionally keeps the full marker list so swiping
-  // doesn't change cards out from under the user while they're scrolling.
+  // "X venues" reflects the visible region rather than the unfiltered result
+  // set. With clustering on, this is still a bbox count — the user might
+  // see fewer cluster bubbles than the number reported, which is the same
+  // semantic Airbnb / Google Maps use ("X stays in this area").
+  //
+  // The carousel intentionally keeps the full marker list so swiping doesn't
+  // change cards out from under the user mid-scroll.
   const visibleMarkers = useMemo(
     () => markers.filter((m) => isInRegion(m.venue, currentRegion)),
     [markers, currentRegion]
@@ -284,6 +294,12 @@ export function MapViewScreen() {
     ) {
       return;
     }
+    // Skip the camera move if the venue is already in view — the user
+    // swiping the carousel between two on-screen venues shouldn't get a
+    // stacked snap-then-pan animation. Pin tap also benefits when the user
+    // taps a pin that's already centered.
+    if (isInRegion(marker.venue, currentRegion)) return;
+
     const cached = getLastRegion();
     const latDelta = cached?.latitudeDelta ?? DEFAULT_DELTA;
     const lngDelta = cached?.longitudeDelta ?? DEFAULT_DELTA;
@@ -297,7 +313,7 @@ export function MapViewScreen() {
       },
       300
     );
-  }, [markers]);
+  }, [markers, currentRegion]);
 
   const handleMarkerPress = (venueId: string) => {
     setSelectedVenueId(venueId);
