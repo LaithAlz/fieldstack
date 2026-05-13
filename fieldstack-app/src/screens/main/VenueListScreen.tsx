@@ -184,7 +184,10 @@ export function VenueListScreen() {
           title="Couldn't load venues"
           description="Check your connection and try again."
           actionLabel="Try again"
-          onAction={refresh}
+          // refetchVenues skips the haptic that the pull-to-refresh wrapper
+          // adds — button taps use `selection()` elsewhere; chaining a
+          // light-impact on a retry button would feel off-pattern.
+          onAction={refetchVenues}
         />
       ) : (
         <FlatList<VenueWithFields>
