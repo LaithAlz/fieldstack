@@ -13,6 +13,7 @@ import MapView, { Marker, type Region } from "react-native-maps";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { FilterChipBar } from "../../components/FilterChipBar";
+import { ResultCountPill } from "../../components/ResultCountPill";
 import { Text } from "../../components/Text";
 import { VenuePin } from "../../components/VenuePin";
 import { VenuePreviewCard } from "../../components/VenuePreviewCard";
@@ -73,7 +74,7 @@ export function MapViewScreen() {
   const nav = useNavigation<Nav>();
 
   const { coords: userCoords } = useLocation();
-  const { results, filters, setFilter, setLocation } = useFieldSearch();
+  const { results, isLoading, filters, setFilter, setLocation } = useFieldSearch();
 
   // Initial region: prior session position if we have one, else user coords,
   // else downtown Toronto.
@@ -304,6 +305,18 @@ export function MapViewScreen() {
           </View>
         </View>
 
+        {/* Result count — live-updates as filters / pan apply */}
+        <View
+          pointerEvents="none"
+          style={styles.countRow}
+        >
+          <ResultCountPill
+            count={markers.length}
+            noun="venue"
+            loading={isLoading}
+          />
+        </View>
+
         {/* "Search this area" — fades + slides in after a meaningful pan */}
         <Animated.View
           pointerEvents={showSearchHere ? "auto" : "none"}
@@ -394,9 +407,13 @@ const styles = StyleSheet.create({
   chipsContent: {
     paddingVertical: 0,
   },
-  searchHereWrap: {
+  countRow: {
     alignItems: "center",
     marginTop: spacing.md,
+  },
+  searchHereWrap: {
+    alignItems: "center",
+    marginTop: spacing.sm,
   },
   iconButton: {
     width: 40,
