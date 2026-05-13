@@ -114,14 +114,19 @@ export function FieldSearchProvider({ children }: { children: ReactNode }) {
   // mounted MapView directly (without first passing through the list) would
   // see empty results — the search just never fired. Hoisting here covers
   // every consumer of useFieldSearch().
+  //
+  // `userCoords` may be null when permission is denied; we still seed so the
+  // search can fall back to text geocoding or the default downtown area.
   const seededRef = useRef(false);
+  const seedLocation = value.setLocation;
+  const locationTextLength = value.location.text.length;
   useEffect(() => {
     if (locationLoading || seededRef.current) return;
-    if (value.location.text.length === 0) {
-      value.setLocation(userLabel, userCoords);
+    if (locationTextLength === 0) {
+      seedLocation(userLabel, userCoords);
     }
     seededRef.current = true;
-  }, [locationLoading, userLabel, userCoords, value]);
+  }, [locationLoading, userLabel, userCoords, locationTextLength, seedLocation]);
 
   return (
     <FieldSearchContext.Provider value={value}>
