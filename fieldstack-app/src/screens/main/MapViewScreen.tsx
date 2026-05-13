@@ -226,9 +226,18 @@ export function MapViewScreen() {
         {markers.map((m) => {
           if (m.venue.lat === null || m.venue.lng === null) return null;
           const isSelected = selectedVenueId === m.venue.id;
+          // Treat free / zero-price fields as "no price" so the pin falls back
+          // to a count circle instead of rendering "$0", which reads as a
+          // missing-data glitch.
+          const hasPositivePrice = m.minPrice !== null && m.minPrice > 0;
+          // Encode the mode + price into the key so react-native-maps forces
+          // a marker remount (and a fresh bitmap snapshot) when filters flip
+          // a venue's price or count. Without this, `tracksViewChanges` stays
+          // false on non-selected pins and the stale snapshot persists.
+          const markerKey = `${m.venue.id}-${hasPositivePrice ? `p${m.minPrice}` : `c${m.fieldCount}`}`;
           return (
             <Marker
-              key={m.venue.id}
+              key={markerKey}
               coordinate={{ latitude: m.venue.lat, longitude: m.venue.lng }}
               onPress={(e) => {
                 // Without stopPropagation the MapView's onPress also fires
@@ -241,7 +250,7 @@ export function MapViewScreen() {
               // animation propagates to the native marker.
               tracksViewChanges={isSelected}
             >
-              {m.minPrice !== null ? (
+              {hasPositivePrice && m.minPrice !== null ? (
                 <VenuePin
                   mode="price"
                   price={m.minPrice}
