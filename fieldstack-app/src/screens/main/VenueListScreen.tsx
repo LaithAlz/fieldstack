@@ -115,7 +115,13 @@ export function VenueListScreen() {
           onPress={openPicker}
         />
         <View style={styles.titleRow}>
-          <Text size="xxl" weight="bold" accessibilityRole="header" style={styles.title}>
+          <Text
+            size="xxl"
+            weight="bold"
+            accessibilityRole="header"
+            numberOfLines={1}
+            style={styles.title}
+          >
             Venues
           </Text>
           <Pressable
@@ -300,6 +306,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
   },
   title: {
+    flexShrink: 1,
     letterSpacing: -0.5,
   },
   mapButton: {
