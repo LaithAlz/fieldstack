@@ -24,6 +24,7 @@ import {
 } from "react";
 
 import { searchFields, type SearchFieldsResult, type SearchSort } from "../api/search";
+import { useLocation } from "./useLocation";
 import { EVENT_SEARCH_FILTERED, track } from "../lib/analytics";
 import type { Coords } from "../lib/location";
 import {
@@ -102,6 +103,31 @@ const FieldSearchContext = createContext<UseFieldSearchResult | null>(null);
 
 export function FieldSearchProvider({ children }: { children: ReactNode }) {
   const value = useFieldSearchState();
+  const {
+    coords: userCoords,
+    label: userLabel,
+    loading: locationLoading,
+  } = useLocation();
+
+  // Seed the search hook's location from useLocation as soon as it resolves.
+  // Previously this lived on FieldSearchScreen, which meant any screen that
+  // mounted MapView directly (without first passing through the list) would
+  // see empty results — the search just never fired. Hoisting here covers
+  // every consumer of useFieldSearch().
+  //
+  // `userCoords` may be null when permission is denied; we still seed so the
+  // search can fall back to text geocoding or the default downtown area.
+  const seededRef = useRef(false);
+  const seedLocation = value.setLocation;
+  const locationTextLength = value.location.text.length;
+  useEffect(() => {
+    if (locationLoading || seededRef.current) return;
+    if (locationTextLength === 0) {
+      seedLocation(userLabel, userCoords);
+    }
+    seededRef.current = true;
+  }, [locationLoading, userLabel, userCoords, locationTextLength, seedLocation]);
+
   return (
     <FieldSearchContext.Provider value={value}>
       {children}
