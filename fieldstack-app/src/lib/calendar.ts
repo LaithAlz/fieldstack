@@ -10,7 +10,7 @@
  */
 
 import * as Calendar from "expo-calendar";
-import { Platform } from "react-native";
+import { Alert, AppState, Linking, Platform } from "react-native";
 
 export type AddEventInput = {
   title: string;
@@ -76,4 +76,103 @@ async function getDefaultCalendarId(): Promise<string | null> {
     (c) => c.allowsModifications && c.accessLevel !== Calendar.CalendarAccessLevel.READ
   );
   return writable?.id ?? null;
+}
+
+// ---------------------------------------------------------------------------
+// Booking-handoff prompt
+// ---------------------------------------------------------------------------
+
+export type CalendarPromptArgs = {
+  venueName: string;
+  venueAddress: string | null | undefined;
+  operatorName: string;
+  startDate: Date;
+  durationHours: number;
+  /** Toast surface — called with a user-facing message + severity. */
+  onResult: (message: string, type: "success" | "error" | "info") => void;
+};
+
+/**
+ * Show the "Add to calendar?" Alert. Booking handoff opens the operator's
+ * URL via Linking, which on iOS resolves *as soon as the URL is dispatched*
+ * — not when the user returns. Showing the Alert immediately would put it
+ * behind the in-app browser. We defer until the AppState flips back to
+ * `active`, so the dialog only appears once the user is looking at the app.
+ *
+ * Hoisted out of the two booking sheets once a second copy of the same
+ * function appeared — three copies (Profile's "rebook" idea) is the next
+ * smell that'd push us to bake this into a hook.
+ */
+export function promptAddToCalendarOnReturn(args: CalendarPromptArgs): void {
+  const present = () => presentCalendarAlert(args);
+
+  // If the app is already active when this is called (rare — handoff usually
+  // backgrounds the app), show immediately. Otherwise wait for the foreground
+  // transition.
+  if (AppState.currentState === "active") {
+    present();
+    return;
+  }
+
+  const sub = AppState.addEventListener("change", (state) => {
+    if (state === "active") {
+      sub.remove();
+      present();
+    }
+  });
+
+  // Safety: if the user never returns within 5 minutes, drop the listener.
+  setTimeout(() => sub.remove(), 5 * 60 * 1000);
+}
+
+function presentCalendarAlert(args: CalendarPromptArgs): void {
+  Alert.alert(
+    "Add to your calendar?",
+    "We'll save the slot you just opened on the operator's site so it doesn't slip your mind.",
+    [
+      { text: "Not now", style: "cancel" },
+      {
+        text: "Add",
+        onPress: async () => {
+          try {
+            const ok = await addEventToCalendar({
+              title: `Soccer at ${args.venueName}`,
+              startDate: args.startDate,
+              durationHours: args.durationHours,
+              location: args.venueAddress ?? undefined,
+              notes: `Booked through ${args.operatorName} · added from FieldStack`,
+            });
+            if (ok) {
+              args.onResult("Added to your calendar.", "success");
+              return;
+            }
+            // Permission was denied — offer a one-tap path to Settings so
+            // the user isn't stranded digging through OS settings manually.
+            Alert.alert(
+              "Calendar access is off",
+              "Enable it in Settings to let FieldStack add events.",
+              [
+                { text: "Cancel", style: "cancel" },
+                {
+                  text: "Open Settings",
+                  onPress: () => {
+                    Linking.openSettings().catch(() => undefined);
+                  },
+                },
+              ]
+            );
+          } catch {
+            args.onResult("Couldn't add to your calendar.", "error");
+          }
+        },
+      },
+    ]
+  );
+}
+
+export function combineDateAndTime(date: Date, time24: string): Date {
+  const [h, m] = time24.split(":").map(Number);
+  const out = new Date(date);
+  out.setHours(h, m, 0, 0);
+  return out;
 }

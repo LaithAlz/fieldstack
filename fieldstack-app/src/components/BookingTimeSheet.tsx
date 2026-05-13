@@ -8,12 +8,15 @@ import {
 import * as Clipboard from "expo-clipboard";
 import * as Linking from "expo-linking";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Alert, StyleSheet, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 
 import { EVENT_BOOKING_REDIRECT_CONFIRMED, track } from "../lib/analytics";
 import { useBookingHistory } from "../lib/bookingHistory";
 import { buildBookingUrl } from "../lib/bookingUrl";
-import { addEventToCalendar } from "../lib/calendar";
+import {
+  combineDateAndTime,
+  promptAddToCalendarOnReturn,
+} from "../lib/calendar";
 import { formatDurationHours } from "../lib/datetime";
 import { lightImpact } from "../lib/haptics";
 import { borderRadius, spacing } from "../theme/tokens";
@@ -126,7 +129,8 @@ export function BookingTimeSheet({
         duration: selectedDuration,
       });
       onConfirm?.();
-      promptAddToCalendar({
+      // Deferred until app returns to foreground — see promptAddToCalendarOnReturn
+      promptAddToCalendarOnReturn({
         venueName: venue.name,
         venueAddress: venue.address,
         operatorName,
@@ -243,63 +247,6 @@ function toIsoDate(d: Date): string {
   const m = String(d.getMonth() + 1).padStart(2, "0");
   const day = String(d.getDate()).padStart(2, "0");
   return `${y}-${m}-${day}`;
-}
-
-function combineDateAndTime(date: Date, time24: string): Date {
-  const [h, m] = time24.split(":").map(Number);
-  const out = new Date(date);
-  out.setHours(h, m, 0, 0);
-  return out;
-}
-
-type PromptArgs = {
-  venueName: string;
-  venueAddress: string | null | undefined;
-  operatorName: string;
-  startDate: Date;
-  durationHours: number;
-  onResult: (message: string, type: "success" | "error" | "info") => void;
-};
-
-/**
- * Native confirm → write event → toast result. Kept inline rather than
- * imported into both booking sheets because the prompt copy is the same.
- * The two sheets pass slightly different "title" data (venue vs field) but
- * both surface as "Soccer at <venue>" — field-name isn't useful in a
- * calendar event title.
- */
-function promptAddToCalendar(args: PromptArgs) {
-  Alert.alert(
-    "Add to your calendar?",
-    "We'll save the slot you just opened on the operator's site so it doesn't slip your mind.",
-    [
-      { text: "Not now", style: "cancel" },
-      {
-        text: "Add",
-        onPress: async () => {
-          try {
-            const ok = await addEventToCalendar({
-              title: `Soccer at ${args.venueName}`,
-              startDate: args.startDate,
-              durationHours: args.durationHours,
-              location: args.venueAddress ?? undefined,
-              notes: `Booked through ${args.operatorName} · added from FieldStack`,
-            });
-            if (ok) {
-              args.onResult("Added to your calendar.", "success");
-            } else {
-              args.onResult(
-                "Calendar access denied. Enable it in Settings to add events.",
-                "error"
-              );
-            }
-          } catch {
-            args.onResult("Couldn't add to your calendar.", "error");
-          }
-        },
-      },
-    ]
-  );
 }
 
 const styles = StyleSheet.create({
