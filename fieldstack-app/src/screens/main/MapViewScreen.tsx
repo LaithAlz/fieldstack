@@ -37,17 +37,32 @@ const DEFAULT_TORONTO: Region = {
 };
 
 // One pin per venue, even when the venue has multiple matching fields.
+// `minPrice` is the lowest per-hour price across that venue's priced fields,
+// or null when no field at the venue has a price.
 type VenueMarker = {
   venue: SearchResult["venue"];
   fieldCount: number;
+  minPrice: number | null;
 };
 
 function groupByVenue(results: SearchResult[]): VenueMarker[] {
   const map = new Map<string, VenueMarker>();
   for (const r of results) {
+    const price = r.field.price_per_hour;
     const existing = map.get(r.venue.id);
-    if (existing) existing.fieldCount += 1;
-    else map.set(r.venue.id, { venue: r.venue, fieldCount: 1 });
+    if (existing) {
+      existing.fieldCount += 1;
+      if (price !== null) {
+        existing.minPrice =
+          existing.minPrice === null ? price : Math.min(existing.minPrice, price);
+      }
+    } else {
+      map.set(r.venue.id, {
+        venue: r.venue,
+        fieldCount: 1,
+        minPrice: price,
+      });
+    }
   }
   return Array.from(map.values());
 }
@@ -226,11 +241,22 @@ export function MapViewScreen() {
               // animation propagates to the native marker.
               tracksViewChanges={isSelected}
             >
-              <VenuePin
-                fieldCount={m.fieldCount}
-                venueName={m.venue.name}
-                selected={isSelected}
-              />
+              {m.minPrice !== null ? (
+                <VenuePin
+                  mode="price"
+                  price={m.minPrice}
+                  fieldCount={m.fieldCount}
+                  venueName={m.venue.name}
+                  selected={isSelected}
+                />
+              ) : (
+                <VenuePin
+                  mode="count"
+                  fieldCount={m.fieldCount}
+                  venueName={m.venue.name}
+                  selected={isSelected}
+                />
+              )}
             </Marker>
           );
         })}
