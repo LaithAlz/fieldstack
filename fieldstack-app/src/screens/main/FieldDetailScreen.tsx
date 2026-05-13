@@ -25,13 +25,16 @@ import {
   track,
 } from "../../lib/analytics";
 import { preferredSlotDate, usePreferredSlot } from "../../lib/preferredSlot";
-import type { MainStackParamList } from "../../navigation/MainNavigator";
+import type { DetailParamList } from "../../navigation/MainNavigator";
 import { borderRadius, spacing } from "../../theme/tokens";
 import { useTheme } from "../../theme/useTheme";
 import type { FieldSize, FieldSurface } from "../../types/api";
 
-type Props = NativeStackScreenProps<MainStackParamList, "FieldDetail">;
-type Nav = NativeStackNavigationProp<MainStackParamList>;
+// See VenueDetailScreen — typed against DetailParamList because this screen
+// is mounted in all three tab stacks and only navigates to the sibling
+// detail. Using MainStackParamList would lie under Saved/Me.
+type Props = NativeStackScreenProps<DetailParamList, "FieldDetail">;
+type Nav = NativeStackNavigationProp<DetailParamList>;
 
 const SURFACE_LABEL: Record<FieldSurface, string> = {
   turf: "Turf",
