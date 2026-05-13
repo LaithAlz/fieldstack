@@ -12,6 +12,7 @@ import {
   StyleSheet,
   View,
 } from "react-native";
+import ClusteredMapView from "react-native-map-clustering";
 import MapView, { Marker, type Region } from "react-native-maps";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -270,14 +271,26 @@ export function MapViewScreen() {
 
   return (
     <View style={styles.root}>
-      <MapView
-        ref={mapRef}
+      <ClusteredMapView
+        mapRef={(ref) => {
+          // ClusteredMapView passes back the underlying react-native-maps ref
+          // via a callback (not the standard ref prop). Stash it on our own
+          // ref so animateToRegion still works.
+          (mapRef as React.MutableRefObject<MapView | null>).current =
+            (ref as unknown as MapView | null) ?? null;
+        }}
         style={StyleSheet.absoluteFill}
         initialRegion={initialRegion}
         onRegionChangeComplete={handleRegionChange}
         onPress={handleMapPress}
         showsUserLocation
         showsMyLocationButton={false}
+        clusterColor={colors.brand}
+        clusterTextColor={"#FFFFFF"}
+        // Bump min before clustering kicks in — single pins read fine; pairs
+        // also OK; 3+ overlap-prone clusters benefit from the count circle.
+        minPoints={3}
+        radius={50}
       >
         {markers.map((m) => {
           if (m.venue.lat === null || m.venue.lng === null) return null;
@@ -325,7 +338,7 @@ export function MapViewScreen() {
             </Marker>
           );
         })}
-      </MapView>
+      </ClusteredMapView>
 
       {/* Top overlay: list-view icon + filter chips */}
       <View
