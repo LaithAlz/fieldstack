@@ -13,6 +13,10 @@ import { StyleSheet, View } from "react-native";
 import { EVENT_BOOKING_REDIRECT_CONFIRMED, track } from "../lib/analytics";
 import { useBookingHistory } from "../lib/bookingHistory";
 import { buildBookingUrl } from "../lib/bookingUrl";
+import {
+  combineDateAndTime,
+  promptAddToCalendarOnReturn,
+} from "../lib/calendar";
 import { formatDurationHours } from "../lib/datetime";
 import { lightImpact } from "../lib/haptics";
 import { borderRadius, spacing } from "../theme/tokens";
@@ -125,6 +129,15 @@ export function BookingTimeSheet({
         duration: selectedDuration,
       });
       onConfirm?.();
+      // Deferred until app returns to foreground — see promptAddToCalendarOnReturn
+      promptAddToCalendarOnReturn({
+        venueName: venue.name,
+        venueAddress: venue.address,
+        operatorName,
+        startDate: combineDateAndTime(selectedDate, selectedTime),
+        durationHours: selectedDuration,
+        onResult: (msg, type) => toast.show(msg, { type }),
+      });
     } catch {
       setFailedUrl(url);
       toast.show("Couldn't open the booking page.", { type: "error" });
