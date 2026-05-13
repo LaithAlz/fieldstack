@@ -60,13 +60,21 @@ export function VenueDetailScreen({ route }: Props) {
   // built into RN, no extra dep needed.
   const onShare = venue
     ? async () => {
-        const slotPart = slot
-          ? ` on ${formatShareSlot(slot)}`
-          : "";
+        const slotPart = slot ? ` on ${formatShareSlot(slot)}` : "";
         const address = venue.address ? `\n${venue.address}` : "";
-        await Share.share({
-          message: `${venue.name}${slotPart} — wanna play?${address}`,
-        }).catch(() => undefined);
+        try {
+          // Modern RN resolves with {action: 'dismissedAction'} on cancel
+          // (both platforms), so we only see this catch for genuine failures.
+          // Surface those in dev; users won't get a toast for a cancel.
+          await Share.share({
+            message: `${venue.name}${slotPart} — wanna play?${address}`,
+          });
+        } catch (err) {
+          if (__DEV__) {
+            // eslint-disable-next-line no-console
+            console.warn("[share] failed", err);
+          }
+        }
       }
     : undefined;
 
