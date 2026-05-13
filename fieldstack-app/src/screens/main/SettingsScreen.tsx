@@ -10,6 +10,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Text } from "../../components/Text";
 import { useToast } from "../../components/Toast";
 import { useAppReset } from "../../lib/appReset";
+import { useAuth } from "../../lib/auth";
 import type { MeStackParamList } from "../../navigation/MainNavigator";
 import { borderRadius, spacing } from "../../theme/tokens";
 import { useTheme } from "../../theme/useTheme";
@@ -27,8 +28,30 @@ export function SettingsScreen() {
   const nav = useNavigation<Nav>();
   const toast = useToast();
   const resetApp = useAppReset();
+  const { user, signOut } = useAuth();
 
   const version = Constants.expoConfig?.version ?? "1.0.0";
+
+  const confirmSignOut = () => {
+    Alert.alert(
+      "Sign out?",
+      // TODO(9D): once saves migrate to user-scoped storage, this copy
+      // becomes a lie — update to "Your saves will be restored when you
+      // sign back in."
+      "Your saved venues, preferred time, and history stay on this device.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Sign out",
+          style: "destructive",
+          onPress: async () => {
+            await signOut();
+            toast.show("Signed out.", { type: "success" });
+          },
+        },
+      ]
+    );
+  };
 
   const open = async (url: string) => {
     try {
@@ -105,6 +128,32 @@ export function SettingsScreen() {
         <Text size="xxl" weight="bold" accessibilityRole="header" style={styles.title}>
           Settings
         </Text>
+
+        <SectionHeader>Account</SectionHeader>
+        {user ? (
+          <>
+            <View style={styles.accountStatic}>
+              <Text size="md" weight="medium" numberOfLines={1}>
+                {user.email ?? "Signed in"}
+              </Text>
+              <Text size="sm" variant="secondary">
+                Signed in
+              </Text>
+            </View>
+            <Row
+              icon="log-out-outline"
+              label="Sign out"
+              destructive
+              onPress={confirmSignOut}
+            />
+          </>
+        ) : (
+          <Row
+            icon="log-in-outline"
+            label="Sign in"
+            onPress={() => nav.navigate("SignIn")}
+          />
+        )}
 
         <SectionHeader>Support</SectionHeader>
         <Row icon="mail-outline" label="Contact us" onPress={emailSupport} />
@@ -248,6 +297,12 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.lg,
     borderWidth: StyleSheet.hairlineWidth,
     marginBottom: spacing.sm,
+  },
+  accountStatic: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
+    marginBottom: spacing.sm,
+    gap: 2,
   },
   rowLabel: {
     flex: 1,
