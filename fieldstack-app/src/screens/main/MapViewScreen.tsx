@@ -79,6 +79,25 @@ function groupByVenue(results: SearchResult[]): VenueMarker[] {
   return Array.from(map.values());
 }
 
+/**
+ * True when the venue's lat/lng sits inside the camera's visible region
+ * (center ± half of each delta). Treats a venue with no coords as not
+ * visible — they can't render as a pin anyway.
+ */
+function isInRegion(venue: SearchResult["venue"], region: Region): boolean {
+  if (venue.lat === null || venue.lng === null) return false;
+  const latMin = region.latitude - region.latitudeDelta / 2;
+  const latMax = region.latitude + region.latitudeDelta / 2;
+  const lngMin = region.longitude - region.longitudeDelta / 2;
+  const lngMax = region.longitude + region.longitudeDelta / 2;
+  return (
+    venue.lat >= latMin &&
+    venue.lat <= latMax &&
+    venue.lng >= lngMin &&
+    venue.lng <= lngMax
+  );
+}
+
 export function MapViewScreen() {
   const colors = useTheme();
   const insets = useSafeAreaInsets();
@@ -123,6 +142,10 @@ export function MapViewScreen() {
 
   const [showSearchHere, setShowSearchHere] = useState(false);
   const [selectedVenueId, setSelectedVenueId] = useState<string | null>(null);
+  // Tracked alongside the persisted ref so React can derive `visibleMarkers`
+  // from the current camera bounds — "12 venues" should reflect what's on
+  // screen, not the total result set.
+  const [currentRegion, setCurrentRegion] = useState<Region>(initialRegion);
   const mapRef = useRef<MapView>(null);
   const carouselRef = useRef<FlatList<VenueMarker>>(null);
   // Set true right before a programmatic scrollToOffset on the carousel; the
@@ -156,6 +179,16 @@ export function MapViewScreen() {
   }, [showSearchHere, searchHereOpacity, searchHereOffset]);
 
   const markers = useMemo(() => groupByVenue(results), [results]);
+
+  // Markers within the current camera bounds. Drives the ResultCountPill so
+  // "X venues" matches what's actually on screen, not the unfiltered result
+  // set. The carousel intentionally keeps the full marker list so swiping
+  // doesn't change cards out from under the user while they're scrolling.
+  const visibleMarkers = useMemo(
+    () => markers.filter((m) => isInRegion(m.venue, currentRegion)),
+    [markers, currentRegion]
+  );
+
   const selectedIndex = useMemo(
     () =>
       selectedVenueId
@@ -206,6 +239,7 @@ export function MapViewScreen() {
 
   const handleRegionChange = useCallback((region: Region) => {
     setLastRegion(region);
+    setCurrentRegion(region);
     // Skip the pan-distance check when the camera just moved because of a
     // programmatic re-center (pin tap). The user didn't pan.
     if (isProgrammaticPanRef.current) {
@@ -230,35 +264,44 @@ export function MapViewScreen() {
     setLocation("", { lat: region.latitude, lng: region.longitude });
   };
 
-  const handleMarkerPress = (venueId: string) => {
-    setSelectedVenueId(venueId);
-    // Re-center so the pin sits above the bottom sheet (sheet snap = 180px).
-    // We shift the camera target south of the pin so the pin lands in the
-    // upper-middle of the visible area.
+  /**
+   * Smoothly pan/zoom the map onto a venue. Shared by pin-tap and the
+   * carousel-swipe handler so both interactions feel equivalent. Marks
+   * the resulting region change as programmatic so it doesn't trip
+   * "Search this area".
+   *
+   * Camera target is shifted south by ~0.12 of latitudeDelta so the pin
+   * lands in the upper-middle of the visible map (the ~140pt carousel
+   * occupies the bottom).
+   */
+  const panToVenue = useCallback((venueId: string) => {
     const marker = markers.find((m) => m.venue.id === venueId);
     if (
-      marker &&
-      marker.venue.lat !== null &&
-      marker.venue.lng !== null &&
-      mapRef.current
+      !marker ||
+      marker.venue.lat === null ||
+      marker.venue.lng === null ||
+      !mapRef.current
     ) {
-      const cached = getLastRegion();
-      const latDelta = cached?.latitudeDelta ?? DEFAULT_DELTA;
-      const lngDelta = cached?.longitudeDelta ?? DEFAULT_DELTA;
-      isProgrammaticPanRef.current = true;
-      mapRef.current.animateToRegion(
-        {
-          // 0.12 keeps the pin above the ~140pt carousel without throwing it
-          // off the top of the visible map. Previously 0.2 — sized for the
-          // old 180pt BottomSheet preview.
-          latitude: marker.venue.lat - latDelta * 0.12,
-          longitude: marker.venue.lng,
-          latitudeDelta: latDelta,
-          longitudeDelta: lngDelta,
-        },
-        300
-      );
+      return;
     }
+    const cached = getLastRegion();
+    const latDelta = cached?.latitudeDelta ?? DEFAULT_DELTA;
+    const lngDelta = cached?.longitudeDelta ?? DEFAULT_DELTA;
+    isProgrammaticPanRef.current = true;
+    mapRef.current.animateToRegion(
+      {
+        latitude: marker.venue.lat - latDelta * 0.12,
+        longitude: marker.venue.lng,
+        latitudeDelta: latDelta,
+        longitudeDelta: lngDelta,
+      },
+      300
+    );
+  }, [markers]);
+
+  const handleMarkerPress = (venueId: string) => {
+    setSelectedVenueId(venueId);
+    panToVenue(venueId);
   };
 
   const handleMapPress = () => {
@@ -282,9 +325,13 @@ export function MapViewScreen() {
       const venueId = markers[idx]?.venue.id;
       if (venueId && venueId !== selectedVenueId) {
         setSelectedVenueId(venueId);
+        // Carousel-swipe should drive the map the same way pin-tap does:
+        // re-center on the newly selected venue so the user actually sees
+        // where the card they're looking at lives.
+        panToVenue(venueId);
       }
     },
-    [markers, selectedVenueId]
+    [markers, selectedVenueId, panToVenue]
   );
 
   const handleCardPress = useCallback(
@@ -420,7 +467,7 @@ export function MapViewScreen() {
           style={styles.countRow}
         >
           <ResultCountPill
-            count={markers.length}
+            count={visibleMarkers.length}
             noun="venue"
             loading={isLoading}
           />
