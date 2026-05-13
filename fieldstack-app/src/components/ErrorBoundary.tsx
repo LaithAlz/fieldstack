@@ -1,10 +1,9 @@
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Clipboard from "expo-clipboard";
 import { Component, type ErrorInfo, type ReactNode } from "react";
-import { Linking, Text as RNText, StyleSheet, View } from "react-native";
+import { Linking, Pressable, Text as RNText, StyleSheet, View } from "react-native";
 
 import { borderRadius, fontFamily, fontSize, fontWeight, spacing } from "../theme/tokens";
-
-import { Button } from "./Button";
 
 type Props = {
   children: ReactNode;
@@ -18,23 +17,33 @@ type Props = {
 type State = {
   error: Error | null;
   errorInfo: ErrorInfo | null;
+  /** Number of consecutive resets that ended in another crash. */
+  resetCount: number;
+  /** Latest user-visible status under the buttons (e.g. clipboard fallback). */
+  feedback: string | null;
 };
 
 const DEFAULT_CONTACT = "support@fieldstack.app";
+// After this many failed reloads we stop offering a plain reload and route
+// the user to a wipe path — the underlying state is almost certainly broken.
+const STUCK_THRESHOLD = 2;
 
 /**
  * Top-level crash guard. Without this, a thrown render error white-screens
  * the entire app — every other screen unreachable. Catching at the root
- * keeps the user one tap away from a reload and gives us a paper trail to
- * triage from.
+ * keeps the user one tap away from a reload and gives us a paper trail.
  *
- * React Native's recovery story for class-based ErrorBoundary is the same
- * as web: setState back to a non-error tree to "reload" the subtree. A full
- * native re-launch needs DevSettings/Updates which aren't worth the dep
- * here — the reset button is enough for the typical transient render bug.
+ * The fallback deliberately avoids every themed / context-aware component
+ * (Text, Button, useTheme) — if the boundary fires from a theme-layer crash,
+ * those would re-throw and produce the white screen we tried to prevent.
+ * Inline styles + raw RN Text/Pressable only.
+ *
+ * After STUCK_THRESHOLD consecutive resets that immediately re-crash, the
+ * Reload button switches to a "Clear app data" path that wipes AsyncStorage —
+ * the realistic recovery when a corrupted persisted blob is feeding the crash.
  */
 export class ErrorBoundary extends Component<Props, State> {
-  state: State = { error: null, errorInfo: null };
+  state: State = { error: null, errorInfo: null, resetCount: 0, feedback: null };
 
   static getDerivedStateFromError(error: Error): Partial<State> {
     return { error };
@@ -46,11 +55,31 @@ export class ErrorBoundary extends Component<Props, State> {
     // shows up in Metro and in dev-tooling.
     // eslint-disable-next-line no-console
     console.error("[ErrorBoundary]", error, errorInfo.componentStack);
-    this.setState({ errorInfo });
+    this.setState((prev) => ({
+      errorInfo,
+      // If we're entering an error state again right after a reset, treat it
+      // as a stuck loop. We can't tell precisely "did reset just happen?" but
+      // any catch while resetCount > 0 implies the prior reset didn't help.
+      resetCount: prev.resetCount,
+    }));
   }
 
   private reset = () => {
-    this.setState({ error: null, errorInfo: null });
+    this.setState((prev) => ({
+      error: null,
+      errorInfo: null,
+      resetCount: prev.resetCount + 1,
+      feedback: null,
+    }));
+  };
+
+  private wipeAndReset = async () => {
+    try {
+      await AsyncStorage.clear();
+    } catch {
+      // Best-effort; even partial wipe should unstick most cases.
+    }
+    this.setState({ error: null, errorInfo: null, resetCount: 0, feedback: null });
   };
 
   private contact = async () => {
@@ -73,25 +102,28 @@ export class ErrorBoundary extends Component<Props, State> {
     const url = `mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
     try {
       await Linking.openURL(url);
+      this.setState({ feedback: null });
     } catch {
-      // Fallback: copy to clipboard so the user can paste it somewhere.
+      // No mail client — copy the error to the clipboard so the user has
+      // something they can paste somewhere, with explicit feedback.
       await Clipboard.setStringAsync(body).catch(() => undefined);
+      this.setState({ feedback: "Error copied to clipboard." });
     }
   };
 
   render() {
     if (!this.state.error) return this.props.children;
 
-    // Intentionally not using the themed Text/View components — those are
-    // the most likely culprits of a render crash, and the fallback has to
-    // work without them. Inline styles only, no theme context.
+    const stuck = this.state.resetCount >= STUCK_THRESHOLD;
+
     return (
       <View style={styles.root}>
         <View style={styles.container}>
           <RNText style={styles.title}>Something went wrong</RNText>
           <RNText style={styles.body}>
-            The app hit an unexpected error. Try reloading; if it keeps
-            happening, let us know.
+            {stuck
+              ? "The app is stuck on a crash. Clearing local data usually fixes it — you'll need to set your area + preferences again."
+              : "The app hit an unexpected error. Try reloading; if it keeps happening, let us know."}
           </RNText>
           {__DEV__ ? (
             <RNText style={styles.errorDev} numberOfLines={6}>
@@ -99,13 +131,58 @@ export class ErrorBoundary extends Component<Props, State> {
             </RNText>
           ) : null}
           <View style={styles.actions}>
-            <Button label="Reload" onPress={this.reset} />
-            <Button label="Email us" variant="secondary" onPress={this.contact} />
+            {stuck ? (
+              <FallbackButton
+                label="Clear app data"
+                onPress={this.wipeAndReset}
+                primary
+              />
+            ) : (
+              <FallbackButton label="Reload" onPress={this.reset} primary />
+            )}
+            <FallbackButton label="Email us" onPress={this.contact} />
           </View>
+          {this.state.feedback ? (
+            <RNText style={styles.feedback}>{this.state.feedback}</RNText>
+          ) : null}
         </View>
       </View>
     );
   }
+}
+
+// Theme-free button — Pressable + RN Text only. The themed Button calls
+// useTheme(), which would re-throw if the crash root is in the theme layer.
+function FallbackButton({
+  label,
+  onPress,
+  primary = false,
+}: {
+  label: string;
+  onPress: () => void;
+  primary?: boolean;
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      style={({ pressed }) => [
+        styles.btn,
+        primary ? styles.btnPrimary : styles.btnSecondary,
+        pressed && { opacity: 0.85 },
+      ]}
+    >
+      <RNText
+        style={[
+          styles.btnLabel,
+          { color: primary ? "#FFFFFF" : "#18181B" },
+        ]}
+      >
+        {label}
+      </RNText>
+    </Pressable>
+  );
 }
 
 const styles = StyleSheet.create({
@@ -145,5 +222,30 @@ const styles = StyleSheet.create({
   actions: {
     marginTop: spacing.sm,
     gap: spacing.sm,
+  },
+  btn: {
+    minHeight: 48,
+    paddingHorizontal: spacing.lg,
+    borderRadius: borderRadius.lg,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  btnPrimary: {
+    backgroundColor: "#15803D", // green-700, matches brand light
+  },
+  btnSecondary: {
+    backgroundColor: "#F4F4F5", // zinc-100
+  },
+  btnLabel: {
+    fontFamily: fontFamily.medium,
+    fontSize: fontSize.md,
+    fontWeight: fontWeight.medium,
+  },
+  feedback: {
+    fontFamily: fontFamily.regular,
+    fontSize: fontSize.sm,
+    color: "#52525B",
+    textAlign: "center",
+    marginTop: spacing.xs,
   },
 });
