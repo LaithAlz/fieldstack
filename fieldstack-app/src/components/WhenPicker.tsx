@@ -91,7 +91,7 @@ export function WhenPill() {
 // Internal: the bottom sheet wrapping DateTimeRangePicker
 // ---------------------------------------------------------------------------
 
-const WhenPickerSheet = forwardRef<BottomSheetModal>((_props, ref) => {
+export const WhenPickerSheet = forwardRef<BottomSheetModal>((_props, ref) => {
   const colors = useTheme();
   const { slot, setSlot } = usePreferredSlot();
   const defaults = useMemo(() => defaultDateTimeSelections(), []);
