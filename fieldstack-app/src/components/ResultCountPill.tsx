@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import { StyleSheet, View } from "react-native";
 
 import { borderRadius, spacing } from "../theme/tokens";
@@ -9,20 +10,34 @@ type Props = {
   count: number;
   /** Singular noun. Plural is just `${noun}s`. */
   noun: string;
-  /** When true, shows a "Searching…" state instead of the count. */
+  /** When true, shows the last-known count if any, else "Searching…". */
   loading?: boolean;
 };
 
 /**
  * Compact "12 venues" pill used over the map. Light surface with a subtle
- * shadow so it lifts off any underlying photo / map style; live-region so
- * a screen reader announces filter updates without re-focusing the chips.
+ * shadow so it lifts off any underlying photo / map style.
+ *
+ * Stale-while-revalidate: when `loading` flickers true between filter changes,
+ * the prior count stays visible rather than flashing "Searching…" between
+ * results. Only the very first load (no prior count) shows the spinner copy.
+ *
+ * Live region announces only on settled, non-loading counts to avoid the
+ * "Searching, 3 venues, Searching, 5 venues" announcement spam during rapid
+ * chip taps.
  */
 export function ResultCountPill({ count, noun, loading = false }: Props) {
   const colors = useTheme();
-  const label = loading
-    ? "Searching…"
-    : `${count} ${count === 1 ? noun : `${noun}s`}`;
+  const lastSettledCountRef = useRef<number | null>(null);
+  useEffect(() => {
+    if (!loading) lastSettledCountRef.current = count;
+  }, [loading, count]);
+
+  const settledCount = !loading ? count : lastSettledCountRef.current;
+  const label =
+    settledCount === null
+      ? "Searching…"
+      : `${settledCount} ${settledCount === 1 ? noun : `${noun}s`}`;
 
   return (
     <View
@@ -33,7 +48,9 @@ export function ResultCountPill({ count, noun, loading = false }: Props) {
           borderColor: colors.border,
         },
       ]}
-      accessibilityLiveRegion="polite"
+      // Only loud during a settled state so SR users don't hear the
+      // intermediate "Searching…" between every chip tap.
+      accessibilityLiveRegion={loading ? "none" : "polite"}
     >
       <Text size="sm" weight="medium" numberOfLines={1}>
         {label}
