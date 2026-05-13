@@ -98,9 +98,23 @@ export function ProfileScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.header}>
-          <Text size="xxl" weight="bold" accessibilityRole="header" style={styles.title}>
-            Me
-          </Text>
+          <View style={styles.headerRow}>
+            <Text size="xxl" weight="bold" accessibilityRole="header" style={styles.title}>
+              Me
+            </Text>
+            <Pressable
+              onPress={() => navigation.navigate("Settings")}
+              accessibilityRole="button"
+              accessibilityLabel="Settings"
+              hitSlop={spacing.sm}
+              style={({ pressed }) => [
+                styles.gearBtn,
+                { backgroundColor: colors.surfaceSecondary, opacity: pressed ? 0.7 : 1 },
+              ]}
+            >
+              <Ionicons name="settings-outline" size={20} color={colors.textPrimary} />
+            </Pressable>
+          </View>
           <Text size="sm" variant="secondary">
             Your preferences and history, all in one place.
           </Text>
@@ -382,8 +396,21 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.md,
     gap: spacing.xs,
   },
+  headerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
   title: {
     letterSpacing: -0.5,
+    flexShrink: 1,
+  },
+  gearBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: borderRadius.xl,
+    alignItems: "center",
+    justifyContent: "center",
   },
   sectionSpacer: {
     marginTop: spacing.md,

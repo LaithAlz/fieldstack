@@ -12,6 +12,7 @@ import { FieldSearchScreen } from "../screens/main/FieldSearchScreen";
 import { MapViewScreen } from "../screens/main/MapViewScreen";
 import { ProfileScreen } from "../screens/main/ProfileScreen";
 import { SavedScreen } from "../screens/main/SavedScreen";
+import { SettingsScreen } from "../screens/main/SettingsScreen";
 import { VenueDetailScreen } from "../screens/main/VenueDetailScreen";
 import { VenueListScreen } from "../screens/main/VenueListScreen";
 import { useTheme } from "../theme/useTheme";
@@ -43,6 +44,7 @@ export type SavedStackParamList = {
 
 export type MeStackParamList = {
   Profile: undefined;
+  Settings: undefined;
   VenueDetail: { venueId: string };
   FieldDetail: { fieldId: string };
 };
@@ -71,7 +73,11 @@ function tabBarStyleFor(
   route: RouteProp<RootTabsParamList, keyof RootTabsParamList>
 ) {
   const focused = getFocusedRouteNameFromRoute(route);
-  if (focused === "VenueDetail" || focused === "FieldDetail") {
+  if (
+    focused === "VenueDetail" ||
+    focused === "FieldDetail" ||
+    focused === "Settings"
+  ) {
     return { display: "none" as const };
   }
   return undefined;
@@ -110,6 +116,7 @@ function MeStackNavigator() {
   return (
     <MeStack.Navigator screenOptions={{ headerShown: false }}>
       <MeStack.Screen name="Profile" component={ProfileScreen} />
+      <MeStack.Screen name="Settings" component={SettingsScreen} />
       <MeStack.Screen name="VenueDetail" component={VenueDetailScreen} />
       <MeStack.Screen name="FieldDetail" component={FieldDetailScreen} />
     </MeStack.Navigator>

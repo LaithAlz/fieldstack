@@ -25,6 +25,8 @@ type ContextValue = {
   hydrated: boolean;
   isSaved: (venueId: string) => boolean;
   toggle: (venueId: string) => Promise<void>;
+  /** Wipe in-memory + persisted set. Used by Settings → Clear data. */
+  clear: () => Promise<void>;
 };
 
 const SavedVenuesContext = createContext<ContextValue | null>(null);
@@ -71,9 +73,18 @@ export function SavedVenuesProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  const clear = useCallback(async () => {
+    setSaved(new Set());
+    try {
+      await AsyncStorage.removeItem(KEY);
+    } catch {
+      // ignore
+    }
+  }, []);
+
   const value = useMemo<ContextValue>(
-    () => ({ saved, hydrated, isSaved, toggle }),
-    [saved, hydrated, isSaved, toggle]
+    () => ({ saved, hydrated, isSaved, toggle, clear }),
+    [saved, hydrated, isSaved, toggle, clear]
   );
 
   return (
