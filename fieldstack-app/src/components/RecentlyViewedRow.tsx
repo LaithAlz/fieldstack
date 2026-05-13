@@ -30,6 +30,7 @@ export function RecentlyViewedRow({
         venueIds={recentIds}
         allVenues={allVenues}
         onPressVenue={onPressVenue}
+        tileAccessibilityPrefix="Recently viewed: "
       />
     </View>
   );

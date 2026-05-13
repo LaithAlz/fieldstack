@@ -1,5 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import type { BottomSheetModal } from "@gorhom/bottom-sheet";
+import type { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useMemo, useRef } from "react";
@@ -20,7 +21,10 @@ import {
 } from "../../lib/preferredSlot";
 import { useRecentlyViewed } from "../../lib/recentlyViewed";
 import { useSavedVenues } from "../../lib/savedVenues";
-import type { MeStackParamList } from "../../navigation/MainNavigator";
+import type {
+  MeStackParamList,
+  RootTabsParamList,
+} from "../../navigation/MainNavigator";
 import { borderRadius, spacing } from "../../theme/tokens";
 import { useTheme } from "../../theme/useTheme";
 
@@ -46,6 +50,24 @@ export function ProfileScreen() {
   const { attempts } = useBookingHistory();
 
   const whenSheetRef = useRef<BottomSheetModal>(null);
+
+  // Visible saved/recent counts — i.e. venues actually renderable given the
+  // current location radius. Used to decide which sections show, with an
+  // "outside this area" fallback so a non-empty IDs set + zero visible rows
+  // doesn't render as silent blank.
+  const visibleSavedCount = useMemo(() => {
+    if (savedIds.size === 0) return 0;
+    const ids = new Set(venues.map((v) => v.id));
+    let n = 0;
+    for (const id of savedIds) if (ids.has(id)) n++;
+    return n;
+  }, [savedIds, venues]);
+
+  const visibleRecentCount = useMemo(() => {
+    if (recentIds.length === 0) return 0;
+    const ids = new Set(venues.map((v) => v.id));
+    return recentIds.filter((id) => ids.has(id)).length;
+  }, [recentIds, venues]);
 
   const recentBookingsByVenue = useMemo(() => {
     // Dedupe attempts down to the latest per venue, then hydrate against the
@@ -98,17 +120,26 @@ export function ProfileScreen() {
               title="Saved"
               actionLabel="See all"
               onAction={() => {
-                const root = navigation.getParent();
-                root?.navigate("SavedTab");
+                // Sibling-tab hop. Type-narrow getParent so a future rename
+                // breaks the build instead of silently no-op'ing at runtime.
+                navigation
+                  .getParent<BottomTabNavigationProp<RootTabsParamList>>()
+                  ?.navigate("SavedTab");
               }}
             />
-            <VenueScrollRow
-              venueIds={Array.from(savedIds)}
-              allVenues={venues}
-              onPressVenue={(id) =>
-                navigation.navigate("VenueDetail", { venueId: id })
-              }
-            />
+            {visibleSavedCount > 0 ? (
+              <VenueScrollRow
+                venueIds={Array.from(savedIds)}
+                allVenues={venues}
+                onPressVenue={(id) =>
+                  navigation.navigate("VenueDetail", { venueId: id })
+                }
+              />
+            ) : (
+              <Text size="sm" variant="tertiary" style={styles.outOfArea}>
+                Your saved venues aren&apos;t in this area.
+              </Text>
+            )}
           </View>
         ) : null}
 
@@ -165,17 +196,23 @@ export function ProfileScreen() {
         {recentIds.length > 0 ? (
           <View style={styles.sectionSpacer}>
             <SectionHeader>Recently viewed</SectionHeader>
-            <VenueScrollRow
-              venueIds={recentIds}
-              allVenues={venues}
-              onPressVenue={(id) =>
-                navigation.navigate("VenueDetail", { venueId: id })
-              }
-            />
+            {visibleRecentCount > 0 ? (
+              <VenueScrollRow
+                venueIds={recentIds}
+                allVenues={venues}
+                onPressVenue={(id) =>
+                  navigation.navigate("VenueDetail", { venueId: id })
+                }
+              />
+            ) : (
+              <Text size="sm" variant="tertiary" style={styles.outOfArea}>
+                Recent venues aren&apos;t in this area.
+              </Text>
+            )}
           </View>
         ) : null}
 
-        {/* ---- Empty everything ---- */}
+        {/* Empty-everything copy only when there's truly nothing to show. */}
         {savedIds.size === 0 &&
         recentBookingsByVenue.length === 0 &&
         recentIds.length === 0 ? (
@@ -279,7 +316,12 @@ function PreferredSlotCard({
             We&apos;ll pre-fill this on every field you open.
           </Text>
         </View>
-        <Text size="sm" weight="medium" style={{ color: colors.brand }}>
+        <Text
+          size="sm"
+          weight="medium"
+          numberOfLines={1}
+          style={{ color: colors.brand, flexShrink: 0 }}
+        >
           {cta}
         </Text>
       </View>
@@ -399,5 +441,9 @@ const styles = StyleSheet.create({
   emptyAll: {
     marginTop: spacing.xl,
     paddingHorizontal: spacing.xl,
+  },
+  outOfArea: {
+    paddingHorizontal: spacing.lg,
+    marginTop: spacing.xs,
   },
 });

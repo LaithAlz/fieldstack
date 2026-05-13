@@ -32,6 +32,11 @@ type Props = {
    * behaviour; pass false to keep the heading + an empty message.
    */
   hideWhenEmpty?: boolean;
+  /**
+   * Prefixed to each tile's accessibilityLabel — e.g. "Recently viewed: ".
+   * Lets RecentlyViewedRow keep its tile-specific SR cue when delegating.
+   */
+  tileAccessibilityPrefix?: string;
 };
 
 /**
@@ -49,6 +54,7 @@ export function VenueScrollRow({
   allVenues,
   onPressVenue,
   hideWhenEmpty = true,
+  tileAccessibilityPrefix = "",
 }: Props) {
   const visible = useMemo(() => {
     const byId = new Map(allVenues.map((v) => [v.id, v]));
@@ -74,14 +80,26 @@ export function VenueScrollRow({
         contentContainerStyle={styles.row}
         ItemSeparatorComponent={() => <View style={{ width: spacing.md }} />}
         renderItem={({ item }) => (
-          <Tile venue={item} onPress={() => onPressVenue(item.id)} />
+          <Tile
+            venue={item}
+            onPress={() => onPressVenue(item.id)}
+            accessibilityLabel={`${tileAccessibilityPrefix}${item.name}`}
+          />
         )}
       />
     </View>
   );
 }
 
-function Tile({ venue, onPress }: { venue: Venue; onPress: () => void }) {
+function Tile({
+  venue,
+  onPress,
+  accessibilityLabel,
+}: {
+  venue: Venue;
+  onPress: () => void;
+  accessibilityLabel: string;
+}) {
   const colors = useTheme();
   const [photoFailed, setPhotoFailed] = useState(false);
   const photoSrc = venue.photos[0];
@@ -91,7 +109,7 @@ function Tile({ venue, onPress }: { venue: Venue; onPress: () => void }) {
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
-      accessibilityLabel={venue.name}
+      accessibilityLabel={accessibilityLabel}
       style={({ pressed }) => [styles.tile, { opacity: pressed ? 0.7 : 1 }]}
     >
       <View
