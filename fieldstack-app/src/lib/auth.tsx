@@ -8,7 +8,7 @@
  * device-local until the user signs in.
  */
 
-import type { Session, User } from "@supabase/supabase-js";
+import type { AuthError, Session, User } from "@supabase/supabase-js";
 import {
   createContext,
   useCallback,
@@ -26,6 +26,27 @@ type AuthResult = {
   /** User-presentable error message when `ok` is false. */
   error: string | null;
 };
+
+/**
+ * Map supabase-js error messages to a stable UI vocabulary. Without this the
+ * sign-in form would leak server-side detail (JWT internals, RLS rule names)
+ * straight to the user, and screens couldn't compare error.message strings
+ * against a known set for branching behaviour.
+ *
+ * Returns null when err is null so screens can use `error ?? "..."` directly.
+ */
+function presentAuthError(err: AuthError | null): string | null {
+  if (!err) return null;
+  const msg = err.message?.toLowerCase() ?? "";
+  if (msg.includes("invalid login credentials")) return "Email or password is incorrect.";
+  if (msg.includes("email not confirmed")) return "Confirm your email — check your inbox for a link.";
+  if (msg.includes("user already registered")) return "That email already has an account. Try signing in.";
+  if (msg.includes("password should be at least")) return "Password must be at least 6 characters.";
+  if (msg.includes("rate limit") || msg.includes("too many")) return "Too many attempts. Try again in a minute.";
+  if (msg.includes("network")) return "Couldn't reach the server. Check your connection.";
+  // Anything else: don't surface internals.
+  return "Something went wrong. Please try again.";
+}
 
 type ContextValue = {
   user: User | null;
@@ -77,7 +98,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setBusy(true);
     try {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
-      return { ok: !error, error: error?.message ?? null };
+      return { ok: !error, error: presentAuthError(error) };
     } finally {
       setBusy(false);
     }
@@ -87,7 +108,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setBusy(true);
     try {
       const { error } = await supabase.auth.signUp({ email, password });
-      return { ok: !error, error: error?.message ?? null };
+      return { ok: !error, error: presentAuthError(error) };
     } finally {
       setBusy(false);
     }

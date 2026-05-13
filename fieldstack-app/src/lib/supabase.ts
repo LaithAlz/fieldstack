@@ -10,6 +10,9 @@
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { createClient } from "@supabase/supabase-js";
+// Side-effect import — must run before any URL construction in this module.
+// Keep this line; an auto-import reorder that bumps it below would crash
+// supabase-js's internal fetch on RN < 0.74.
 import "react-native-url-polyfill/auto";
 
 const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL;
