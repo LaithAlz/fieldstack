@@ -1,5 +1,9 @@
 import { Ionicons } from "@expo/vector-icons";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
+import {
+  getFocusedRouteNameFromRoute,
+  type RouteProp,
+} from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 
 import { FieldSearchProvider } from "../hooks/useFieldSearch";
@@ -48,6 +52,30 @@ export type RootTabsParamList = {
   SavedTab: undefined;
   MeTab: undefined;
 };
+
+/**
+ * Routes a Venue/Field detail screen can navigate to. They live in all three
+ * tab stacks, so typing against `MainStackParamList` would lie when mounted
+ * under Saved or Me — a `navigate("FieldSearch")` call would compile but
+ * crash at runtime. This subset is what the detail screens actually use.
+ */
+export type DetailParamList = {
+  VenueDetail: { venueId: string };
+  FieldDetail: { fieldId: string };
+};
+
+// Hide the tab bar on full-screen detail routes. Returns a function that
+// React Navigation re-reads as `route.state` changes, so the bar slides
+// back when the user pops to a list-level screen.
+function tabBarStyleFor(
+  route: RouteProp<RootTabsParamList, keyof RootTabsParamList>
+) {
+  const focused = getFocusedRouteNameFromRoute(route);
+  if (focused === "VenueDetail" || focused === "FieldDetail") {
+    return { display: "none" as const };
+  }
+  return undefined;
+}
 
 // ---------------------------------------------------------------------------
 // Stacks
@@ -103,41 +131,49 @@ export function MainNavigator() {
           headerShown: false,
           tabBarActiveTintColor: colors.brand,
           tabBarInactiveTintColor: colors.textTertiary,
-          tabBarStyle: {
-            backgroundColor: colors.surface,
-            borderTopColor: colors.border,
-          },
         }}
       >
         <Tabs.Screen
           name="ExploreTab"
           component={ExploreStackNavigator}
-          options={{
+          options={({ route }) => ({
             tabBarLabel: "Explore",
             tabBarIcon: ({ color, size }) => (
               <Ionicons name="search" size={size} color={color} />
             ),
-          }}
+            tabBarStyle: tabBarStyleFor(route) ?? {
+              backgroundColor: colors.surface,
+              borderTopColor: colors.border,
+            },
+          })}
         />
         <Tabs.Screen
           name="SavedTab"
           component={SavedStackNavigator}
-          options={{
+          options={({ route }) => ({
             tabBarLabel: "Saved",
             tabBarIcon: ({ color, size }) => (
               <Ionicons name="heart" size={size} color={color} />
             ),
-          }}
+            tabBarStyle: tabBarStyleFor(route) ?? {
+              backgroundColor: colors.surface,
+              borderTopColor: colors.border,
+            },
+          })}
         />
         <Tabs.Screen
           name="MeTab"
           component={MeStackNavigator}
-          options={{
+          options={({ route }) => ({
             tabBarLabel: "Me",
             tabBarIcon: ({ color, size }) => (
               <Ionicons name="person" size={size} color={color} />
             ),
-          }}
+            tabBarStyle: tabBarStyleFor(route) ?? {
+              backgroundColor: colors.surface,
+              borderTopColor: colors.border,
+            },
+          })}
         />
       </Tabs.Navigator>
     </FieldSearchProvider>

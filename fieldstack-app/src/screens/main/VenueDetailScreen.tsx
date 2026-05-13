@@ -23,13 +23,18 @@ import { useRecentlyViewed } from "../../lib/recentlyViewed";
 import { useSavedVenues } from "../../lib/savedVenues";
 import { EVENT_VENUE_VIEWED, track } from "../../lib/analytics";
 import { formatDistance, haversineKm } from "../../lib/distance";
-import type { MainStackParamList } from "../../navigation/MainNavigator";
+import type { DetailParamList } from "../../navigation/MainNavigator";
 import { borderRadius, spacing } from "../../theme/tokens";
 import { useTheme } from "../../theme/useTheme";
 import type { Field } from "../../types/api";
 
-type Props = NativeStackScreenProps<MainStackParamList, "VenueDetail">;
-type Nav = NativeStackNavigationProp<MainStackParamList>;
+// Honest typing: VenueDetail/FieldDetail live in all three tab stacks
+// (Explore / Saved / Me), and from here we only ever navigate to the other
+// detail screen. DetailParamList captures that subset; using MainStackParamList
+// would falsely typecheck navigate("FieldSearch") / navigate("MapView") when
+// mounted under Saved or Me.
+type Props = NativeStackScreenProps<DetailParamList, "VenueDetail">;
+type Nav = NativeStackNavigationProp<DetailParamList>;
 
 export function VenueDetailScreen({ route }: Props) {
   const { venueId } = route.params;
