@@ -12,6 +12,7 @@ import { VenueScrollRow } from "../../components/VenueScrollRow";
 import { WhenPickerSheet } from "../../components/WhenPicker";
 import { useLocation } from "../../hooks/useLocation";
 import { useVenues } from "../../hooks/useVenues";
+import { useAuth } from "../../lib/auth";
 import { useBookingHistory, type BookingAttempt } from "../../lib/bookingHistory";
 import { formatEndTime, formatTime12h } from "../../lib/datetime";
 import {
@@ -48,6 +49,22 @@ export function ProfileScreen() {
   const { saved: savedIds } = useSavedVenues();
   const { recent: recentIds } = useRecentlyViewed();
   const { attempts } = useBookingHistory();
+  const { user } = useAuth();
+
+  // Greeting picks the first thing useful — display name from auth metadata,
+  // local-part of the email, or a generic "you" for guests.
+  const greeting = useMemo(() => {
+    if (!user) return "Me";
+    const meta = user.user_metadata as { name?: string; full_name?: string } | undefined;
+    const fromMeta = meta?.name ?? meta?.full_name;
+    if (fromMeta && fromMeta.trim().length > 0) return `Hey ${fromMeta.trim().split(" ")[0]}`;
+    if (user.email) {
+      const local = user.email.split("@")[0];
+      // Capitalize first letter for a friendlier read.
+      return `Hey ${local.charAt(0).toUpperCase()}${local.slice(1)}`;
+    }
+    return "Hey there";
+  }, [user]);
 
   const whenSheetRef = useRef<BottomSheetModal>(null);
 
@@ -100,7 +117,7 @@ export function ProfileScreen() {
         <View style={styles.header}>
           <View style={styles.headerRow}>
             <Text size="xxl" weight="bold" accessibilityRole="header" style={styles.title}>
-              Me
+              {greeting}
             </Text>
             <Pressable
               onPress={() => navigation.navigate("Settings")}
@@ -119,6 +136,43 @@ export function ProfileScreen() {
             Your preferences and history, all in one place.
           </Text>
         </View>
+
+        {/* Sign-in banner — only when guest. Saves are device-local, so the
+            invite is informational rather than blocking. Hides itself once
+            the user signs in. */}
+        {!user ? (
+          <Pressable
+            onPress={() => navigation.navigate("SignIn")}
+            accessibilityRole="button"
+            accessibilityLabel="Sign in to sync your saves and preferences"
+            style={({ pressed }) => [
+              styles.signInBanner,
+              {
+                backgroundColor: colors.brand + "12",
+                borderColor: colors.brand,
+                opacity: pressed ? 0.85 : 1,
+              },
+            ]}
+          >
+            <View
+              style={[
+                styles.signInIcon,
+                { backgroundColor: colors.brand + "22" },
+              ]}
+            >
+              <Ionicons name="cloud-upload-outline" size={20} color={colors.brand} />
+            </View>
+            <View style={styles.signInBody}>
+              <Text size="md" weight="bold">
+                Sign in to sync
+              </Text>
+              <Text size="sm" variant="secondary">
+                Keep your saves, preferred time, and history across devices.
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={16} color={colors.brand} />
+          </Pressable>
+        ) : null}
 
         {/* ---- Preferred slot ---- */}
         <SectionHeader>Preferred time</SectionHeader>
@@ -411,6 +465,27 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.xl,
     alignItems: "center",
     justifyContent: "center",
+  },
+  signInBanner: {
+    marginHorizontal: spacing.lg,
+    marginTop: spacing.sm,
+    padding: spacing.md,
+    borderRadius: borderRadius.lg,
+    borderWidth: 1.5,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.md,
+  },
+  signInIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  signInBody: {
+    flex: 1,
+    gap: 2,
   },
   sectionSpacer: {
     marginTop: spacing.md,
