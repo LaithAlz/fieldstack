@@ -18,6 +18,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { FilterChipBar } from "../../components/FilterChipBar";
 import { ResultCountPill } from "../../components/ResultCountPill";
+import { SearchInput } from "../../components/SearchInput";
 import { Text } from "../../components/Text";
 import { VenueMapCard, VENUE_MAP_CARD_WIDTH } from "../../components/VenueMapCard";
 import { VenuePin } from "../../components/VenuePin";
@@ -84,7 +85,15 @@ export function MapViewScreen() {
   const nav = useNavigation<Nav>();
 
   const { coords: userCoords } = useLocation();
-  const { results, isLoading, filters, setFilter, setLocation } = useFieldSearch();
+  const {
+    results,
+    isLoading,
+    filters,
+    location,
+    locationError,
+    setFilter,
+    setLocation,
+  } = useFieldSearch();
 
   // Initial region: prior session position if we have one, else user coords,
   // else downtown Toronto.
@@ -165,6 +174,29 @@ export function MapViewScreen() {
       animated: true,
     });
   }, [selectedIndex]);
+
+  // Successful geocode → fly the map to the new coords. Without this the
+  // search bar would update location state but the camera would sit still,
+  // which feels broken (typing "Mississauga" should pan the map there).
+  // Mark the pan as programmatic so it doesn't trip "Search this area".
+  useEffect(() => {
+    if (location.lat === null || location.lng === null) return;
+    if (!mapRef.current) return;
+    const cached = getLastRegion();
+    const latDelta = cached?.latitudeDelta ?? DEFAULT_DELTA;
+    const lngDelta = cached?.longitudeDelta ?? DEFAULT_DELTA;
+    isProgrammaticPanRef.current = true;
+    mapRef.current.animateToRegion(
+      {
+        latitude: location.lat,
+        longitude: location.lng,
+        latitudeDelta: latDelta,
+        longitudeDelta: lngDelta,
+      },
+      400
+    );
+    lastSearchCenterRef.current = { lat: location.lat, lng: location.lng };
+  }, [location.lat, location.lng]);
 
   // Note: previously we default-selected the first marker on results-load
   // for visual parity with Airbnb's carousel. With clustering on at city
@@ -343,12 +375,20 @@ export function MapViewScreen() {
         })}
       </ClusteredMapView>
 
-      {/* Top overlay: list-view icon + filter chips */}
+      {/* Top overlay: search bar (with list-view icon) + filter chips */}
       <View
         pointerEvents="box-none"
         style={[styles.topOverlay, { top: insets.top + spacing.sm }]}
       >
-        <View style={styles.topRow} pointerEvents="box-none">
+        <View style={styles.searchRow} pointerEvents="box-none">
+          <View style={styles.searchWrap} pointerEvents="auto">
+            <SearchInput
+              value={location.text}
+              onChangeText={(t) => setLocation(t)}
+              error={locationError?.message ?? null}
+              placeholder="Search city, neighbourhood, or postal"
+            />
+          </View>
           <Pressable
             onPress={() => nav.goBack()}
             accessibilityRole="button"
@@ -364,16 +404,14 @@ export function MapViewScreen() {
           >
             <Ionicons name="list" size={20} color={colors.textPrimary} />
           </Pressable>
+        </View>
 
-          {/* box-none so map gestures pass through the empty space between
-              chips; each chip's own Pressable still receives taps. */}
-          <View style={styles.chipsWrap} pointerEvents="box-none">
-            <FilterChipBar
-              filters={filters}
-              setFilter={setFilter}
-              contentStyle={styles.chipsContent}
-            />
-          </View>
+        <View style={styles.chipsWrap} pointerEvents="box-none">
+          <FilterChipBar
+            filters={filters}
+            setFilter={setFilter}
+            contentStyle={styles.chipsContent}
+          />
         </View>
 
         {/* Result count — live-updates as filters / pan apply */}
@@ -473,14 +511,26 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
   },
-  topRow: {
+  searchRow: {
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: spacing.lg,
     gap: spacing.sm,
   },
-  chipsWrap: {
+  searchWrap: {
     flex: 1,
+    // Lift the input off the map base layer so it reads on light + dark
+    // satellite tiles. Matches the list-icon's existing shadow weight so
+    // they sit together as a single floating row.
+    shadowColor: "#000",
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 3,
+  },
+  chipsWrap: {
+    paddingHorizontal: spacing.lg,
+    marginTop: spacing.sm,
   },
   chipsContent: {
     paddingVertical: 0,
