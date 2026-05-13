@@ -57,18 +57,34 @@ export function setAnalyticsProvider(provider: AnalyticsProvider): void {
   currentProvider = provider;
 }
 
+/**
+ * Restore the default console provider. Module-level provider state would
+ * otherwise leak between Jest specs that swap in mocks.
+ */
+export function resetAnalyticsProvider(): void {
+  currentProvider = consoleProvider;
+}
+
 export function track(event: AnalyticsEvent, properties?: AnalyticsProperties): void {
   try {
     currentProvider.track(event, properties);
-  } catch {
-    // Analytics must never crash callers. Swallow.
+  } catch (err) {
+    // Analytics must never crash callers. Surface to the dev console so a
+    // faulty provider is at least visible during development.
+    if (__DEV__) {
+      // eslint-disable-next-line no-console
+      console.warn("[analytics] provider.track threw", err);
+    }
   }
 }
 
 export function identify(userId: string, traits?: AnalyticsProperties): void {
   try {
     currentProvider.identify?.(userId, traits);
-  } catch {
-    // ignore
+  } catch (err) {
+    if (__DEV__) {
+      // eslint-disable-next-line no-console
+      console.warn("[analytics] provider.identify threw", err);
+    }
   }
 }
