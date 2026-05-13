@@ -1,7 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useMemo } from "react";
 import {
   FlatList,
   Pressable,
@@ -42,11 +42,7 @@ export function FieldSearchScreen() {
   const insets = useSafeAreaInsets();
   const nav = useNavigation<Nav>();
 
-  const {
-    coords: userCoords,
-    label: userLocationLabel,
-    loading: locationLoading,
-  } = useLocation();
+  const { coords: userCoords } = useLocation();
 
   const {
     results,
@@ -59,18 +55,7 @@ export function FieldSearchScreen() {
     clearFilters,
     setLocation,
   } = useFieldSearch();
-
-  // Seed the search hook's location once useLocation resolves, so the first
-  // fetch goes out with coords rather than waiting on a geocode the user
-  // hasn't asked for.
-  const seededRef = useRef(false);
-  useEffect(() => {
-    if (locationLoading || seededRef.current) return;
-    if (location.text.length === 0) {
-      setLocation(userLocationLabel, userCoords);
-    }
-    seededRef.current = true;
-  }, [locationLoading, userLocationLabel, userCoords, location.text.length, setLocation]);
+  // Location seeding lives in FieldSearchProvider now so MapView gets it too.
 
   const activeFilterCount =
     filters.surface.length +
