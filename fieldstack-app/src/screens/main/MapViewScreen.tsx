@@ -115,6 +115,11 @@ export function MapViewScreen() {
   const [selectedVenueId, setSelectedVenueId] = useState<string | null>(null);
   const mapRef = useRef<MapView>(null);
   const carouselRef = useRef<FlatList<VenueMarker>>(null);
+  // Set true right before a programmatic scrollToOffset on the carousel; the
+  // resulting onMomentumScrollEnd reads + clears it. Without this, an animated
+  // scroll-to-card can settle one sub-pixel index off and re-flip the
+  // selection back to the neighbour, ping-ponging with the pin tap.
+  const programmaticScrollRef = useRef(false);
   const { isSaved, toggle: toggleSaved } = useSavedVenues();
   // Set true right before a programmatic animateToRegion; cleared by the
   // resulting onRegionChangeComplete. Prevents the pin-tap re-center from
@@ -153,11 +158,25 @@ export function MapViewScreen() {
   // Guard against scrolling before the FlatList has measured (offset === -1).
   useEffect(() => {
     if (selectedIndex < 0) return;
+    programmaticScrollRef.current = true;
     carouselRef.current?.scrollToOffset({
       offset: selectedIndex * CARD_SNAP,
       animated: true,
     });
   }, [selectedIndex]);
+
+  // Default-select the first marker when results land so the centered card
+  // matches the highlighted pin from frame one (Airbnb pattern). Re-runs only
+  // when the first marker's identity changes — not on every result reorder.
+  const firstMarkerId = markers[0]?.venue.id;
+  useEffect(() => {
+    if (firstMarkerId && selectedVenueId === null) {
+      setSelectedVenueId(firstMarkerId);
+    }
+    // selectedVenueId intentionally excluded so user-cleared selection
+    // (handleMapPress) doesn't snap back to the first card.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [firstMarkerId]);
 
   const handleRegionChange = useCallback((region: Region) => {
     setLastRegion(region);
@@ -203,7 +222,10 @@ export function MapViewScreen() {
       isProgrammaticPanRef.current = true;
       mapRef.current.animateToRegion(
         {
-          latitude: marker.venue.lat - latDelta * 0.2,
+          // 0.12 keeps the pin above the ~140pt carousel without throwing it
+          // off the top of the visible map. Previously 0.2 — sized for the
+          // old 180pt BottomSheet preview.
+          latitude: marker.venue.lat - latDelta * 0.12,
           longitude: marker.venue.lng,
           latitudeDelta: latDelta,
           longitudeDelta: lngDelta,
@@ -223,6 +245,13 @@ export function MapViewScreen() {
   // on every intermediate index).
   const handleCarouselMomentumEnd = useCallback(
     (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+      // Ignore the momentum-end from our own scrollToOffset; otherwise a sub-
+      // pixel landing can flip selection back to the neighbour, ping-ponging
+      // against the pin-tap effect.
+      if (programmaticScrollRef.current) {
+        programmaticScrollRef.current = false;
+        return;
+      }
       const idx = Math.round(e.nativeEvent.contentOffset.x / CARD_SNAP);
       const venueId = markers[idx]?.venue.id;
       if (venueId && venueId !== selectedVenueId) {

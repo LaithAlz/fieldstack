@@ -29,10 +29,10 @@ type Props = {
 };
 
 /**
- * Compact venue card used in the map's bottom carousel. Distinct from
- * `VenueCard` (full-width list) and `VenuePreviewCard` (sheet) because the
- * carousel format demands a fixed width with peek of neighbours — neither
- * existing card supports that without compromising one of its existing uses.
+ * Compact venue card used in the map's bottom carousel. Distinct from the
+ * full-width `VenueCard` (list) because the carousel format demands a fixed
+ * width with peek of neighbours — sharing a single card would mean a
+ * `compact` mode on `VenueCard` that compromised both layouts.
  *
  * Pure presentational; parent owns selection state, navigation, and the save
  * toggle handler.
@@ -116,10 +116,9 @@ export function VenueMapCard({
             {venue.name}
           </Text>
           <Pressable
-            onPress={(e) => {
-              e.stopPropagation();
-              onToggleSave();
-            }}
+            // RN Pressable doesn't bubble to a parent Pressable, so the heart
+            // tap is naturally isolated from the card's onPress.
+            onPress={onToggleSave}
             accessibilityRole="button"
             accessibilityLabel={isSaved ? "Unsave venue" : "Save venue"}
             accessibilityState={{ selected: isSaved }}
