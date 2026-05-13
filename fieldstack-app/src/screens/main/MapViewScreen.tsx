@@ -175,6 +175,29 @@ export function MapViewScreen() {
     });
   }, [selectedIndex]);
 
+  // Successful geocode → fly the map to the new coords. Without this the
+  // search bar would update location state but the camera would sit still,
+  // which feels broken (typing "Mississauga" should pan the map there).
+  // Mark the pan as programmatic so it doesn't trip "Search this area".
+  useEffect(() => {
+    if (location.lat === null || location.lng === null) return;
+    if (!mapRef.current) return;
+    const cached = getLastRegion();
+    const latDelta = cached?.latitudeDelta ?? DEFAULT_DELTA;
+    const lngDelta = cached?.longitudeDelta ?? DEFAULT_DELTA;
+    isProgrammaticPanRef.current = true;
+    mapRef.current.animateToRegion(
+      {
+        latitude: location.lat,
+        longitude: location.lng,
+        latitudeDelta: latDelta,
+        longitudeDelta: lngDelta,
+      },
+      400
+    );
+    lastSearchCenterRef.current = { lat: location.lat, lng: location.lng };
+  }, [location.lat, location.lng]);
+
   // Note: previously we default-selected the first marker on results-load
   // for visual parity with Airbnb's carousel. With clustering on at city
   // zoom most pins live inside a cluster bubble — selecting one would show
@@ -496,6 +519,14 @@ const styles = StyleSheet.create({
   },
   searchWrap: {
     flex: 1,
+    // Lift the input off the map base layer so it reads on light + dark
+    // satellite tiles. Matches the list-icon's existing shadow weight so
+    // they sit together as a single floating row.
+    shadowColor: "#000",
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 3,
   },
   chipsWrap: {
     paddingHorizontal: spacing.lg,
