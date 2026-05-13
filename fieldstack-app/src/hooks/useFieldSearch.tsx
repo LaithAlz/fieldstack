@@ -12,7 +12,16 @@
  */
 
 import * as Location from "expo-location";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 
 import { searchFields, type SearchFieldsResult, type SearchSort } from "../api/search";
 import { EVENT_SEARCH_FILTERED, track } from "../lib/analytics";
@@ -81,7 +90,36 @@ export type UseFieldSearchResult = {
   setLocation: (text: string, coords?: Coords) => void;
 };
 
+// ---------------------------------------------------------------------------
+// Provider + context. Hoisted from a per-call hook so FieldSearchScreen and
+// MapViewScreen share one set of filters / results / debounced fetches.
+// Without this both screens would maintain independent state and double the
+// network traffic, and a filter set on Map wouldn't apply when nav-back to
+// the list.
+// ---------------------------------------------------------------------------
+
+const FieldSearchContext = createContext<UseFieldSearchResult | null>(null);
+
+export function FieldSearchProvider({ children }: { children: ReactNode }) {
+  const value = useFieldSearchState();
+  return (
+    <FieldSearchContext.Provider value={value}>
+      {children}
+    </FieldSearchContext.Provider>
+  );
+}
+
 export function useFieldSearch(): UseFieldSearchResult {
+  const ctx = useContext(FieldSearchContext);
+  if (!ctx) {
+    throw new Error(
+      "useFieldSearch must be used inside <FieldSearchProvider>"
+    );
+  }
+  return ctx;
+}
+
+function useFieldSearchState(): UseFieldSearchResult {
   const [filters, setFilters] = useState<FieldSearchFilters>(DEFAULT_FILTERS);
   const [location, setLocationState] = useState<FieldSearchLocation>(DEFAULT_LOCATION);
 

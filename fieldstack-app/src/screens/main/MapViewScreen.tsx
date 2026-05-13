@@ -258,7 +258,9 @@ export function MapViewScreen() {
             <Ionicons name="list" size={20} color={colors.textPrimary} />
           </Pressable>
 
-          <View style={styles.chipsWrap} pointerEvents="auto">
+          {/* box-none so map gestures pass through the empty space between
+              chips; each chip's own Pressable still receives taps. */}
+          <View style={styles.chipsWrap} pointerEvents="box-none">
             <FilterChipBar
               filters={filters}
               setFilter={setFilter}
