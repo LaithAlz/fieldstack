@@ -2,7 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp, NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useEffect, useMemo, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { Pressable, ScrollView, Share, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { AmenityChip } from "../../components/AmenityChip";
@@ -18,7 +18,12 @@ import { Skeleton } from "../../components/Skeleton";
 import { Text } from "../../components/Text";
 import { useLocation } from "../../hooks/useLocation";
 import { useVenue } from "../../hooks/useVenue";
-import { preferredSlotDate, usePreferredSlot } from "../../lib/preferredSlot";
+import { formatEndTime, formatTime12h } from "../../lib/datetime";
+import {
+  preferredSlotDate,
+  usePreferredSlot,
+  type PreferredSlot,
+} from "../../lib/preferredSlot";
 import { useRecentlyViewed } from "../../lib/recentlyViewed";
 import { useSavedVenues } from "../../lib/savedVenues";
 import { EVENT_VENUE_VIEWED, track } from "../../lib/analytics";
@@ -49,6 +54,29 @@ export function VenueDetailScreen({ route }: Props) {
   const { recordView } = useRecentlyViewed();
   const savedForVenue = venue ? isSaved(venue.id) : false;
   const onToggleSave = venue ? () => void toggleSaved(venue.id) : undefined;
+
+  // System share sheet — gives the user a one-tap way to send the venue to
+  // group chat with the optional preferred slot baked in. Native Share is
+  // built into RN, no extra dep needed.
+  const onShare = venue
+    ? async () => {
+        const slotPart = slot ? ` on ${formatShareSlot(slot)}` : "";
+        const address = venue.address ? `\n${venue.address}` : "";
+        try {
+          // Modern RN resolves with {action: 'dismissedAction'} on cancel
+          // (both platforms), so we only see this catch for genuine failures.
+          // Surface those in dev; users won't get a toast for a cancel.
+          await Share.share({
+            message: `${venue.name}${slotPart} — wanna play?${address}`,
+          });
+        } catch (err) {
+          if (__DEV__) {
+            // eslint-disable-next-line no-console
+            console.warn("[share] failed", err);
+          }
+        }
+      }
+    : undefined;
 
   const initial = useState(() => {
     if (slot) {
@@ -97,6 +125,7 @@ export function VenueDetailScreen({ route }: Props) {
           insets={insets}
           saved={savedForVenue}
           onToggleSave={onToggleSave}
+          onShare={onShare}
         />
         <ScrollView contentContainerStyle={styles.scroll}>
           <Skeleton width="100%" height={220} borderRadius={0} />
@@ -163,6 +192,7 @@ export function VenueDetailScreen({ route }: Props) {
           insets={insets}
           saved={savedForVenue}
           onToggleSave={onToggleSave}
+          onShare={onShare}
         />
         </View>
 
@@ -252,9 +282,11 @@ type FloatingTopBarProps = {
   insets: { top: number };
   /** When false, render in normal flow (used for error / loading states). */
   floating?: boolean;
-  /** Optional save action — when provided, renders a heart toggle on the right. */
+  /** Optional save action — when provided, renders a heart toggle. */
   saved?: boolean;
   onToggleSave?: () => void;
+  /** Optional share action — renders a share icon between back and heart. */
+  onShare?: () => void;
 };
 
 function FloatingTopBar({
@@ -263,6 +295,7 @@ function FloatingTopBar({
   floating = true,
   saved = false,
   onToggleSave,
+  onShare,
 }: FloatingTopBarProps) {
   const colors = useTheme();
   return (
@@ -277,12 +310,14 @@ function FloatingTopBar({
               right: spacing.lg,
               zIndex: 2,
               flexDirection: "row",
+              alignItems: "center",
               justifyContent: "space-between",
             }
           : {
               paddingTop: spacing.sm,
               paddingHorizontal: spacing.lg,
               flexDirection: "row",
+              alignItems: "center",
               justifyContent: "space-between",
             },
       ]}
@@ -299,25 +334,41 @@ function FloatingTopBar({
       >
         <Ionicons name="chevron-back" size={20} color={colors.textPrimary} />
       </Pressable>
-      {onToggleSave ? (
-        <Pressable
-          onPress={onToggleSave}
-          accessibilityRole="button"
-          accessibilityLabel={saved ? "Unsave venue" : "Save venue"}
-          accessibilityState={{ selected: saved }}
-          hitSlop={spacing.sm}
-          style={({ pressed }) => [
-            styles.circle,
-            { backgroundColor: colors.surface, opacity: pressed ? 0.7 : 1 },
-          ]}
-        >
-          <Ionicons
-            name={saved ? "heart" : "heart-outline"}
-            size={20}
-            color={saved ? colors.danger : colors.textPrimary}
-          />
-        </Pressable>
-      ) : null}
+      <View style={styles.topBarRight}>
+        {onShare ? (
+          <Pressable
+            onPress={onShare}
+            accessibilityRole="button"
+            accessibilityLabel="Share venue"
+            hitSlop={spacing.sm}
+            style={({ pressed }) => [
+              styles.circle,
+              { backgroundColor: colors.surface, opacity: pressed ? 0.7 : 1 },
+            ]}
+          >
+            <Ionicons name="share-outline" size={20} color={colors.textPrimary} />
+          </Pressable>
+        ) : null}
+        {onToggleSave ? (
+          <Pressable
+            onPress={onToggleSave}
+            accessibilityRole="button"
+            accessibilityLabel={saved ? "Unsave venue" : "Save venue"}
+            accessibilityState={{ selected: saved }}
+            hitSlop={spacing.sm}
+            style={({ pressed }) => [
+              styles.circle,
+              { backgroundColor: colors.surface, opacity: pressed ? 0.7 : 1 },
+            ]}
+          >
+            <Ionicons
+              name={saved ? "heart" : "heart-outline"}
+              size={20}
+              color={saved ? colors.danger : colors.textPrimary}
+            />
+          </Pressable>
+        ) : null}
+      </View>
     </View>
   );
 }
@@ -325,6 +376,24 @@ function FloatingTopBar({
 // ---------------------------------------------------------------------------
 // Styles
 // ---------------------------------------------------------------------------
+
+function formatShareSlot(slot: PreferredSlot): string {
+  const date = preferredSlotDate(slot);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const tomorrow = new Date(today);
+  tomorrow.setDate(today.getDate() + 1);
+  let datePart: string;
+  if (date.getTime() === today.getTime()) datePart = "today";
+  else if (date.getTime() === tomorrow.getTime()) datePart = "tomorrow";
+  else
+    datePart = date.toLocaleDateString("en-US", {
+      weekday: "short",
+      month: "short",
+      day: "numeric",
+    });
+  return `${datePart} ${formatTime12h(slot.startTime)}–${formatEndTime(slot.startTime, slot.duration)}`;
+}
 
 const styles = StyleSheet.create({
   root: {
@@ -335,6 +404,11 @@ const styles = StyleSheet.create({
   },
   topBar: {
     flexDirection: "row",
+  },
+  topBarRight: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
   },
   circle: {
     width: 40,
