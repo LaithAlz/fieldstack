@@ -52,16 +52,20 @@ export function ProfileScreen() {
   const { user } = useAuth();
 
   // Greeting picks the first thing useful — display name from auth metadata,
-  // local-part of the email, or a generic "you" for guests.
+  // local-part of the email, or a generic fallback for guests.
   const greeting = useMemo(() => {
     if (!user) return "Me";
-    const meta = user.user_metadata as { name?: string; full_name?: string } | undefined;
-    const fromMeta = meta?.name ?? meta?.full_name;
-    if (fromMeta && fromMeta.trim().length > 0) return `Hey ${fromMeta.trim().split(" ")[0]}`;
+    const meta = (user.user_metadata ?? {}) as Record<string, unknown>;
+    const candidate = [meta.name, meta.full_name].find(
+      (v): v is string => typeof v === "string" && v.trim().length > 0
+    );
+    if (candidate) return `Hey ${candidate.trim().split(" ")[0]}`;
     if (user.email) {
+      // Split on dots/underscores/dashes so "alex.smith@…" reads as "Alex"
+      // rather than "Alex.smith". Common in work emails.
       const local = user.email.split("@")[0];
-      // Capitalize first letter for a friendlier read.
-      return `Hey ${local.charAt(0).toUpperCase()}${local.slice(1)}`;
+      const firstToken = local.split(/[._-]/)[0] ?? local;
+      return `Hey ${firstToken.charAt(0).toUpperCase()}${firstToken.slice(1)}`;
     }
     return "Hey there";
   }, [user]);
@@ -170,7 +174,13 @@ export function ProfileScreen() {
                 Keep your saves, preferred time, and history across devices.
               </Text>
             </View>
-            <Ionicons name="chevron-forward" size={16} color={colors.brand} />
+            <Ionicons
+              name="chevron-forward"
+              size={16}
+              color={colors.brand}
+              accessibilityElementsHidden
+              importantForAccessibility="no-hide-descendants"
+            />
           </Pressable>
         ) : null}
 
@@ -280,8 +290,11 @@ export function ProfileScreen() {
           </View>
         ) : null}
 
-        {/* Empty-everything copy only when there's truly nothing to show. */}
-        {savedIds.size === 0 &&
+        {/* Empty-everything copy only when there's truly nothing to show AND
+            we're not already nudging the user via the sign-in banner — both
+            blocks together reads as redundant. */}
+        {user &&
+        savedIds.size === 0 &&
         recentBookingsByVenue.length === 0 &&
         recentIds.length === 0 ? (
           <View style={styles.emptyAll}>
