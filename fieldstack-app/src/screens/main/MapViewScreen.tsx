@@ -12,6 +12,7 @@ import { Animated, Pressable, StyleSheet, View } from "react-native";
 import MapView, { Marker, type Region } from "react-native-maps";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { FilterChipBar } from "../../components/FilterChipBar";
 import { Text } from "../../components/Text";
 import { VenuePin } from "../../components/VenuePin";
 import { VenuePreviewCard } from "../../components/VenuePreviewCard";
@@ -57,7 +58,7 @@ export function MapViewScreen() {
   const nav = useNavigation<Nav>();
 
   const { coords: userCoords } = useLocation();
-  const { results, setLocation } = useFieldSearch();
+  const { results, filters, setFilter, setLocation } = useFieldSearch();
 
   // Initial region: prior session position if we have one, else user coords,
   // else downtown Toronto.
@@ -235,34 +236,47 @@ export function MapViewScreen() {
         })}
       </MapView>
 
-      {/* List view button — top-left */}
+      {/* Top overlay: list-view icon + filter chips */}
       <View
         pointerEvents="box-none"
-        style={[styles.topBar, { top: insets.top + spacing.sm }]}
+        style={[styles.topOverlay, { top: insets.top + spacing.sm }]}
       >
-        <Pressable
-          onPress={() => nav.goBack()}
-          accessibilityRole="button"
-          accessibilityLabel="List view"
-          hitSlop={spacing.sm}
-          style={({ pressed }) => [
-            styles.iconButton,
-            {
-              backgroundColor: colors.surface,
-              opacity: pressed ? 0.7 : 1,
-            },
-          ]}
-        >
-          <Ionicons name="list" size={20} color={colors.textPrimary} />
-        </Pressable>
+        <View style={styles.topRow} pointerEvents="box-none">
+          <Pressable
+            onPress={() => nav.goBack()}
+            accessibilityRole="button"
+            accessibilityLabel="List view"
+            hitSlop={spacing.sm}
+            style={({ pressed }) => [
+              styles.iconButton,
+              {
+                backgroundColor: colors.surface,
+                opacity: pressed ? 0.7 : 1,
+              },
+            ]}
+          >
+            <Ionicons name="list" size={20} color={colors.textPrimary} />
+          </Pressable>
+
+          <View style={styles.chipsWrap} pointerEvents="auto">
+            <FilterChipBar
+              filters={filters}
+              setFilter={setFilter}
+              contentStyle={styles.chipsContent}
+            />
+          </View>
+        </View>
 
         {/* "Search this area" — fades + slides in after a meaningful pan */}
         <Animated.View
           pointerEvents={showSearchHere ? "auto" : "none"}
-          style={{
-            opacity: searchHereOpacity,
-            transform: [{ translateY: searchHereOffset }],
-          }}
+          style={[
+            styles.searchHereWrap,
+            {
+              opacity: searchHereOpacity,
+              transform: [{ translateY: searchHereOffset }],
+            },
+          ]}
         >
           <Pressable
             onPress={handleSearchHere}
@@ -289,9 +303,6 @@ export function MapViewScreen() {
             </Text>
           </Pressable>
         </Animated.View>
-
-        {/* Spacer so the icon button stays pinned at the left. */}
-        <View style={{ width: 40 }} />
       </View>
 
       {/* Preview card sheet */}
@@ -329,14 +340,26 @@ const styles = StyleSheet.create({
   root: {
     flex: 1,
   },
-  topBar: {
+  topOverlay: {
     position: "absolute",
-    left: spacing.lg,
-    right: spacing.lg,
+    left: 0,
+    right: 0,
+  },
+  topRow: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    gap: spacing.md,
+    paddingHorizontal: spacing.lg,
+    gap: spacing.sm,
+  },
+  chipsWrap: {
+    flex: 1,
+  },
+  chipsContent: {
+    paddingVertical: 0,
+  },
+  searchHereWrap: {
+    alignItems: "center",
+    marginTop: spacing.md,
   },
   iconButton: {
     width: 40,

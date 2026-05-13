@@ -1,0 +1,49 @@
+/**
+ * Shared filter option lists + bucket helpers used by every surface that
+ * exposes the field-search filter UI (FieldSearchScreen, MapViewScreen,
+ * FilterChipBar, etc.). Keeping these in one place means the label "Indoor"
+ * or "Under $80" never drifts between screens.
+ */
+
+import type { FilterOption } from "../components/FilterBottomSheet";
+import type { FieldSize, FieldSurface } from "../types/api";
+
+export const SURFACE_OPTIONS: FilterOption<FieldSurface>[] = [
+  { id: "turf", label: "Turf" },
+  { id: "grass", label: "Grass" },
+  { id: "concrete", label: "Concrete" },
+  { id: "indoor", label: "Indoor" },
+];
+
+export const SIZE_OPTIONS: FilterOption<FieldSize>[] = [
+  { id: "5v5", label: "5-a-side" },
+  { id: "7v7", label: "7-a-side" },
+  { id: "11v11", label: "11-a-side" },
+];
+
+// Price encoded as the upper bound to keep `priceMax` semantics on the wire.
+// `"any"` is the no-filter sentinel; `"120plus"` is also a no-filter request
+// today because the API doesn't accept a min.
+export type PriceBucket = "any" | "under80" | "to120" | "120plus";
+
+export const PRICE_OPTIONS: FilterOption<PriceBucket>[] = [
+  { id: "any", label: "Any price" },
+  { id: "under80", label: "Under $80" },
+  { id: "to120", label: "$80–$120" },
+  { id: "120plus", label: "$120+" },
+];
+
+export function bucketToPriceMax(bucket: PriceBucket): number | null {
+  if (bucket === "under80") return 80;
+  if (bucket === "to120") return 120;
+  // "any" and "120plus" both clear the cap. "$120+" should ideally pair with
+  // a price_min filter — backend doesn't support that yet, so it behaves as
+  // "any" until the API grows the field.
+  return null;
+}
+
+export function priceMaxToBucket(priceMax: number | null): PriceBucket {
+  if (priceMax === 80) return "under80";
+  if (priceMax === 120) return "to120";
+  return "any";
+}
