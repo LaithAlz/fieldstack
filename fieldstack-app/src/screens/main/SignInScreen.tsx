@@ -45,6 +45,7 @@ export function SignInScreen() {
   const [mode, setMode] = useState<Mode>("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = async () => {
@@ -159,8 +160,12 @@ export function SignInScreen() {
             autoCapitalize="none"
             autoCorrect={false}
             keyboardType="email-address"
+            // textContentType drives iOS autofill / 1Password; autoComplete
+            // is the Android equivalent. Need both for full coverage.
             textContentType="emailAddress"
-            accessibilityLabel="Email"
+            autoComplete="email"
+            // Visible "Email" label above already labels the field for SR.
+            // Setting accessibilityLabel here would make TalkBack read it twice.
             style={[
               styles.input,
               {
@@ -176,25 +181,46 @@ export function SignInScreen() {
           <Text size="sm" variant="secondary" weight="medium" style={styles.fieldLabel}>
             Password
           </Text>
-          <TextInput
-            value={password}
-            onChangeText={setPassword}
-            placeholder={`At least ${MIN_PASSWORD} characters`}
-            placeholderTextColor={colors.textTertiary}
-            secureTextEntry
-            autoCapitalize="none"
-            autoCorrect={false}
-            textContentType={mode === "signin" ? "password" : "newPassword"}
-            accessibilityLabel="Password"
+          <View
             style={[
               styles.input,
+              styles.passwordWrap,
               {
                 backgroundColor: colors.surfaceSecondary,
-                color: colors.textPrimary,
                 borderColor: colors.border,
               },
             ]}
-          />
+          >
+            <TextInput
+              value={password}
+              onChangeText={setPassword}
+              placeholder={`At least ${MIN_PASSWORD} characters`}
+              placeholderTextColor={colors.textTertiary}
+              secureTextEntry={!showPassword}
+              autoCapitalize="none"
+              autoCorrect={false}
+              textContentType={mode === "signin" ? "password" : "newPassword"}
+              autoComplete={mode === "signin" ? "password" : "password-new"}
+              // Visible "Password" label above already labels for SR.
+              style={[styles.passwordInput, { color: colors.textPrimary }]}
+            />
+            <Pressable
+              onPress={() => setShowPassword((v) => !v)}
+              accessibilityRole="button"
+              accessibilityLabel={showPassword ? "Hide password" : "Show password"}
+              hitSlop={spacing.xs}
+              style={({ pressed }) => [
+                styles.passwordToggle,
+                { opacity: pressed ? 0.6 : 1 },
+              ]}
+            >
+              <Ionicons
+                name={showPassword ? "eye-off-outline" : "eye-outline"}
+                size={20}
+                color={colors.textSecondary}
+              />
+            </Pressable>
+          </View>
         </View>
 
         {error ? (
@@ -329,6 +355,24 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.lg,
     borderWidth: StyleSheet.hairlineWidth,
     minHeight: 48,
+  },
+  passwordWrap: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 0,
+    paddingRight: spacing.xs,
+  },
+  passwordInput: {
+    flex: 1,
+    fontFamily: fontFamily.regular,
+    fontSize: fontSize.md,
+    paddingVertical: spacing.sm + 4,
+  },
+  passwordToggle: {
+    width: 36,
+    height: 36,
+    alignItems: "center",
+    justifyContent: "center",
   },
   errorText: {
     marginBottom: spacing.sm,

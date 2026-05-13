@@ -35,6 +35,9 @@ export function SettingsScreen() {
   const confirmSignOut = () => {
     Alert.alert(
       "Sign out?",
+      // TODO(9D): once saves migrate to user-scoped storage, this copy
+      // becomes a lie — update to "Your saves will be restored when you
+      // sign back in."
       "Your saved venues, preferred time, and history stay on this device.",
       [
         { text: "Cancel", style: "cancel" },
