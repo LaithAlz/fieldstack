@@ -16,6 +16,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { ErrorBoundary } from "./src/components/ErrorBoundary";
 import { ToastProvider } from "./src/components/Toast";
 import { EVENT_APP_OPENED, track } from "./src/lib/analytics";
+import { AuthProvider, useAuth } from "./src/lib/auth";
 import {
   BookingHistoryProvider,
   useBookingHistory,
@@ -136,24 +137,26 @@ export default function App() {
         <ErrorBoundary>
           <BottomSheetModalProvider>
             <ToastProvider>
-              <OnboardingProvider initialIsOnboarded={initialIsOnboarded}>
-                <PreferredSlotProvider>
-                  <SavedVenuesProvider>
-                    <BookingHistoryProvider>
-                      <RecentlyViewedProvider>
-                        {/* Hold render until persisted state has hydrated,
-                            so deep links don't see empty defaults. */}
-                        <PersistenceGate>
-                          <NavigationContainer theme={navTheme}>
-                            <RootNavigator />
-                          </NavigationContainer>
-                          <StatusBar style="auto" />
-                        </PersistenceGate>
-                      </RecentlyViewedProvider>
-                    </BookingHistoryProvider>
-                  </SavedVenuesProvider>
-                </PreferredSlotProvider>
-              </OnboardingProvider>
+              <AuthProvider>
+                <OnboardingProvider initialIsOnboarded={initialIsOnboarded}>
+                  <PreferredSlotProvider>
+                    <SavedVenuesProvider>
+                      <BookingHistoryProvider>
+                        <RecentlyViewedProvider>
+                          {/* Hold render until persisted state has hydrated,
+                              so deep links don't see empty defaults. */}
+                          <PersistenceGate>
+                            <NavigationContainer theme={navTheme}>
+                              <RootNavigator />
+                            </NavigationContainer>
+                            <StatusBar style="auto" />
+                          </PersistenceGate>
+                        </RecentlyViewedProvider>
+                      </BookingHistoryProvider>
+                    </SavedVenuesProvider>
+                  </PreferredSlotProvider>
+                </OnboardingProvider>
+              </AuthProvider>
             </ToastProvider>
           </BottomSheetModalProvider>
         </ErrorBoundary>
@@ -167,7 +170,14 @@ function PersistenceGate({ children }: { children: React.ReactNode }) {
   const { hydrated: savedHydrated } = useSavedVenues();
   const { hydrated: historyHydrated } = useBookingHistory();
   const { hydrated: recentHydrated } = useRecentlyViewed();
-  if (!slotHydrated || !savedHydrated || !historyHydrated || !recentHydrated) {
+  const { hydrated: authHydrated } = useAuth();
+  if (
+    !slotHydrated ||
+    !savedHydrated ||
+    !historyHydrated ||
+    !recentHydrated ||
+    !authHydrated
+  ) {
     return null;
   }
   return <>{children}</>;
