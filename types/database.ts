@@ -190,8 +190,8 @@ export type Database = {
           p_lat?: number | null;
           p_lng?: number | null;
           p_radius_meters?: number | null;
-          p_surface?: Database["public"]["Enums"]["field_surface"] | null;
-          p_size?: Database["public"]["Enums"]["field_size"] | null;
+          p_surfaces?: Database["public"]["Enums"]["field_surface"][] | null;
+          p_sizes?: Database["public"]["Enums"]["field_size"][] | null;
           p_price_max?: number | null;
           p_sort?: string | null;
         };
