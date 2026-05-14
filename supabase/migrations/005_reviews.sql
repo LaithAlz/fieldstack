@@ -76,7 +76,12 @@ create policy "users delete own reviews"
 -- Aggregate view for venue cards / detail headers. PostgREST exposes any
 -- view in the public schema; consumers query it like a table.
 -- -------------------------------------------------------------------------
-create or replace view venue_review_summary as
+-- security_invoker=true means the view runs as the caller, not the owner,
+-- so RLS on venue_reviews actually applies through the view. Without this
+-- the view would behave as SECURITY DEFINER and bypass any future tightening
+-- of the underlying table's read policy.
+create or replace view venue_review_summary
+with (security_invoker = true) as
 select
   venue_id,
   round(avg(rating)::numeric, 2) as avg_rating,
