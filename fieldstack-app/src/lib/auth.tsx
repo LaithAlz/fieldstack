@@ -9,6 +9,7 @@
  */
 
 import type { AuthError, Session, User } from "@supabase/supabase-js";
+import * as Linking from "expo-linking";
 import {
   createContext,
   useCallback,
@@ -88,9 +89,42 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSession(next ?? null);
     });
 
+    // Deep-link handler for email verification / magic links. Supabase
+    // appends `#access_token=…&refresh_token=…` to its redirect URL; we
+    // parse that out and hydrate the session. We don't `detectSessionInUrl`
+    // in the client (it's RN, no URL bar), so this is the bridge.
+    const handleDeepLink = async (url: string | null) => {
+      if (cancelled || !url) return;
+      const parsed = parseSupabaseAuthUrl(url);
+      if (!parsed) return;
+      try {
+        await supabase.auth.setSession(parsed);
+      } catch (err) {
+        if (__DEV__) {
+          // Message only — supabase-js error objects can echo back the
+          // request/response body, which may include the raw tokens.
+          // eslint-disable-next-line no-console
+          console.warn(
+            "[auth] setSession from deep link failed",
+            err instanceof Error ? err.message : "unknown"
+          );
+        }
+      }
+    };
+
+    // Cold-launch: the email link may have been the launcher.
+    Linking.getInitialURL()
+      .then((url) => void handleDeepLink(url))
+      .catch(() => undefined);
+    // Warm: app already running when the user tapped the link.
+    const linkingSub = Linking.addEventListener("url", (e) =>
+      void handleDeepLink(e.url)
+    );
+
     return () => {
       cancelled = true;
       sub.subscription.unsubscribe();
+      linkingSub.remove();
     };
   }, []);
 
@@ -145,4 +179,27 @@ export function useAuth(): ContextValue {
     throw new Error("useAuth must be used inside <AuthProvider>");
   }
   return ctx;
+}
+
+/**
+ * Pull `access_token` + `refresh_token` out of a Supabase auth redirect URL.
+ * Supabase puts them in the URL fragment (`#access_token=…&refresh_token=…`)
+ * for email verification, magic links, and password recovery. Returns null
+ * for anything else (regular deep links, error redirects, etc.) so callers
+ * can no-op safely.
+ *
+ * TODO(recovery): `type=recovery` URLs also carry tokens, so the caller
+ * currently signs the user straight in. Once a "set new password" screen
+ * exists, branch on the `type` fragment param and route to it instead.
+ */
+function parseSupabaseAuthUrl(
+  url: string
+): { access_token: string; refresh_token: string } | null {
+  const hashIndex = url.indexOf("#");
+  if (hashIndex === -1) return null;
+  const params = new URLSearchParams(url.slice(hashIndex + 1));
+  const access_token = params.get("access_token");
+  const refresh_token = params.get("refresh_token");
+  if (!access_token || !refresh_token) return null;
+  return { access_token, refresh_token };
 }
