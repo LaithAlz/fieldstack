@@ -32,9 +32,10 @@ const PHONE_DIGITS_REQUIRED = 10;
 const PHONE_COUNTRY_CODE = "+1"; // GTA-focused — North American numbers only for v1
 
 /**
- * Combined sign-in / sign-up screen. Top tab toggle switches mode; an
- * Email/Phone segmented control inside the form switches contact method.
- * Sign-up additionally collects a name + a confirm-password field.
+ * Combined sign-in / sign-up screen. Defaults to sign-in; the user switches
+ * modes via a text link in the footer ("New to FieldStack? Sign up"). Inside
+ * the form, an Email/Phone segmented control picks contact method, and
+ * sign-up additionally collects a name + a confirm-password field.
  *
  * After a successful auth, AuthProvider's onAuthStateChange propagates the
  * new session and downstream screens (Profile, Settings) re-render.
@@ -200,10 +201,8 @@ export function SignInScreen() {
           </View>
         ) : null}
 
-        {/* Email / Phone toggle — radiogroup since it's a single-choice form
-            selector, not a mode tablist. */}
+        {/* Email / Phone — the only segmented control left in the form. */}
         <SegmentedToggle
-          role="radiogroup"
           style={styles.contactToggle}
           left={{
             label: "Email",
@@ -383,7 +382,7 @@ export function SignInScreen() {
             accessibilityLabel={
               mode === "signin" ? "Switch to sign up" : "Switch to sign in"
             }
-            hitSlop={spacing.xs}
+            hitSlop={spacing.md}
             style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}
           >
             <Text size="sm" weight="bold" style={{ color: colors.brand }}>
@@ -409,53 +408,36 @@ type SegmentSide = {
   onPress: () => void;
 };
 
-type SegmentedRole = "tablist" | "radiogroup";
-
 function SegmentedToggle({
   left,
   right,
   style,
-  role = "tablist",
 }: {
   left: SegmentSide;
   right: SegmentSide;
   style?: StyleProp<ViewStyle>;
-  role?: SegmentedRole;
 }) {
   const colors = useTheme();
-  const childRole: "tab" | "radio" = role === "tablist" ? "tab" : "radio";
   return (
     <View
-      accessibilityRole={role}
+      accessibilityRole="radiogroup"
       style={[
         styles.tabs,
         { backgroundColor: colors.surfaceSecondary, borderColor: colors.border },
         style,
       ]}
     >
-      <Segment
-        role={childRole}
-        label={left.label}
-        active={left.active}
-        onPress={left.onPress}
-      />
-      <Segment
-        role={childRole}
-        label={right.label}
-        active={right.active}
-        onPress={right.onPress}
-      />
+      <Segment label={left.label} active={left.active} onPress={left.onPress} />
+      <Segment label={right.label} active={right.active} onPress={right.onPress} />
     </View>
   );
 }
 
 function Segment({
-  role,
   label,
   active,
   onPress,
 }: {
-  role: "tab" | "radio";
   label: string;
   active: boolean;
   onPress: () => void;
@@ -464,7 +446,7 @@ function Segment({
   return (
     <Pressable
       onPress={onPress}
-      accessibilityRole={role}
+      accessibilityRole="radio"
       accessibilityState={{ selected: active }}
       style={({ pressed }) => [
         styles.tab,
