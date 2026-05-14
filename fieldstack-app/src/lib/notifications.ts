@@ -13,10 +13,11 @@ import * as Notifications from "expo-notifications";
 import { Platform } from "react-native";
 
 const ANDROID_CHANNEL = "booking-reminders";
-const MIN_LEAD_MS = 60 * 1000; // <1 min from now → don't bother
+/** Minimum time between "now" and the *trigger* (which is 1h before start). */
+const MIN_LEAD_MS = 60 * 1000;
 
 let handlerRegistered = false;
-let permissionResolved: Promise<boolean> | null = null;
+let pendingPermission: Promise<boolean> | null = null;
 let androidChannelEnsured = false;
 
 /**
@@ -37,13 +38,15 @@ export function initNotifications(): void {
 }
 
 /**
- * Schedule a one-hour-before-start reminder. Returns the scheduler id (so we
- * could cancel later) or null when we skipped scheduling.
+ * Schedule a one-hour-before-start reminder. Returns the scheduler id or null
+ * when we skipped scheduling.
  *
  * Skip cases — all silent, no toast or error:
- *   - notifications permission denied
- *   - start time is < 1 hour + 1 minute away (lead time already gone)
- *   - start time is in the past
+ *   - notifications permission denied (we don't pester after the first ask)
+ *   - the 1-hour-prior trigger is already <1 minute away or in the past, i.e.
+ *     the slot itself is roughly less than an hour out. Last-minute bookings
+ *     intentionally get no reminder — the user just opened the operator's
+ *     site, they don't need a heads-up about a slot they're currently booking.
  */
 export async function scheduleBookingReminder(input: {
   venueName: string;
@@ -71,7 +74,14 @@ export async function scheduleBookingReminder(input: {
   });
 }
 
-/** Wipes every reminder we ever scheduled. Used by Settings → Clear data. */
+/**
+ * Wipes every scheduled notification. Used by Settings → Clear data.
+ *
+ * TODO: scope by identifier once a second notification source exists. Today
+ * booking reminders are the only thing we schedule, so the broad cancel is
+ * accurate; if/when we add another scheduler, persist per-attempt ids and
+ * cancel them individually.
+ */
 export async function cancelAllBookingReminders(): Promise<void> {
   try {
     await Notifications.cancelAllScheduledNotificationsAsync();
@@ -82,15 +92,18 @@ export async function cancelAllBookingReminders(): Promise<void> {
 
 // ---------------------------------------------------------------------------
 
+/**
+ * Returns whether the app has notification permission. Re-queries the OS each
+ * call so toggling the system setting takes effect without an app restart;
+ * only the in-flight `request` is cached to prevent double-prompts during
+ * back-to-back bookings.
+ */
 async function ensurePermission(): Promise<boolean> {
-  // Cache the in-flight / resolved permission so back-to-back bookings don't
-  // re-prompt or re-query. iOS in particular caches the dialog answer but the
-  // round-trip still costs us a few ms each call.
-  if (permissionResolved) return permissionResolved;
-  permissionResolved = (async () => {
-    const current = await Notifications.getPermissionsAsync();
-    if (current.granted) return true;
-    if (!current.canAskAgain) return false;
+  const current = await Notifications.getPermissionsAsync();
+  if (current.granted) return true;
+  if (!current.canAskAgain) return false;
+  if (pendingPermission) return pendingPermission;
+  pendingPermission = (async () => {
     const req = await Notifications.requestPermissionsAsync({
       ios: {
         allowAlert: true,
@@ -100,7 +113,11 @@ async function ensurePermission(): Promise<boolean> {
     });
     return req.granted;
   })();
-  return permissionResolved;
+  try {
+    return await pendingPermission;
+  } finally {
+    pendingPermission = null;
+  }
 }
 
 async function ensureAndroidChannel(): Promise<void> {

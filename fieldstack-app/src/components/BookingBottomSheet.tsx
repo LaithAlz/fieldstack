@@ -140,9 +140,14 @@ export function BookingBottomSheet({
         startTime: selectedTime,
         duration: selectedDuration,
       });
-      void scheduleBookingReminder({
+      scheduleBookingReminder({
         venueName: venue.name,
         startDate: combineDateAndTime(selectedDate, selectedTime),
+      }).catch((err) => {
+        if (__DEV__) {
+          // eslint-disable-next-line no-console
+          console.warn("[notifications] scheduleBookingReminder failed", err);
+        }
       });
       onConfirm?.();
       promptAddToCalendarOnReturn({
