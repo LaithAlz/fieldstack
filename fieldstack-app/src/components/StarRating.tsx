@@ -38,11 +38,13 @@ export function StarRating(props: Props) {
 
   if (interactive) {
     const onChange = props.onChange;
+    // No accessibilityRole on the row — RN's role list doesn't include
+    // "radiogroup" on native, and the per-star radios already carry
+    // accessibilityRole="radio" + state.
     return (
       <View
         style={styles.row}
-        accessibilityRole="radiogroup"
-        accessibilityLabel={`Rating, ${props.value} of 5`}
+        accessible={false}
       >
         {STARS.map((n) => {
           const filled = n <= props.value;
@@ -82,9 +84,11 @@ export function StarRating(props: Props) {
     >
       {STARS.map((n) => {
         const diff = props.value - (n - 1);
+        // Half-star band intentionally wide on the low end (≥0.15) so a 3.2
+        // avg renders 3 full + 1 half rather than 3 full + 1 empty.
         let glyph: "star" | "star-half" | "star-outline";
         if (diff >= 0.75) glyph = "star";
-        else if (diff >= 0.25) glyph = "star-half";
+        else if (diff >= 0.15) glyph = "star-half";
         else glyph = "star-outline";
         return (
           <Ionicons

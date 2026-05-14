@@ -4,7 +4,7 @@
  * submitting / deleting a review).
  */
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import {
   getVenueReviewSummary,
@@ -26,15 +26,22 @@ export function useVenueReviews(venueId: string): UseVenueReviews {
   const [summary, setSummary] = useState<ReviewSummary | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
+  // Tracks the venueId we should accept results for. A → B → A nav within
+  // the resolution window of the trailing fetch would otherwise overwrite
+  // newer state with stale data.
+  const requestedVenueIdRef = useRef(venueId);
 
   const load = useCallback(async () => {
+    requestedVenueIdRef.current = venueId;
     setIsLoading(true);
     setError(null);
-    // Fire both fetches in parallel — they're independent reads.
     const [reviewsResult, summaryResult] = await Promise.all([
       listVenueReviews(venueId),
       getVenueReviewSummary(venueId),
     ]);
+    // Drop the result if the caller has since moved on to a different venue.
+    if (requestedVenueIdRef.current !== venueId) return;
+
     if (reviewsResult.error) {
       setError(reviewsResult.error);
     } else if (reviewsResult.data) {
