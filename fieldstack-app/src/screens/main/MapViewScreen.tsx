@@ -23,6 +23,7 @@ import { Text } from "../../components/Text";
 import { VenueMapCard, VENUE_MAP_CARD_WIDTH } from "../../components/VenueMapCard";
 import { VenuePin } from "../../components/VenuePin";
 import { useFieldSearch } from "../../hooks/useFieldSearch";
+import { useFilterControls } from "../../hooks/useFilterControls";
 import { useLocation } from "../../hooks/useLocation";
 import { haversineKm } from "../../lib/distance";
 import { getLastRegion, setLastRegion } from "../../lib/mapState";
@@ -113,6 +114,7 @@ export function MapViewScreen() {
     setFilter,
     setLocation,
   } = useFieldSearch();
+  const { chipsProps, sheets } = useFilterControls(filters, setFilter);
 
   // Initial region: prior session position if we have one, else user coords,
   // else downtown Toronto.
@@ -477,8 +479,7 @@ export function MapViewScreen() {
             tradeoff Airbnb makes — drag the map below this row. */}
         <View style={styles.chipsWrap} pointerEvents="auto">
           <FilterChipBar
-            filters={filters}
-            setFilter={setFilter}
+            {...chipsProps}
             contentStyle={styles.chipsContent}
           />
         </View>
@@ -567,6 +568,8 @@ export function MapViewScreen() {
           />
         </View>
       ) : null}
+
+      {sheets}
     </View>
   );
 }

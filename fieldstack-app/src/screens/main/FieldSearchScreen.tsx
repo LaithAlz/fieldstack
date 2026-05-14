@@ -18,6 +18,7 @@ import { FilterChipBar } from "../../components/FilterChipBar";
 import { SearchInput } from "../../components/SearchInput";
 import { Text } from "../../components/Text";
 import { useFieldSearch } from "../../hooks/useFieldSearch";
+import { useFilterControls } from "../../hooks/useFilterControls";
 import { useLocation } from "../../hooks/useLocation";
 import {
   PRICE_OPTIONS,
@@ -55,6 +56,7 @@ export function FieldSearchScreen() {
     setLocation,
   } = useFieldSearch();
   // Location seeding lives in FieldSearchProvider now so MapView gets it too.
+  const { chipsProps, sheets } = useFilterControls(filters, setFilter);
 
   const activeFilterCount =
     filters.surface.length +
@@ -115,7 +117,7 @@ export function FieldSearchScreen() {
           error={locationError?.message ?? null}
         />
 
-        <FilterChipBar filters={filters} setFilter={setFilter} />
+        <FilterChipBar {...chipsProps} />
 
         {/* Count + clear-all row */}
         <View style={styles.countRow}>
@@ -276,6 +278,7 @@ export function FieldSearchScreen() {
         </Pressable>
       </View>
 
+      {sheets}
     </View>
   );
 }
