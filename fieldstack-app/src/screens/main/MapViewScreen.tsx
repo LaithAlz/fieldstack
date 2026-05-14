@@ -469,7 +469,12 @@ export function MapViewScreen() {
           </Pressable>
         </View>
 
-        <View style={styles.chipsWrap} pointerEvents="box-none">
+        {/* `auto` (not `box-none`) so the filter chips reliably receive
+            taps. With `box-none` plus the nested horizontal ScrollView,
+            Pressable chips were silently dropping touches on iOS. The chip
+            strip blocking map gestures within its 44pt band is the same
+            tradeoff Airbnb makes — drag the map below this row. */}
+        <View style={styles.chipsWrap} pointerEvents="auto">
           <FilterChipBar
             filters={filters}
             setFilter={setFilter}
