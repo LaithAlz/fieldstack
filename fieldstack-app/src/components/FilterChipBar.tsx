@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { ScrollView, StyleSheet, type StyleProp, type ViewStyle } from "react-native";
 
-import { PRICE_OPTIONS, priceMaxToBucket } from "../lib/filters";
+import { PRICE_OPTIONS, priceMaxToBucket, sortLabel } from "../lib/filters";
 import { spacing } from "../theme/tokens";
 import type { FieldSearchFilters, SetFilter } from "../hooks/useFieldSearch";
 
@@ -13,6 +13,7 @@ type Props = {
   onOpenSurface: () => void;
   onOpenSize: () => void;
   onOpenPrice: () => void;
+  onOpenSort: () => void;
   /** Optional extra styling for the horizontal scroll wrapper. */
   contentStyle?: StyleProp<ViewStyle>;
 };
@@ -29,6 +30,7 @@ export function FilterChipBar({
   onOpenSurface,
   onOpenSize,
   onOpenPrice,
+  onOpenSort,
   contentStyle,
 }: Props) {
   const priceBucket = useMemo(
@@ -73,6 +75,12 @@ export function FilterChipBar({
         isActive={priceBucket !== "any"}
         onPress={onOpenPrice}
         onClear={() => setFilter("priceMax", null)}
+      />
+      <FilterChip
+        label={filters.sort === "distance" ? "Sort" : sortLabel(filters.sort)}
+        isActive={filters.sort !== "distance"}
+        onPress={onOpenSort}
+        onClear={() => setFilter("sort", "distance")}
       />
     </ScrollView>
   );
