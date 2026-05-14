@@ -8,8 +8,10 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
+  type StyleProp,
   TextInput,
   View,
+  type ViewStyle,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -83,9 +85,15 @@ export function SignInScreen() {
       return;
     }
 
-    if (mode === "signup" && password !== confirmPassword) {
-      setError("Passwords don't match.");
-      return;
+    if (mode === "signup") {
+      if (confirmPassword.length === 0) {
+        setError("Confirm your password.");
+        return;
+      }
+      if (password !== confirmPassword) {
+        setError("Passwords don't match.");
+        return;
+      }
     }
 
     const result =
@@ -114,12 +122,19 @@ export function SignInScreen() {
     if (next === mode) return;
     setMode(next);
     setError(null);
+    // Clear confirm so a stale value can't silently match a freshly-typed
+    // password on the next attempt.
+    setConfirmPassword("");
   };
 
   const switchContactMethod = (next: ContactMethod) => {
     if (next === contactMethod) return;
     setContactMethod(next);
     setError(null);
+    // Drop the inactive field's value so toggling back doesn't resurrect a
+    // half-typed contact the user already abandoned.
+    if (next === "email") setPhone("");
+    else setEmail("");
   };
 
   return (
@@ -161,7 +176,7 @@ export function SignInScreen() {
 
         {/* Mode toggle */}
         <SegmentedToggle
-          accessibilityRole="tablist"
+          role="tablist"
           left={{
             label: "Sign in",
             active: mode === "signin",
@@ -200,8 +215,10 @@ export function SignInScreen() {
           </View>
         ) : null}
 
-        {/* Email / Phone toggle */}
+        {/* Email / Phone toggle — radiogroup since it's a single-choice form
+            selector, not a mode tablist. */}
         <SegmentedToggle
+          role="radiogroup"
           style={styles.contactToggle}
           left={{
             label: "Email",
@@ -386,38 +403,53 @@ type SegmentSide = {
   onPress: () => void;
 };
 
+type SegmentedRole = "tablist" | "radiogroup";
+
 function SegmentedToggle({
   left,
   right,
   style,
-  accessibilityRole = "tablist",
+  role = "tablist",
 }: {
   left: SegmentSide;
   right: SegmentSide;
-  style?: object;
-  accessibilityRole?: "tablist";
+  style?: StyleProp<ViewStyle>;
+  role?: SegmentedRole;
 }) {
   const colors = useTheme();
+  const childRole: "tab" | "radio" = role === "tablist" ? "tab" : "radio";
   return (
     <View
-      accessibilityRole={accessibilityRole}
+      accessibilityRole={role}
       style={[
         styles.tabs,
         { backgroundColor: colors.surfaceSecondary, borderColor: colors.border },
         style,
       ]}
     >
-      <Segment label={left.label} active={left.active} onPress={left.onPress} />
-      <Segment label={right.label} active={right.active} onPress={right.onPress} />
+      <Segment
+        role={childRole}
+        label={left.label}
+        active={left.active}
+        onPress={left.onPress}
+      />
+      <Segment
+        role={childRole}
+        label={right.label}
+        active={right.active}
+        onPress={right.onPress}
+      />
     </View>
   );
 }
 
 function Segment({
+  role,
   label,
   active,
   onPress,
 }: {
+  role: "tab" | "radio";
   label: string;
   active: boolean;
   onPress: () => void;
@@ -426,7 +458,7 @@ function Segment({
   return (
     <Pressable
       onPress={onPress}
-      accessibilityRole="tab"
+      accessibilityRole={role}
       accessibilityState={{ selected: active }}
       style={({ pressed }) => [
         styles.tab,
