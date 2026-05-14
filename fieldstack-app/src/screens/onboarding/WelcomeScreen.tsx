@@ -1,3 +1,4 @@
+import { Ionicons } from "@expo/vector-icons";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
@@ -14,6 +15,12 @@ import { setLastLocation } from "../../lib/storage";
 import type { OnboardingStackParamList } from "../../navigation/OnboardingNavigator";
 import { fontFamily, fontSize, fontWeight, spacing } from "../../theme/tokens";
 import { useTheme } from "../../theme/useTheme";
+
+const FEATURES: { icon: React.ComponentProps<typeof Ionicons>["name"]; label: string }[] = [
+  { icon: "search-outline", label: "Browse pickup-ready fields across the GTA" },
+  { icon: "options-outline", label: "Filter by surface, size, and price" },
+  { icon: "calendar-outline", label: "Pick a slot, get a one-hour reminder" },
+];
 
 type Props = NativeStackScreenProps<OnboardingStackParamList, "Welcome">;
 
@@ -59,7 +66,7 @@ export function WelcomeScreen(_props: Props) {
         </View>
       }
       title="Find pickup soccer, fast"
-      body="Discover and book fields across the GTA — turf, grass, indoor, all in one place. Share your location so we can rank fields by distance."
+      body="Discover and book fields across the GTA. Share your location so we can rank fields by distance."
       footer={
         <>
           <Button
@@ -77,7 +84,24 @@ export function WelcomeScreen(_props: Props) {
           />
         </>
       }
-    />
+    >
+      <View style={styles.featureList}>
+        {FEATURES.map((f) => (
+          <View key={f.label} style={styles.featureRow}>
+            <View
+              style={[styles.featureIconWrap, { backgroundColor: colors.brand + "1A" }]}
+              accessibilityElementsHidden
+              importantForAccessibility="no-hide-descendants"
+            >
+              <Ionicons name={f.icon} size={18} color={colors.brand} />
+            </View>
+            <Text style={[styles.featureText, { color: colors.textPrimary }]}>
+              {f.label}
+            </Text>
+          </View>
+        ))}
+      </View>
+    </OnboardingScaffold>
   );
 }
 
@@ -91,5 +115,28 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xl,
     fontWeight: fontWeight.bold,
     letterSpacing: -0.5,
+  },
+  featureList: {
+    marginTop: spacing.lg,
+    gap: spacing.md,
+  },
+  featureRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.md,
+  },
+  featureIconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  featureText: {
+    flex: 1,
+    flexShrink: 1,
+    fontFamily: fontFamily.regular,
+    fontSize: fontSize.md,
+    lineHeight: 22,
   },
 });
