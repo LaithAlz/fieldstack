@@ -1,0 +1,40 @@
+# End-to-end smoke flow: launches Expo Go pointed at our dev URL, taps
+# through Explore → first venue → confirms the detail screen renders, and
+# then opens the Search tab and verifies the filter chips are tappable
+# (regression guard for the bottom-sheet bug fixed in PR 19).
+#
+# Run locally against a running Expo Go + simulator:
+#   1. `cd fieldstack-app && bun run start`   # starts Metro
+#   2. Open Expo Go on the simulator
+#   3. `maestro test .maestro/smoke.yaml`
+#
+# See .maestro/README.md for first-time setup.
+
+appId: host.exp.Exponent
+---
+# 1. Sanity check: app launched, Explore tab is visible.
+- assertVisible: "Explore"
+
+# 2. Tap the first venue card on the list. Card title text comes from seed
+#    data; we don't assert a specific name so the test stays seed-stable.
+- tapOn:
+    text: ".*km away.*"
+    index: 0
+
+# 3. Venue detail should render with a "Pick a time" header.
+- assertVisible: "Pick a time"
+
+# 4. Back to Explore.
+- back
+
+# 5. Filter sheet smoke check: tap Surface chip → sheet should slide up
+#    with at least one surface option visible. Regression guard for PR 19.
+- tapOn: "Surface"
+- assertVisible:
+    text: "Turf"
+    timeout: 3000
+
+# 6. Dismiss the sheet.
+- swipe:
+    direction: DOWN
+    duration: 400
