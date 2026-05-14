@@ -53,6 +53,7 @@ export function DateTimeRangePicker({
   onDurationChange,
   getAvailability,
 }: Props) {
+  const colors = useTheme();
   const [hint, setHint] = useState<string | null>(null);
   // Ticks every minute so the date rail rolls "Today" over at midnight and
   // past-slot greying doesn't go stale when the sheet sits open.
@@ -196,9 +197,16 @@ export function DateTimeRangePicker({
       )}
 
       {getAvailability ? (
-        <Text size="xs" variant="tertiary" style={styles.availabilityNote}>
-          {"●"} Likely busy — final availability confirmed on the operator&apos;s site.
-        </Text>
+        <View style={styles.availabilityNote}>
+          <View
+            style={[styles.busyDotLegend, { backgroundColor: colors.danger }]}
+            accessibilityElementsHidden
+            importantForAccessibility="no-hide-descendants"
+          />
+          <Text size="xs" variant="tertiary" style={styles.availabilityNoteText}>
+            Likely busy — final availability confirmed on the operator&apos;s site.
+          </Text>
+        </View>
       ) : null}
     </View>
   );
@@ -229,9 +237,10 @@ function PillBase({
   accessibilityLabel,
 }: PillBaseProps) {
   const colors = useTheme();
-  const a11y = busy
-    ? `${accessibilityLabel ?? label}, likely busy`
-    : accessibilityLabel ?? label;
+  const a11y =
+    busy && !selected
+      ? `${accessibilityLabel ?? label}, likely busy`
+      : accessibilityLabel ?? label;
   return (
     <Pressable
       onPress={onPress}
@@ -511,5 +520,17 @@ const styles = StyleSheet.create({
   availabilityNote: {
     paddingHorizontal: spacing.lg,
     marginTop: spacing.xs,
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  availabilityNoteText: {
+    flex: 1,
+    flexShrink: 1,
+  },
+  busyDotLegend: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    marginRight: spacing.xs,
   },
 });

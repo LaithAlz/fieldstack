@@ -23,6 +23,9 @@ export function mockedAvailability(
   startTime: string
 ): AvailabilityBucket {
   const [h] = startTime.split(":").map(Number);
+  if (Number.isNaN(h)) return "open";
+  // Intentionally local time: callers build `date` via local-tz helpers in
+  // DateTimeRangePicker, so "Friday evening" means Friday in the user's tz.
   const dow = date.getDay(); // 0 = Sunday, 6 = Saturday
 
   // Friday + Saturday 6 PM – 10 PM: peak demand everywhere.

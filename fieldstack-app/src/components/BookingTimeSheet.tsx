@@ -104,6 +104,11 @@ export function BookingTimeSheet({
     []
   );
 
+  const getAvailability = useCallback(
+    (d: Date, t: string) => mockedAvailability(venue.id, d, t),
+    [venue.id]
+  );
+
   const handleConfirm = async () => {
     lightImpact();
     track(EVENT_BOOKING_REDIRECT_CONFIRMED, {
@@ -185,7 +190,7 @@ export function BookingTimeSheet({
           onDateChange={onDateChange}
           onStartTimeChange={onStartTimeChange}
           onDurationChange={onDurationChange}
-          getAvailability={(d, t) => mockedAvailability(venue.id, d, t)}
+          getAvailability={getAvailability}
         />
 
         {estimatedTotal !== null ? (
