@@ -16,6 +16,7 @@ import ClusteredMapView from "react-native-map-clustering";
 import MapView, { Marker, type Region } from "react-native-maps";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { EmptyState } from "../../components/EmptyState";
 import { FilterChipBar } from "../../components/FilterChipBar";
 import { ResultCountPill } from "../../components/ResultCountPill";
 import { SearchInput } from "../../components/SearchInput";
@@ -565,6 +566,51 @@ export function MapViewScreen() {
         </Animated.View>
       </View>
 
+      {/* No results — guide the user back to something useful instead of
+          leaving them on an empty map. Active filter clear or "Search this
+          area" both move forward; matches the FieldSearchScreen empty
+          treatment so behavior reads as one product, not two. */}
+      {!isLoading && markers.length === 0 ? (
+        <View
+          pointerEvents="box-none"
+          style={[
+            styles.emptyOverlay,
+            { paddingBottom: insets.bottom + spacing.lg },
+          ]}
+        >
+          <View
+            pointerEvents="auto"
+            style={[
+              styles.emptyCard,
+              {
+                backgroundColor: colors.surface,
+                borderColor: colors.border,
+              },
+            ]}
+          >
+            <EmptyState
+              icon="map-outline"
+              title={
+                filters.surface.length > 0 ||
+                filters.size.length > 0 ||
+                filters.priceMax !== null
+                  ? "No fields match your filters here"
+                  : "No fields in this area"
+              }
+              description={
+                filters.surface.length > 0 ||
+                filters.size.length > 0 ||
+                filters.priceMax !== null
+                  ? "Try clearing a filter or panning to a wider area."
+                  : "Try panning to a different neighbourhood or widening your search."
+              }
+              actionLabel="Search this area"
+              onAction={handleSearchHere}
+            />
+          </View>
+        </View>
+      ) : null}
+
       {/* Bottom result carousel — snap-to-card, pin↔card sync */}
       {markers.length > 0 ? (
         <View
@@ -678,5 +724,26 @@ const styles = StyleSheet.create({
   },
   carouselContent: {
     paddingHorizontal: CARD_SIDE_PEEK,
+  },
+  emptyOverlay: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    alignItems: "center",
+  },
+  emptyCard: {
+    marginHorizontal: spacing.lg,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.lg,
+    borderRadius: borderRadius.lg,
+    borderWidth: StyleSheet.hairlineWidth,
+    maxWidth: 360,
+    width: "100%",
+    shadowColor: "#000",
+    shadowOpacity: 0.12,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 4,
   },
 });
