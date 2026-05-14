@@ -1,40 +1,36 @@
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { ScrollView, StyleSheet, type StyleProp, type ViewStyle } from "react-native";
 
-import {
-  bucketToPriceMax,
-  PRICE_OPTIONS,
-  priceMaxToBucket,
-  SIZE_OPTIONS,
-  SURFACE_OPTIONS,
-} from "../lib/filters";
+import { PRICE_OPTIONS, priceMaxToBucket } from "../lib/filters";
 import { spacing } from "../theme/tokens";
 import type { FieldSearchFilters, SetFilter } from "../hooks/useFieldSearch";
 
-import { FilterBottomSheet } from "./FilterBottomSheet";
 import { FilterChip } from "./FilterChip";
 
 type Props = {
   filters: FieldSearchFilters;
   setFilter: SetFilter;
+  onOpenSurface: () => void;
+  onOpenSize: () => void;
+  onOpenPrice: () => void;
   /** Optional extra styling for the horizontal scroll wrapper. */
   contentStyle?: StyleProp<ViewStyle>;
 };
 
 /**
- * Self-contained Surface / Size / Price filter chip row + the three picker
- * sheets that go with it. Drop into any screen that owns filter state and the
- * shared `useFieldSearch` hook — both FieldSearchScreen and MapViewScreen
- * render this without duplicating the picker plumbing.
- *
- * The sheets are mounted inside this component so each render-site doesn't
- * need to wire `surfaceOpen` / `sizeOpen` / `priceOpen` state by hand.
+ * Surface / Size / Price filter chip row. Pure UI — the picker sheets live
+ * separately so they can be mounted at the screen root (see
+ * `useFilterControls`). That hook is the canonical way to consume this
+ * component: it returns these props plus the sheets element to render.
  */
-export function FilterChipBar({ filters, setFilter, contentStyle }: Props) {
-  const [surfaceOpen, setSurfaceOpen] = useState(false);
-  const [sizeOpen, setSizeOpen] = useState(false);
-  const [priceOpen, setPriceOpen] = useState(false);
-
+export function FilterChipBar({
+  filters,
+  setFilter,
+  onOpenSurface,
+  onOpenSize,
+  onOpenPrice,
+  contentStyle,
+}: Props) {
   const priceBucket = useMemo(
     () => priceMaxToBucket(filters.priceMax),
     [filters.priceMax]
@@ -44,62 +40,41 @@ export function FilterChipBar({ filters, setFilter, contentStyle }: Props) {
     PRICE_OPTIONS.find((o) => o.id === priceBucket)?.label ?? "Price";
 
   return (
-    <>
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={[styles.chips, contentStyle]}
-      >
-        <FilterChip
-          label="Surface"
-          isActive={filters.surface.length > 0}
-          count={filters.surface.length}
-          onPress={() => setSurfaceOpen(true)}
-          onClear={() => setFilter("surface", [])}
-        />
-        <FilterChip
-          label="Size"
-          isActive={filters.size.length > 0}
-          count={filters.size.length}
-          onPress={() => setSizeOpen(true)}
-          onClear={() => setFilter("size", [])}
-        />
-        <FilterChip
-          label={priceBucket === "any" ? "Price" : priceLabel}
-          isActive={priceBucket !== "any"}
-          onPress={() => setPriceOpen(true)}
-          onClear={() => setFilter("priceMax", null)}
-        />
-      </ScrollView>
-
-      <FilterBottomSheet
-        visible={surfaceOpen}
-        title="Surface"
-        mode="multi"
-        options={SURFACE_OPTIONS}
-        selected={filters.surface}
-        onSelect={(next) => setFilter("surface", next)}
-        onDismiss={() => setSurfaceOpen(false)}
+    <ScrollView
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      // delaysContentTouches defaults to true on iOS — that holds taps for
+      // ~150ms while the ScrollView decides "pan or tap", and the Pressable's
+      // tap resolution gets eaten inside that window. Disable so chip taps
+      // fire instantly. Horizontal pans still work via the ScrollView's own
+      // pan recognizer running in parallel.
+      //
+      // Cast through `as any` — the prop is iOS-specific and works at
+      // runtime, but it's missing from RN 0.81's TS types.
+      {...({ delaysContentTouches: false } as any)}
+      contentContainerStyle={[styles.chips, contentStyle]}
+    >
+      <FilterChip
+        label="Surface"
+        isActive={filters.surface.length > 0}
+        count={filters.surface.length}
+        onPress={onOpenSurface}
+        onClear={() => setFilter("surface", [])}
       />
-      <FilterBottomSheet
-        visible={sizeOpen}
-        title="Size"
-        mode="multi"
-        options={SIZE_OPTIONS}
-        selected={filters.size}
-        onSelect={(next) => setFilter("size", next)}
-        onDismiss={() => setSizeOpen(false)}
+      <FilterChip
+        label="Size"
+        isActive={filters.size.length > 0}
+        count={filters.size.length}
+        onPress={onOpenSize}
+        onClear={() => setFilter("size", [])}
       />
-      <FilterBottomSheet
-        visible={priceOpen}
-        title="Price"
-        mode="single"
-        options={PRICE_OPTIONS}
-        selected={priceBucket}
-        onSelect={(next) => setFilter("priceMax", bucketToPriceMax(next ?? "any"))}
-        onDismiss={() => setPriceOpen(false)}
+      <FilterChip
+        label={priceBucket === "any" ? "Price" : priceLabel}
+        isActive={priceBucket !== "any"}
+        onPress={onOpenPrice}
+        onClear={() => setFilter("priceMax", null)}
       />
-    </>
+    </ScrollView>
   );
 }
 
