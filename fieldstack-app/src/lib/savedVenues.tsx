@@ -49,6 +49,11 @@ export function SavedVenuesProvider({ children }: { children: ReactNode }) {
   // Tracks which user we've already merged for, so we don't re-pull cloud
   // on every render. Cleared on sign-out.
   const mergedForUserId = useRef<string | null>(null);
+  // Per-venue write chain. Rapid toggles on the same venue could otherwise
+  // fire DELETE before the prior INSERT had landed at Supabase, leaving a
+  // phantom row in cloud until the next sign-in merge. Awaiting the previous
+  // write for that id serializes them.
+  const writeChains = useRef(new Map<string, Promise<void>>());
 
   useEffect(() => {
     let cancelled = false;
@@ -115,10 +120,14 @@ export function SavedVenuesProvider({ children }: { children: ReactNode }) {
             if (!cloud.has(id)) localOnly.push(id);
           });
           if (localOnly.length > 0) {
+            // upsert with ignoreDuplicates so a near-simultaneous sync from
+            // another device that already pushed the same venue doesn't
+            // surface as a unique-constraint violation in logs.
             void supabase
               .from("user_saved_venues")
-              .insert(
-                localOnly.map((venue_id) => ({ user_id: user.id, venue_id }))
+              .upsert(
+                localOnly.map((venue_id) => ({ user_id: user.id, venue_id })),
+                { onConflict: "user_id,venue_id", ignoreDuplicates: true }
               )
               .then(({ error: upsertErr }) => {
                 if (upsertErr) {
@@ -165,30 +174,45 @@ export function SavedVenuesProvider({ children }: { children: ReactNode }) {
 
         // Write-through to cloud if signed in. Failures don't block local
         // state — eventual consistency is acceptable for "is this saved."
+        // TODO: retry/queue cloud failures rather than relying on the next
+        // sign-in merge to repair drift.
         if (user) {
-          if (wasSaved) {
-            void supabase
-              .from("user_saved_venues")
-              .delete()
-              .eq("user_id", user.id)
-              .eq("venue_id", id)
-              .then(({ error }) => {
-                if (error) {
-                  // eslint-disable-next-line no-console
-                  console.warn("[savedVenues] cloud delete failed", error.message);
-                }
-              });
-          } else {
-            void supabase
-              .from("user_saved_venues")
-              .insert({ user_id: user.id, venue_id: id })
-              .then(({ error }) => {
-                if (error) {
-                  // eslint-disable-next-line no-console
-                  console.warn("[savedVenues] cloud insert failed", error.message);
-                }
-              });
-          }
+          // Chain this write onto any pending write for the same venue so a
+          // rapid double-tap can't have DELETE land before the prior INSERT.
+          const previous = writeChains.current.get(id) ?? Promise.resolve();
+          const next$ = previous.then(async () => {
+            if (wasSaved) {
+              const { error } = await supabase
+                .from("user_saved_venues")
+                .delete()
+                .eq("user_id", user.id)
+                .eq("venue_id", id);
+              if (error) {
+                // eslint-disable-next-line no-console
+                console.warn("[savedVenues] cloud delete failed", error.message);
+              }
+            } else {
+              const { error } = await supabase
+                .from("user_saved_venues")
+                .upsert(
+                  { user_id: user.id, venue_id: id },
+                  { onConflict: "user_id,venue_id", ignoreDuplicates: true }
+                );
+              if (error) {
+                // eslint-disable-next-line no-console
+                console.warn("[savedVenues] cloud insert failed", error.message);
+              }
+            }
+          });
+          writeChains.current.set(id, next$);
+          // Reap the chain once it resolves so the Map doesn't grow without
+          // bound. Only clear if we're still the latest pending write for
+          // this id — a newer toggle may have already replaced us.
+          void next$.finally(() => {
+            if (writeChains.current.get(id) === next$) {
+              writeChains.current.delete(id);
+            }
+          });
         }
 
         return next;
