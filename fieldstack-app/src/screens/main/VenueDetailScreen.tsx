@@ -1,7 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp, NativeStackScreenProps } from "@react-navigation/native-stack";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Pressable, ScrollView, Share, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -20,6 +20,7 @@ import { Text } from "../../components/Text";
 import { useLocation } from "../../hooks/useLocation";
 import { useVenue } from "../../hooks/useVenue";
 import { useVenueReviews } from "../../hooks/useVenueReviews";
+import { mockedAvailability } from "../../lib/availability";
 import { formatEndTime, formatTime12h } from "../../lib/datetime";
 import {
   preferredSlotDate,
@@ -62,6 +63,11 @@ export function VenueDetailScreen({ route }: Props) {
   const { recordView } = useRecentlyViewed();
   const savedForVenue = venue ? isSaved(venue.id) : false;
   const onToggleSave = venue ? () => void toggleSaved(venue.id) : undefined;
+
+  const getAvailability = useCallback(
+    (d: Date, t: string) => mockedAvailability(venueId, d, t),
+    [venueId]
+  );
 
   // System share sheet — gives the user a one-tap way to send the venue to
   // group chat with the optional preferred slot baked in. Native Share is
@@ -237,6 +243,7 @@ export function VenueDetailScreen({ route }: Props) {
             onDateChange={setSelectedDate}
             onStartTimeChange={setSelectedTime}
             onDurationChange={setSelectedDuration}
+            getAvailability={getAvailability}
           />
 
           <Text size="lg" weight="bold" accessibilityRole="header" style={styles.section}>

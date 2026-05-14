@@ -2,6 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useEffect, useMemo, useState } from "react";
 import { FlatList, Pressable, StyleSheet, View } from "react-native";
 
+import type { AvailabilityBucket } from "../lib/availability";
 import { formatEndTime } from "../lib/datetime";
 import { selection } from "../lib/haptics";
 import { borderRadius, fontSize, spacing } from "../theme/tokens";
@@ -35,6 +36,12 @@ type Props = {
   onDateChange: (date: Date) => void;
   onStartTimeChange: (time: string) => void;
   onDurationChange: (duration: number) => void;
+  /**
+   * Optional availability hint for each slot. When provided, slots in the
+   * 'busy' bucket render a small dot and a footer disclaimer surfaces so
+   * the user knows it's a hint, not a hard block. Slots stay tappable.
+   */
+  getAvailability?: (date: Date, startTime: string) => AvailabilityBucket;
 };
 
 export function DateTimeRangePicker({
@@ -44,7 +51,9 @@ export function DateTimeRangePicker({
   onDateChange,
   onStartTimeChange,
   onDurationChange,
+  getAvailability,
 }: Props) {
+  const colors = useTheme();
   const [hint, setHint] = useState<string | null>(null);
   // Ticks every minute so the date rail rolls "Today" over at midnight and
   // past-slot greying doesn't go stale when the sheet sits open.
@@ -134,12 +143,15 @@ export function DateTimeRangePicker({
                 {slots.map((slot) => {
                   const isPast =
                     timeStringToMinutes(slot) <= pastBoundaryMinutes;
+                  const busy =
+                    getAvailability?.(selectedDate, slot) === "busy";
                   return (
                     <TimePill
                       key={slot}
                       label={formatTimeForDisplay(slot)}
                       selected={slot === selectedStartTime}
                       disabled={isPast}
+                      busy={busy}
                       onPress={() => handleStartTime(slot)}
                     />
                   );
@@ -183,6 +195,19 @@ export function DateTimeRangePicker({
           Ends at {formatEndTime(selectedStartTime, selectedDuration)}
         </Text>
       )}
+
+      {getAvailability ? (
+        <View style={styles.availabilityNote}>
+          <View
+            style={[styles.busyDotLegend, { backgroundColor: colors.danger }]}
+            accessibilityElementsHidden
+            importantForAccessibility="no-hide-descendants"
+          />
+          <Text size="xs" variant="tertiary" style={styles.availabilityNoteText}>
+            Likely busy — final availability confirmed on the operator&apos;s site.
+          </Text>
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -197,6 +222,8 @@ type PillBaseProps = {
   onPress: () => void;
   disabled?: boolean;
   withCheckmark?: boolean;
+  /** When true, render a small dot indicating likely-busy. */
+  busy?: boolean;
   accessibilityLabel?: string;
 };
 
@@ -206,16 +233,21 @@ function PillBase({
   onPress,
   disabled = false,
   withCheckmark = false,
+  busy = false,
   accessibilityLabel,
 }: PillBaseProps) {
   const colors = useTheme();
+  const a11y =
+    busy && !selected
+      ? `${accessibilityLabel ?? label}, likely busy`
+      : accessibilityLabel ?? label;
   return (
     <Pressable
       onPress={onPress}
       disabled={disabled}
       accessibilityRole="button"
       accessibilityState={{ selected, disabled }}
-      accessibilityLabel={accessibilityLabel ?? label}
+      accessibilityLabel={a11y}
       style={({ pressed }) => [
         styles.pill,
         {
@@ -235,6 +267,13 @@ function PillBase({
           importantForAccessibility="no-hide-descendants"
         />
       ) : null}
+      {busy && !selected ? (
+        <View
+          style={[styles.busyDot, { backgroundColor: colors.danger }]}
+          accessibilityElementsHidden
+          importantForAccessibility="no-hide-descendants"
+        />
+      ) : null}
       <Text
         weight={selected ? "bold" : "medium"}
         style={{
@@ -249,7 +288,7 @@ function PillBase({
   );
 }
 
-function DatePill(props: Omit<PillBaseProps, "withCheckmark">) {
+function DatePill(props: Omit<PillBaseProps, "withCheckmark" | "busy">) {
   return <PillBase {...props} withCheckmark />;
 }
 
@@ -464,6 +503,12 @@ const styles = StyleSheet.create({
   checkmark: {
     marginRight: spacing.xs,
   },
+  busyDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    marginRight: spacing.xs,
+  },
   hint: {
     paddingHorizontal: spacing.lg,
     marginTop: spacing.sm,
@@ -471,5 +516,21 @@ const styles = StyleSheet.create({
   endTime: {
     paddingHorizontal: spacing.lg,
     marginTop: spacing.sm,
+  },
+  availabilityNote: {
+    paddingHorizontal: spacing.lg,
+    marginTop: spacing.xs,
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  availabilityNoteText: {
+    flex: 1,
+    flexShrink: 1,
+  },
+  busyDotLegend: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    marginRight: spacing.xs,
   },
 });
