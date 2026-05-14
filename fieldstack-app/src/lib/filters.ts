@@ -21,6 +21,18 @@ export const SIZE_OPTIONS: FilterOption<FieldSize>[] = [
   { id: "11v11", label: "11-a-side" },
 ];
 
+import type { SearchSort } from "../api/search";
+
+export const SORT_OPTIONS: FilterOption<SearchSort>[] = [
+  { id: "distance", label: "Distance" },
+  { id: "price_asc", label: "Price (low to high)" },
+  { id: "price_desc", label: "Price (high to low)" },
+];
+
+export function sortLabel(sort: SearchSort): string {
+  return SORT_OPTIONS.find((o) => o.id === sort)?.label ?? "Distance";
+}
+
 // Price encoded as the upper bound to keep `priceMax` semantics on the wire.
 // `"any"` is the no-filter sentinel; `"120plus"` is also a no-filter request
 // today because the API doesn't accept a min.
