@@ -15,7 +15,15 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { ErrorBoundary } from "./src/components/ErrorBoundary";
 import { ToastProvider } from "./src/components/Toast";
-import { EVENT_APP_OPENED, track } from "./src/lib/analytics";
+import {
+  EVENT_APP_OPENED,
+  setAnalyticsProvider,
+  track,
+} from "./src/lib/analytics";
+import {
+  createPosthogProvider,
+  initSentry,
+} from "./src/lib/analyticsProviders";
 import { AuthProvider, useAuth } from "./src/lib/auth";
 import {
   BookingHistoryProvider,
@@ -42,6 +50,13 @@ import { colors } from "./src/theme/tokens";
 SplashScreen.preventAutoHideAsync().catch(() => {
   /* no-op: already hidden, fine */
 });
+
+// Crash reporting + analytics — env-gated so dev/preview builds without
+// these secrets still work. Sentry init runs once at module load (must run
+// before any UI for capture to work). PostHog provider swap-in below.
+initSentry();
+const posthogProvider = createPosthogProvider();
+if (posthogProvider) setAnalyticsProvider(posthogProvider);
 
 const SPLASH_CAP_MS = 2000;
 
