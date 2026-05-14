@@ -286,7 +286,11 @@ export function VenueListScreen() {
 
 function ListSkeleton() {
   return (
-    <View style={[styles.list, { paddingTop: spacing.md, gap: spacing.md }]}>
+    <View
+      accessibilityLabel="Loading venues"
+      accessibilityLiveRegion="polite"
+      style={[styles.list, { paddingTop: spacing.md, gap: spacing.md }]}
+    >
       {Array.from({ length: 5 }, (_, i) => (
         <VenueCardSkeleton key={i} />
       ))}

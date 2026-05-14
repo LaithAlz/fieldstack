@@ -16,6 +16,16 @@ import { useTheme } from "../theme/useTheme";
 
 const ASPECT_RATIO = 16 / 9;
 
+/**
+ * Height of the gallery at the current device width. Exposed so skeleton
+ * placeholders for the same hero can match this exactly — keeps the swap
+ * from loading → loaded a pure pixel replacement instead of a reflow.
+ */
+export function useGalleryHeight(): number {
+  const { width } = useWindowDimensions();
+  return width / ASPECT_RATIO;
+}
+
 type Props = {
   photos: string[];
 };

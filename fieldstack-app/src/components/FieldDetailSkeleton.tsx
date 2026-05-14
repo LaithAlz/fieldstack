@@ -2,22 +2,27 @@ import { StyleSheet, View } from "react-native";
 
 import { borderRadius, spacing } from "../theme/tokens";
 
+import { useGalleryHeight } from "./PhotoGallery";
 import { Skeleton } from "./Skeleton";
 
-const HERO_HEIGHT = 220;
 const BADGE_HEIGHT = 22;
 const BADGE_RADIUS = borderRadius.sm;
 const SPEC_ROW_HEIGHT = 44;
+const AMENITY_CHIP_HEIGHT = 28;
 
 /**
  * Loading placeholder for `FieldDetailScreen`. Matches the loaded shape: hero
- * photo, field name, surface/size badge pair, venue link row, price chip, and
- * the four-row "Field specs" card.
+ * photo, field name, surface/size badge pair, venue link row, price chip, the
+ * four-row "Field specs" card, and a venue-amenities row.
  */
 export function FieldDetailSkeleton() {
+  const heroHeight = useGalleryHeight();
   return (
-    <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
-      <Skeleton width="100%" height={HERO_HEIGHT} borderRadius={0} />
+    <View
+      accessibilityLabel="Loading field"
+      accessibilityLiveRegion="polite"
+    >
+      <Skeleton width="100%" height={heroHeight} borderRadius={0} />
       <View style={styles.body}>
         <Skeleton width="70%" height={28} />
 
@@ -48,6 +53,16 @@ export function FieldDetailSkeleton() {
           <Skeleton width="100%" height={SPEC_ROW_HEIGHT} />
           <Skeleton width="100%" height={SPEC_ROW_HEIGHT} />
         </View>
+
+        {/* Venue amenities */}
+        <View style={styles.section}>
+          <Skeleton width={150} height={22} />
+        </View>
+        <View style={styles.amenities}>
+          <Skeleton width={72} height={AMENITY_CHIP_HEIGHT} borderRadius={borderRadius.md} />
+          <Skeleton width={88} height={AMENITY_CHIP_HEIGHT} borderRadius={borderRadius.md} />
+          <Skeleton width={64} height={AMENITY_CHIP_HEIGHT} borderRadius={borderRadius.md} />
+        </View>
       </View>
     </View>
   );
@@ -77,6 +92,10 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   specs: {
+    gap: spacing.xs,
+  },
+  amenities: {
+    flexDirection: "row",
     gap: spacing.xs,
   },
 });

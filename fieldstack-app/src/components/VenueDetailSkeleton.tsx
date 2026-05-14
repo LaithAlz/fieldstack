@@ -2,23 +2,28 @@ import { StyleSheet, View } from "react-native";
 
 import { borderRadius, spacing } from "../theme/tokens";
 
+import { useGalleryHeight } from "./PhotoGallery";
 import { Skeleton } from "./Skeleton";
 
-const HERO_HEIGHT = 220;
 const AMENITY_CHIP_HEIGHT = 28;
-const AMENITY_CHIP_RADIUS = borderRadius.xl;
 const FIELD_CARD_HEIGHT = 132;
+const REVIEW_CARD_HEIGHT = 96;
 
 /**
  * Loading placeholder for `VenueDetailScreen`. Mirrors the loaded layout —
  * hero photo strip, title + address, amenity chip row, the "Pick a time"
- * section header + picker block, and two field cards. Same vertical
- * rhythm as the real screen so hydration is a swap, not a reflow.
+ * section header + picker block, two field cards, and the Reviews section.
+ * Same vertical rhythm as the real screen so hydration is a swap, not a
+ * reflow.
  */
 export function VenueDetailSkeleton() {
+  const heroHeight = useGalleryHeight();
   return (
-    <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
-      <Skeleton width="100%" height={HERO_HEIGHT} borderRadius={0} />
+    <View
+      accessibilityLabel="Loading venue"
+      accessibilityLiveRegion="polite"
+    >
+      <Skeleton width="100%" height={heroHeight} borderRadius={0} />
       <View style={styles.body}>
         <Skeleton width="70%" height={28} />
         <View style={styles.tightGap} />
@@ -26,11 +31,11 @@ export function VenueDetailSkeleton() {
         <View style={styles.tightGap} />
         <Skeleton width="35%" height={14} />
 
-        {/* Amenity chips row */}
+        {/* Amenity chips row — same radius as AmenityChip (borderRadius.md). */}
         <View style={styles.amenities}>
-          <Skeleton width={72} height={AMENITY_CHIP_HEIGHT} borderRadius={AMENITY_CHIP_RADIUS} />
-          <Skeleton width={88} height={AMENITY_CHIP_HEIGHT} borderRadius={AMENITY_CHIP_RADIUS} />
-          <Skeleton width={64} height={AMENITY_CHIP_HEIGHT} borderRadius={AMENITY_CHIP_RADIUS} />
+          <Skeleton width={72} height={AMENITY_CHIP_HEIGHT} borderRadius={borderRadius.md} />
+          <Skeleton width={88} height={AMENITY_CHIP_HEIGHT} borderRadius={borderRadius.md} />
+          <Skeleton width={64} height={AMENITY_CHIP_HEIGHT} borderRadius={borderRadius.md} />
         </View>
 
         {/* "Pick a time" section header */}
@@ -46,6 +51,12 @@ export function VenueDetailSkeleton() {
         <Skeleton width="100%" height={FIELD_CARD_HEIGHT} borderRadius={borderRadius.lg} />
         <View style={styles.fieldGap} />
         <Skeleton width="100%" height={FIELD_CARD_HEIGHT} borderRadius={borderRadius.lg} />
+
+        {/* Reviews section */}
+        <View style={styles.section}>
+          <Skeleton width={100} height={22} />
+        </View>
+        <Skeleton width="100%" height={REVIEW_CARD_HEIGHT} borderRadius={borderRadius.lg} />
       </View>
     </View>
   );

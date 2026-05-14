@@ -145,6 +145,8 @@ export function FieldSearchScreen() {
       {/* ---------- List ---------- */}
       {isLoading ? (
         <ScrollView
+          accessibilityLabel="Loading fields"
+          accessibilityLiveRegion="polite"
           contentContainerStyle={[
             styles.listContent,
             { paddingBottom: insets.bottom + 96, gap: spacing.md },
