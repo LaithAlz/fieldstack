@@ -100,7 +100,9 @@ export function VenueDetailScreen({ route }: Props) {
         duration: slot.duration,
       };
     }
-    return defaultDateTimeSelections();
+    return defaultDateTimeSelections((d, t) =>
+      mockedAvailability(venueId, d, t)
+    );
   })[0];
 
   const [selectedDate, setSelectedDate] = useState(initial.date);
