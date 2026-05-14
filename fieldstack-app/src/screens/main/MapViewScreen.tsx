@@ -99,6 +99,71 @@ function isInRegion(venue: SearchResult["venue"], region: Region): boolean {
   );
 }
 
+/**
+ * Wraps a single venue's `<Marker>` with the "track once" pattern:
+ *
+ * - On mount, render with `tracksViewChanges={true}` so the native marker
+ *   captures a fresh snapshot of the React-tree-rendered VenuePin.
+ * - After a short delay, flip tracking off so subsequent panning/zooming
+ *   doesn't trigger re-snapshots — those constant re-snapshots show up as
+ *   the "glitchy disappear/reappear" pins on iOS.
+ * - When the pin becomes selected (or its content changes via price/count),
+ *   tracking re-enables briefly so the new visual is captured.
+ */
+function VenueMarker({
+  marker,
+  isSelected,
+  onPress,
+}: {
+  marker: VenueMarker;
+  isSelected: boolean;
+  onPress: (venueId: string) => void;
+}) {
+  const hasPositivePrice = marker.minPrice !== null && marker.minPrice > 0;
+  const [tracking, setTracking] = useState(true);
+
+  // Re-enable tracking briefly whenever the visual content changes (selection
+  // flip, or price/count update from a filter). 250ms is enough for the
+  // native snapshot to capture the new appearance before we turn it off.
+  useEffect(() => {
+    setTracking(true);
+    const id = setTimeout(() => setTracking(false), 250);
+    return () => clearTimeout(id);
+  }, [isSelected, hasPositivePrice, marker.minPrice, marker.fieldCount]);
+
+  if (marker.venue.lat === null || marker.venue.lng === null) return null;
+
+  return (
+    <Marker
+      coordinate={{ latitude: marker.venue.lat, longitude: marker.venue.lng }}
+      onPress={(e) => {
+        // Without stopPropagation the MapView's onPress also fires and
+        // immediately deselects the venue we just tapped.
+        e.stopPropagation();
+        onPress(marker.venue.id);
+      }}
+      tracksViewChanges={tracking}
+    >
+      {hasPositivePrice && marker.minPrice !== null ? (
+        <VenuePin
+          mode="price"
+          price={marker.minPrice}
+          fieldCount={marker.fieldCount}
+          venueName={marker.venue.name}
+          selected={isSelected}
+        />
+      ) : (
+        <VenuePin
+          mode="count"
+          fieldCount={marker.fieldCount}
+          venueName={marker.venue.name}
+          selected={isSelected}
+        />
+      )}
+    </Marker>
+  );
+}
+
 export function MapViewScreen() {
   const colors = useTheme();
   const insets = useSafeAreaInsets();
@@ -380,10 +445,12 @@ export function MapViewScreen() {
         // AA) and near-black in dark mode (vs green-500 brand: ~10:1). White
         // alone fails AA against the dark-mode brand at 2.15:1.
         clusterTextColor={colors.surface}
-        // Bump min before clustering kicks in — single pins read fine; pairs
-        // also OK; 3+ overlap-prone clusters benefit from the count circle.
-        minPoints={3}
-        radius={50}
+        // Clustering thresholds: only group when pins genuinely overlap. The
+        // lib's defaults (minPoints=2, radius=40) cluster pins that are
+        // clearly readable as separate. 5 pins within 28pt of each other is
+        // a real cluster; anything looser should stay as individual pins.
+        minPoints={5}
+        radius={28}
         onClusterPress={() => {
           // Cluster tap → lib calls fitToCoordinates → our
           // onRegionChangeComplete fires. Flag it as programmatic so the
@@ -394,49 +461,13 @@ export function MapViewScreen() {
       >
         {markers.map((m) => {
           if (m.venue.lat === null || m.venue.lng === null) return null;
-          const isSelected = selectedVenueId === m.venue.id;
-          // Treat free / zero-price fields as "no price" so the pin falls back
-          // to a count circle instead of rendering "$0", which reads as a
-          // missing-data glitch.
-          const hasPositivePrice = m.minPrice !== null && m.minPrice > 0;
           return (
-            <Marker
-              // Stable per-venue key. Previously we encoded price/count to
-              // force remounts when filters changed venue data — but that
-              // triggered AIRMap insertReactSubview crashes on the new
-              // architecture in Expo SDK 54. With `tracksViewChanges` on
-              // (below), the native marker re-snapshots in place when its
-              // child VenuePin changes, so we don't need the key churn.
+            <VenueMarker
               key={m.venue.id}
-              coordinate={{ latitude: m.venue.lat, longitude: m.venue.lng }}
-              onPress={(e) => {
-                // Without stopPropagation the MapView's onPress also fires
-                // and immediately deselects the venue we just tapped.
-                e.stopPropagation();
-                handleMarkerPress(m.venue.id);
-              }}
-              // Always track so the native snapshot updates when child pin
-              // props change. The perf cost on a <50-pin map is negligible
-              // and the stability is worth it.
-              tracksViewChanges={true}
-            >
-              {hasPositivePrice && m.minPrice !== null ? (
-                <VenuePin
-                  mode="price"
-                  price={m.minPrice}
-                  fieldCount={m.fieldCount}
-                  venueName={m.venue.name}
-                  selected={isSelected}
-                />
-              ) : (
-                <VenuePin
-                  mode="count"
-                  fieldCount={m.fieldCount}
-                  venueName={m.venue.name}
-                  selected={isSelected}
-                />
-              )}
-            </Marker>
+              marker={m}
+              isSelected={selectedVenueId === m.venue.id}
+              onPress={handleMarkerPress}
+            />
           );
         })}
       </ClusteredMapView>
