@@ -2,9 +2,16 @@
  * Persistent set of "saved" venue IDs. Backed by AsyncStorage as a JSON array;
  * exposed as a Set-of-strings in memory for O(1) membership checks.
  *
- * Returns an immutable snapshot per render so consumers can pass it down
- * without worrying about mutation, and so React's referential equality picks
- * up changes.
+ * When a user is signed in, the set also syncs to the `user_saved_venues`
+ * Supabase table via direct supabase-js calls (RLS enforces ownership).
+ *
+ *   - On sign-in: cloud rows + local rows are unioned. Any local-only entries
+ *     get uploaded so a guest who saves a few venues, then signs in, keeps
+ *     them. Cloud is the source of truth from that point.
+ *   - On toggle (signed in): write-through to cloud in parallel with the
+ *     AsyncStorage write. Cloud failures are logged but don't block local
+ *     state — eventual consistency is fine here.
+ *   - On sign-out: cloud writes stop. Local state stays put on this device.
  */
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -14,9 +21,13 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
+
+import { useAuth } from "./auth";
+import { supabase } from "./supabase";
 
 const KEY = "@fieldstack/saved_venues";
 
@@ -34,6 +45,15 @@ const SavedVenuesContext = createContext<ContextValue | null>(null);
 export function SavedVenuesProvider({ children }: { children: ReactNode }) {
   const [saved, setSaved] = useState<ReadonlySet<string>>(() => new Set());
   const [hydrated, setHydrated] = useState(false);
+  const { user } = useAuth();
+  // Tracks which user we've already merged for, so we don't re-pull cloud
+  // on every render. Cleared on sign-out.
+  const mergedForUserId = useRef<string | null>(null);
+  // Per-venue write chain. Rapid toggles on the same venue could otherwise
+  // fire DELETE before the prior INSERT had landed at Supabase, leaving a
+  // phantom row in cloud until the next sign-in merge. Awaiting the previous
+  // write for that id serializes them.
+  const writeChains = useRef(new Map<string, Promise<void>>());
 
   useEffect(() => {
     let cancelled = false;
@@ -58,20 +78,148 @@ export function SavedVenuesProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
+  // Cloud sync on sign-in / sign-out. Re-runs only when the user identity
+  // actually changes (not on every render of the provider).
+  useEffect(() => {
+    if (!hydrated) return;
+    if (!user) {
+      // Signed out — drop the merged marker so a future sign-in pulls fresh.
+      mergedForUserId.current = null;
+      return;
+    }
+    if (mergedForUserId.current === user.id) return;
+    mergedForUserId.current = user.id;
+
+    let cancelled = false;
+    (async () => {
+      try {
+        // Pull cloud rows for this user.
+        const { data, error } = await supabase
+          .from("user_saved_venues")
+          .select("venue_id")
+          .eq("user_id", user.id);
+        if (cancelled) return;
+        if (error) {
+          // eslint-disable-next-line no-console
+          console.warn("[savedVenues] pull failed", error.message);
+          return;
+        }
+        const cloud = new Set<string>(
+          (data ?? []).map((r) => r.venue_id as string)
+        );
+
+        // Functional update so we union against the freshest local state in
+        // case the user toggled while the network round-trip was in flight.
+        setSaved((prev) => {
+          const union = new Set<string>(prev);
+          cloud.forEach((id) => union.add(id));
+
+          // Push local-only entries up to the cloud.
+          const localOnly: string[] = [];
+          prev.forEach((id) => {
+            if (!cloud.has(id)) localOnly.push(id);
+          });
+          if (localOnly.length > 0) {
+            // upsert with ignoreDuplicates so a near-simultaneous sync from
+            // another device that already pushed the same venue doesn't
+            // surface as a unique-constraint violation in logs.
+            void supabase
+              .from("user_saved_venues")
+              .upsert(
+                localOnly.map((venue_id) => ({ user_id: user.id, venue_id })),
+                { onConflict: "user_id,venue_id", ignoreDuplicates: true }
+              )
+              .then(({ error: upsertErr }) => {
+                if (upsertErr) {
+                  // eslint-disable-next-line no-console
+                  console.warn("[savedVenues] upload failed", upsertErr.message);
+                }
+              });
+          }
+
+          // Persist the union locally too so a fresh-cloud, no-local sign-in
+          // doesn't have to re-pull every cold start.
+          void AsyncStorage.setItem(
+            KEY,
+            JSON.stringify(Array.from(union))
+          ).catch(() => undefined);
+
+          return union;
+        });
+      } catch (err) {
+        // eslint-disable-next-line no-console
+        console.warn("[savedVenues] sync threw", err);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [hydrated, user]);
+
   const isSaved = useCallback((id: string) => saved.has(id), [saved]);
 
   // Functional setter pattern — rapid taps must not race on a stale snapshot.
-  // Persist inside the updater so the disk write always reflects the actual
-  // resulting state, not whatever was captured at call time.
-  const toggle = useCallback(async (id: string) => {
-    setSaved((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      void AsyncStorage.setItem(KEY, JSON.stringify(Array.from(next))).catch(() => undefined);
-      return next;
-    });
-  }, []);
+  // Persist locally inside the updater; cloud write fires when signed in.
+  const toggle = useCallback(
+    async (id: string) => {
+      setSaved((prev) => {
+        const next = new Set(prev);
+        const wasSaved = next.has(id);
+        if (wasSaved) next.delete(id);
+        else next.add(id);
+
+        void AsyncStorage.setItem(KEY, JSON.stringify(Array.from(next))).catch(
+          () => undefined
+        );
+
+        // Write-through to cloud if signed in. Failures don't block local
+        // state — eventual consistency is acceptable for "is this saved."
+        // TODO: retry/queue cloud failures rather than relying on the next
+        // sign-in merge to repair drift.
+        if (user) {
+          // Chain this write onto any pending write for the same venue so a
+          // rapid double-tap can't have DELETE land before the prior INSERT.
+          const previous = writeChains.current.get(id) ?? Promise.resolve();
+          const next$ = previous.then(async () => {
+            if (wasSaved) {
+              const { error } = await supabase
+                .from("user_saved_venues")
+                .delete()
+                .eq("user_id", user.id)
+                .eq("venue_id", id);
+              if (error) {
+                // eslint-disable-next-line no-console
+                console.warn("[savedVenues] cloud delete failed", error.message);
+              }
+            } else {
+              const { error } = await supabase
+                .from("user_saved_venues")
+                .upsert(
+                  { user_id: user.id, venue_id: id },
+                  { onConflict: "user_id,venue_id", ignoreDuplicates: true }
+                );
+              if (error) {
+                // eslint-disable-next-line no-console
+                console.warn("[savedVenues] cloud insert failed", error.message);
+              }
+            }
+          });
+          writeChains.current.set(id, next$);
+          // Reap the chain once it resolves so the Map doesn't grow without
+          // bound. Only clear if we're still the latest pending write for
+          // this id — a newer toggle may have already replaced us.
+          void next$.finally(() => {
+            if (writeChains.current.get(id) === next$) {
+              writeChains.current.delete(id);
+            }
+          });
+        }
+
+        return next;
+      });
+    },
+    [user]
+  );
 
   const clear = useCallback(async () => {
     setSaved(new Set());
@@ -80,6 +228,9 @@ export function SavedVenuesProvider({ children }: { children: ReactNode }) {
     } catch {
       // ignore
     }
+    // Don't wipe cloud rows from clear() — Settings' "Clear data" is a
+    // device-scoped reset (the alert copy promises that explicitly).
+    // Account deletion is a separate flow.
   }, []);
 
   const value = useMemo<ContextValue>(
