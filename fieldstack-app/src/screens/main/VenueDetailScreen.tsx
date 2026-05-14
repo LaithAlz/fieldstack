@@ -15,8 +15,8 @@ import { ReviewSection } from "../../components/ReviewSection";
 import { EmptyState } from "../../components/EmptyState";
 import { FieldAvailabilityCard } from "../../components/FieldAvailabilityCard";
 import { PhotoGallery } from "../../components/PhotoGallery";
-import { Skeleton } from "../../components/Skeleton";
 import { Text } from "../../components/Text";
+import { VenueDetailSkeleton } from "../../components/VenueDetailSkeleton";
 import { useLocation } from "../../hooks/useLocation";
 import { useVenue } from "../../hooks/useVenue";
 import { useVenueReviews } from "../../hooks/useVenueReviews";
@@ -142,16 +142,7 @@ export function VenueDetailScreen({ route }: Props) {
           onShare={onShare}
         />
         <ScrollView contentContainerStyle={styles.scroll}>
-          <Skeleton width="100%" height={220} borderRadius={0} />
-          <View style={styles.body}>
-            <Skeleton width="70%" height={28} />
-            <View style={{ height: spacing.sm }} />
-            <Skeleton width="50%" height={16} />
-            <View style={{ height: spacing.lg }} />
-            <Skeleton width="100%" height={88} />
-            <View style={{ height: spacing.md }} />
-            <Skeleton width="100%" height={88} />
-          </View>
+          <VenueDetailSkeleton />
         </ScrollView>
       </View>
     );

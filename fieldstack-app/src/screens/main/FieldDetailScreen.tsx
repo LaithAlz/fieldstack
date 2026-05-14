@@ -14,8 +14,8 @@ import { BookingTimeSheet } from "../../components/BookingTimeSheet";
 import { Button } from "../../components/Button";
 import { defaultDateTimeSelections } from "../../components/DateTimeRangePicker";
 import { EmptyState } from "../../components/EmptyState";
+import { FieldDetailSkeleton } from "../../components/FieldDetailSkeleton";
 import { PhotoGallery } from "../../components/PhotoGallery";
-import { Skeleton } from "../../components/Skeleton";
 import { StickyFooter } from "../../components/StickyFooter";
 import { Text } from "../../components/Text";
 import { useField } from "../../hooks/useField";
@@ -103,16 +103,7 @@ export function FieldDetailScreen({ route }: Props) {
       <View style={[styles.root, { backgroundColor: colors.surface }]}>
         <FloatingBack onBack={() => nav.goBack()} insets={insets} />
         <ScrollView contentContainerStyle={styles.scroll}>
-          <Skeleton width="100%" height={220} borderRadius={0} />
-          <View style={styles.body}>
-            <Skeleton width="70%" height={28} />
-            <View style={{ height: spacing.sm }} />
-            <Skeleton width="50%" height={18} />
-            <View style={{ height: spacing.lg }} />
-            <Skeleton width="40%" height={32} />
-            <View style={{ height: spacing.lg }} />
-            <Skeleton width="100%" height={120} />
-          </View>
+          <FieldDetailSkeleton />
         </ScrollView>
       </View>
     );
