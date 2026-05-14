@@ -8,32 +8,40 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
+  type StyleProp,
   TextInput,
   View,
+  type ViewStyle,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Button } from "../../components/Button";
 import { Text } from "../../components/Text";
 import { useToast } from "../../components/Toast";
-import { useAuth } from "../../lib/auth";
+import { useAuth, type AuthContact } from "../../lib/auth";
 import type { MeStackParamList } from "../../navigation/MainNavigator";
 import { borderRadius, fontFamily, fontSize, spacing } from "../../theme/tokens";
 import { useTheme } from "../../theme/useTheme";
 
 type Nav = NativeStackNavigationProp<MeStackParamList, "SignIn">;
 type Mode = "signin" | "signup";
+type ContactMethod = "email" | "phone";
 
 const MIN_PASSWORD = 6;
+const PHONE_DIGITS_REQUIRED = 10;
+const PHONE_COUNTRY_CODE = "+1"; // GTA-focused — North American numbers only for v1
 
 /**
- * Combined sign-in / sign-up screen. Tab toggle at the top switches between
- * the two modes — same form fields, different submit handler. After a
- * successful sign-in, AuthProvider's onAuthStateChange will update the user
- * session and downstream screens (Profile, Settings) re-render to reflect it.
+ * Combined sign-in / sign-up screen. Top tab toggle switches mode; an
+ * Email/Phone segmented control inside the form switches contact method.
+ * Sign-up additionally collects a name + a confirm-password field.
  *
- * Apple + Google OAuth land in follow-up PRs once the Supabase dashboard +
- * EAS build prerequisites are configured.
+ * After a successful auth, AuthProvider's onAuthStateChange propagates the
+ * new session and downstream screens (Profile, Settings) re-render.
+ *
+ * Phone path requires Supabase's SMS provider to be configured — when it
+ * isn't, the server-side error is surfaced as a friendly "use email instead"
+ * message via presentAuthError.
  */
 export function SignInScreen() {
   const colors = useTheme();
@@ -43,27 +51,55 @@ export function SignInScreen() {
   const { signIn, signUp, busy } = useAuth();
 
   const [mode, setMode] = useState<Mode>("signin");
+  const [contactMethod, setContactMethod] = useState<ContactMethod>("email");
+
+  const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = async () => {
     setError(null);
-    const trimmedEmail = email.trim();
-    if (!isLikelyEmail(trimmedEmail)) {
-      setError("Enter a valid email address.");
+
+    const trimmedName = fullName.trim();
+    if (mode === "signup" && trimmedName.length < 2) {
+      setError("Enter your name.");
       return;
     }
+
+    const contact = buildContact(contactMethod, email, phone);
+    if (!contact) {
+      setError(
+        contactMethod === "email"
+          ? "Enter a valid email address."
+          : `Enter a ${PHONE_DIGITS_REQUIRED}-digit phone number.`
+      );
+      return;
+    }
+
     if (password.length < MIN_PASSWORD) {
       setError(`Password must be at least ${MIN_PASSWORD} characters.`);
       return;
     }
 
+    if (mode === "signup") {
+      if (confirmPassword.length === 0) {
+        setError("Confirm your password.");
+        return;
+      }
+      if (password !== confirmPassword) {
+        setError("Passwords don't match.");
+        return;
+      }
+    }
+
     const result =
       mode === "signin"
-        ? await signIn(trimmedEmail, password)
-        : await signUp(trimmedEmail, password);
+        ? await signIn(contact, password)
+        : await signUp(contact, password, trimmedName);
 
     if (!result.ok) {
       setError(result.error);
@@ -71,13 +107,11 @@ export function SignInScreen() {
     }
 
     if (mode === "signup") {
-      // Supabase's default project setting is "email confirmation required" —
-      // we don't know the project state here, so cover both cases with a
-      // toast that's accurate either way.
-      toast.show(
-        "Account created. Check your inbox if email confirmation is required.",
-        { type: "success" }
-      );
+      const verifyHint =
+        contactMethod === "email"
+          ? "Check your inbox if email confirmation is required."
+          : "Check your texts if phone confirmation is required.";
+      toast.show(`Account created. ${verifyHint}`, { type: "success" });
     } else {
       toast.show("Signed in.", { type: "success" });
     }
@@ -88,6 +122,19 @@ export function SignInScreen() {
     if (next === mode) return;
     setMode(next);
     setError(null);
+    // Clear confirm so a stale value can't silently match a freshly-typed
+    // password on the next attempt.
+    setConfirmPassword("");
+  };
+
+  const switchContactMethod = (next: ContactMethod) => {
+    if (next === contactMethod) return;
+    setContactMethod(next);
+    setError(null);
+    // Drop the inactive field's value so toggling back doesn't resurrect a
+    // half-typed contact the user already abandoned.
+    if (next === "email") setPhone("");
+    else setEmail("");
   };
 
   return (
@@ -128,54 +175,120 @@ export function SignInScreen() {
         </Text>
 
         {/* Mode toggle */}
-        <View
-          style={[
-            styles.tabs,
-            { backgroundColor: colors.surfaceSecondary, borderColor: colors.border },
-          ]}
-          accessibilityRole="tablist"
-        >
-          <Tab
-            label="Sign in"
-            active={mode === "signin"}
-            onPress={() => switchMode("signin")}
-          />
-          <Tab
-            label="Sign up"
-            active={mode === "signup"}
-            onPress={() => switchMode("signup")}
-          />
-        </View>
+        <SegmentedToggle
+          role="tablist"
+          left={{
+            label: "Sign in",
+            active: mode === "signin",
+            onPress: () => switchMode("signin"),
+          }}
+          right={{
+            label: "Sign up",
+            active: mode === "signup",
+            onPress: () => switchMode("signup"),
+          }}
+        />
 
-        {/* Fields */}
-        <View style={styles.field}>
-          <Text size="sm" variant="secondary" weight="medium" style={styles.fieldLabel}>
-            Email
-          </Text>
-          <TextInput
-            value={email}
-            onChangeText={setEmail}
-            placeholder="you@example.com"
-            placeholderTextColor={colors.textTertiary}
-            autoCapitalize="none"
-            autoCorrect={false}
-            keyboardType="email-address"
-            // textContentType drives iOS autofill / 1Password; autoComplete
-            // is the Android equivalent. Need both for full coverage.
-            textContentType="emailAddress"
-            autoComplete="email"
-            // Visible "Email" label above already labels the field for SR.
-            // Setting accessibilityLabel here would make TalkBack read it twice.
-            style={[
-              styles.input,
-              {
-                backgroundColor: colors.surfaceSecondary,
-                color: colors.textPrimary,
-                borderColor: colors.border,
-              },
-            ]}
-          />
-        </View>
+        {mode === "signup" ? (
+          <View style={styles.field}>
+            <Text size="sm" variant="secondary" weight="medium" style={styles.fieldLabel}>
+              Name
+            </Text>
+            <TextInput
+              value={fullName}
+              onChangeText={setFullName}
+              placeholder="Alex Rivera"
+              placeholderTextColor={colors.textTertiary}
+              autoCapitalize="words"
+              autoCorrect={false}
+              textContentType="name"
+              autoComplete="name"
+              style={[
+                styles.input,
+                {
+                  backgroundColor: colors.surfaceSecondary,
+                  color: colors.textPrimary,
+                  borderColor: colors.border,
+                },
+              ]}
+            />
+          </View>
+        ) : null}
+
+        {/* Email / Phone toggle — radiogroup since it's a single-choice form
+            selector, not a mode tablist. */}
+        <SegmentedToggle
+          role="radiogroup"
+          style={styles.contactToggle}
+          left={{
+            label: "Email",
+            active: contactMethod === "email",
+            onPress: () => switchContactMethod("email"),
+          }}
+          right={{
+            label: "Phone",
+            active: contactMethod === "phone",
+            onPress: () => switchContactMethod("phone"),
+          }}
+        />
+
+        {contactMethod === "email" ? (
+          <View style={styles.field}>
+            <Text size="sm" variant="secondary" weight="medium" style={styles.fieldLabel}>
+              Email
+            </Text>
+            <TextInput
+              value={email}
+              onChangeText={setEmail}
+              placeholder="you@example.com"
+              placeholderTextColor={colors.textTertiary}
+              autoCapitalize="none"
+              autoCorrect={false}
+              keyboardType="email-address"
+              textContentType="emailAddress"
+              autoComplete="email"
+              style={[
+                styles.input,
+                {
+                  backgroundColor: colors.surfaceSecondary,
+                  color: colors.textPrimary,
+                  borderColor: colors.border,
+                },
+              ]}
+            />
+          </View>
+        ) : (
+          <View style={styles.field}>
+            <Text size="sm" variant="secondary" weight="medium" style={styles.fieldLabel}>
+              Phone
+            </Text>
+            <View
+              style={[
+                styles.input,
+                styles.phoneWrap,
+                {
+                  backgroundColor: colors.surfaceSecondary,
+                  borderColor: colors.border,
+                },
+              ]}
+            >
+              <Text size="md" style={{ color: colors.textSecondary }}>
+                {PHONE_COUNTRY_CODE}
+              </Text>
+              <TextInput
+                value={phone}
+                onChangeText={(v) => setPhone(stripNonDigits(v))}
+                placeholder="416 555 0123"
+                placeholderTextColor={colors.textTertiary}
+                keyboardType="phone-pad"
+                textContentType="telephoneNumber"
+                autoComplete="tel"
+                maxLength={PHONE_DIGITS_REQUIRED}
+                style={[styles.phoneInput, { color: colors.textPrimary }]}
+              />
+            </View>
+          </View>
+        )}
 
         <View style={styles.field}>
           <Text size="sm" variant="secondary" weight="medium" style={styles.fieldLabel}>
@@ -201,7 +314,6 @@ export function SignInScreen() {
               autoCorrect={false}
               textContentType={mode === "signin" ? "password" : "newPassword"}
               autoComplete={mode === "signin" ? "password" : "password-new"}
-              // Visible "Password" label above already labels for SR.
               style={[styles.passwordInput, { color: colors.textPrimary }]}
             />
             <Pressable
@@ -223,6 +335,33 @@ export function SignInScreen() {
           </View>
         </View>
 
+        {mode === "signup" ? (
+          <View style={styles.field}>
+            <Text size="sm" variant="secondary" weight="medium" style={styles.fieldLabel}>
+              Confirm password
+            </Text>
+            <TextInput
+              value={confirmPassword}
+              onChangeText={setConfirmPassword}
+              placeholder="Re-enter your password"
+              placeholderTextColor={colors.textTertiary}
+              secureTextEntry={!showPassword}
+              autoCapitalize="none"
+              autoCorrect={false}
+              textContentType="newPassword"
+              autoComplete="password-new"
+              style={[
+                styles.input,
+                {
+                  backgroundColor: colors.surfaceSecondary,
+                  color: colors.textPrimary,
+                  borderColor: colors.border,
+                },
+              ]}
+            />
+          </View>
+        ) : null}
+
         {error ? (
           <Text
             size="sm"
@@ -241,7 +380,7 @@ export function SignInScreen() {
             loading={busy}
             accessibilityHint={
               mode === "signin"
-                ? "Sign in with your email and password"
+                ? `Sign in with your ${contactMethod} and password`
                 : "Create a new account"
             }
           />
@@ -258,11 +397,59 @@ export function SignInScreen() {
 
 // ---------------------------------------------------------------------------
 
-function Tab({
+type SegmentSide = {
+  label: string;
+  active: boolean;
+  onPress: () => void;
+};
+
+type SegmentedRole = "tablist" | "radiogroup";
+
+function SegmentedToggle({
+  left,
+  right,
+  style,
+  role = "tablist",
+}: {
+  left: SegmentSide;
+  right: SegmentSide;
+  style?: StyleProp<ViewStyle>;
+  role?: SegmentedRole;
+}) {
+  const colors = useTheme();
+  const childRole: "tab" | "radio" = role === "tablist" ? "tab" : "radio";
+  return (
+    <View
+      accessibilityRole={role}
+      style={[
+        styles.tabs,
+        { backgroundColor: colors.surfaceSecondary, borderColor: colors.border },
+        style,
+      ]}
+    >
+      <Segment
+        role={childRole}
+        label={left.label}
+        active={left.active}
+        onPress={left.onPress}
+      />
+      <Segment
+        role={childRole}
+        label={right.label}
+        active={right.active}
+        onPress={right.onPress}
+      />
+    </View>
+  );
+}
+
+function Segment({
+  role,
   label,
   active,
   onPress,
 }: {
+  role: "tab" | "radio";
   label: string;
   active: boolean;
   onPress: () => void;
@@ -271,7 +458,7 @@ function Tab({
   return (
     <Pressable
       onPress={onPress}
-      accessibilityRole="tab"
+      accessibilityRole={role}
       accessibilityState={{ selected: active }}
       style={({ pressed }) => [
         styles.tab,
@@ -296,6 +483,27 @@ function isLikelyEmail(value: string): boolean {
   // Intentionally permissive — Supabase validates server-side. We only want
   // to catch obvious typos before the round-trip.
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+}
+
+function stripNonDigits(s: string): string {
+  return s.replace(/\D/g, "");
+}
+
+function buildContact(
+  method: ContactMethod,
+  email: string,
+  phone: string
+): AuthContact | null {
+  if (method === "email") {
+    const trimmed = email.trim();
+    if (!isLikelyEmail(trimmed)) return null;
+    return { email: trimmed };
+  }
+  // Phone path. We ship the country code on submit so AuthProvider hands
+  // Supabase an E.164 number even though the user only typed digits.
+  const digits = stripNonDigits(phone);
+  if (digits.length !== PHONE_DIGITS_REQUIRED) return null;
+  return { phone: `${PHONE_COUNTRY_CODE}${digits}` };
 }
 
 // ---------------------------------------------------------------------------
@@ -333,6 +541,9 @@ const styles = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth,
     marginBottom: spacing.lg,
   },
+  contactToggle: {
+    marginBottom: spacing.md,
+  },
   tab: {
     flex: 1,
     paddingVertical: spacing.sm + 2,
@@ -355,6 +566,18 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.lg,
     borderWidth: StyleSheet.hairlineWidth,
     minHeight: 48,
+  },
+  phoneWrap: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 0,
+    gap: spacing.sm,
+  },
+  phoneInput: {
+    flex: 1,
+    fontFamily: fontFamily.regular,
+    fontSize: fontSize.md,
+    paddingVertical: spacing.sm + 4,
   },
   passwordWrap: {
     flexDirection: "row",
