@@ -174,21 +174,6 @@ export function SignInScreen() {
             : "Create an account so your saves and preferences travel with you."}
         </Text>
 
-        {/* Mode toggle */}
-        <SegmentedToggle
-          role="tablist"
-          left={{
-            label: "Sign in",
-            active: mode === "signin",
-            onPress: () => switchMode("signin"),
-          }}
-          right={{
-            label: "Sign up",
-            active: mode === "signup",
-            onPress: () => switchMode("signup"),
-          }}
-        />
-
         {mode === "signup" ? (
           <View style={styles.field}>
             <Text size="sm" variant="secondary" weight="medium" style={styles.fieldLabel}>
@@ -384,6 +369,27 @@ export function SignInScreen() {
                 : "Create a new account"
             }
           />
+        </View>
+
+        <View style={styles.modeSwitchRow}>
+          <Text size="sm" variant="secondary">
+            {mode === "signin"
+              ? "New to FieldStack?"
+              : "Already have an account?"}
+          </Text>
+          <Pressable
+            onPress={() => switchMode(mode === "signin" ? "signup" : "signin")}
+            accessibilityRole="link"
+            accessibilityLabel={
+              mode === "signin" ? "Switch to sign up" : "Switch to sign in"
+            }
+            hitSlop={spacing.xs}
+            style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}
+          >
+            <Text size="sm" weight="bold" style={{ color: colors.brand }}>
+              {mode === "signin" ? "Sign up" : "Sign in"}
+            </Text>
+          </Pressable>
         </View>
 
         <Text size="xs" variant="tertiary" style={styles.legal}>
@@ -603,9 +609,16 @@ const styles = StyleSheet.create({
   cta: {
     marginTop: spacing.sm,
   },
+  modeSwitchRow: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    gap: spacing.xs,
+    marginTop: spacing.lg,
+  },
   legal: {
     textAlign: "center",
-    marginTop: spacing.lg,
+    marginTop: spacing.md,
     paddingHorizontal: spacing.md,
   },
 });
