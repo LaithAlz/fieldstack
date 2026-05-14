@@ -101,8 +101,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         await supabase.auth.setSession(parsed);
       } catch (err) {
         if (__DEV__) {
+          // Message only — supabase-js error objects can echo back the
+          // request/response body, which may include the raw tokens.
           // eslint-disable-next-line no-console
-          console.warn("[auth] setSession from deep link failed", err);
+          console.warn(
+            "[auth] setSession from deep link failed",
+            err instanceof Error ? err.message : "unknown"
+          );
         }
       }
     };
@@ -182,6 +187,10 @@ export function useAuth(): ContextValue {
  * for email verification, magic links, and password recovery. Returns null
  * for anything else (regular deep links, error redirects, etc.) so callers
  * can no-op safely.
+ *
+ * TODO(recovery): `type=recovery` URLs also carry tokens, so the caller
+ * currently signs the user straight in. Once a "set new password" screen
+ * exists, branch on the `type` fragment param and route to it instead.
  */
 function parseSupabaseAuthUrl(
   url: string
