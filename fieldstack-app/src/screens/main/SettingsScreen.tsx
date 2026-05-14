@@ -35,10 +35,7 @@ export function SettingsScreen() {
   const confirmSignOut = () => {
     Alert.alert(
       "Sign out?",
-      // TODO(9D): once saves migrate to user-scoped storage, this copy
-      // becomes a lie — update to "Your saves will be restored when you
-      // sign back in."
-      "Your saved venues, preferred time, and history stay on this device.",
+      "Your saves, preferred time, and history are restored when you sign back in.",
       [
         { text: "Cancel", style: "cancel" },
         {
@@ -51,6 +48,17 @@ export function SettingsScreen() {
         },
       ]
     );
+  };
+
+  // Deep-link to the OS notification settings for FieldStack. Lets the user
+  // toggle booking reminders without us needing in-app notification toggles
+  // (we'd just be reflecting OS state anyway).
+  const openNotificationSettings = async () => {
+    try {
+      await Linking.openSettings();
+    } catch {
+      toast.show("Couldn't open notification settings.", { type: "error" });
+    }
   };
 
   const open = async (url: string) => {
@@ -154,6 +162,13 @@ export function SettingsScreen() {
             onPress={() => nav.navigate("SignIn")}
           />
         )}
+
+        <SectionHeader>Preferences</SectionHeader>
+        <Row
+          icon="notifications-outline"
+          label="Notifications"
+          onPress={openNotificationSettings}
+        />
 
         <SectionHeader>Support</SectionHeader>
         <Row icon="mail-outline" label="Contact us" onPress={emailSupport} />
