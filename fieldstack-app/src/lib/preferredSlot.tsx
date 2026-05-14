@@ -124,14 +124,11 @@ export function PreferredSlotProvider({ children }: { children: ReactNode }) {
               () => undefined
             );
           }
-        } else {
-          // Cloud empty — push current local slot up so it survives device swap.
-          setSlotState((current) => {
-            if (current) {
-              void uploadSlot(user.id, current);
-            }
-            return current;
-          });
+        } else if (slot) {
+          // Cloud empty — push current local slot up so it survives device
+          // swap. Read from the in-scope `slot` rather than poking into a
+          // state updater; setSlotState updaters must be pure.
+          void uploadSlot(user.id, slot);
         }
       } catch (err) {
         // eslint-disable-next-line no-console
@@ -141,6 +138,10 @@ export function PreferredSlotProvider({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true;
     };
+    // `slot` intentionally excluded — this effect is a one-shot per sign-in
+    // (gated by mergedForUserId). Re-running on every slot change would
+    // re-pull cloud unnecessarily; setSlot uploads on its own anyway.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hydrated, user]);
 
   const setSlot = useCallback(

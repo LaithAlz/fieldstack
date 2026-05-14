@@ -4,8 +4,9 @@
  * order, capped at MAX_ENTRIES.
  *
  * When signed in, also writes to `user_recently_viewed` (composite PK so
- * re-views upsert in place). On sign-in we union cloud + local by venue id,
- * preferring the more-recent viewed_at where they overlap.
+ * re-views upsert in place). On sign-in we union cloud + local by venue id;
+ * local order wins for overlapping ids (post-recordView local is fresher
+ * than whatever cloud's viewed_at says), and cloud-only ids append after.
  */
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -126,6 +127,10 @@ export function RecentlyViewedProvider({ children }: { children: ReactNode }) {
           const cloudSet = new Set(cloudIds);
           const localOnly = capped.filter((id) => !cloudSet.has(id));
           if (localOnly.length > 0) {
+            // Note: we don't have the original local viewed_at timestamps
+            // (the local store only keeps order, not times). Stamping the
+            // upload with `now` is intentional — these are venues the user
+            // has seen recently from this device's perspective.
             void supabase
               .from("user_recently_viewed")
               .upsert(
