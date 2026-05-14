@@ -207,7 +207,7 @@ export function BookingBottomSheet({
             importantForAccessibility="no-hide-descendants"
           />
           <Text size="sm" variant="secondary" style={styles.noticeText}>
-            You'll be taken to{" "}
+            You&apos;ll be taken to{" "}
             <Text size="sm" weight="medium">
               {operatorName}
             </Text>{" "}
