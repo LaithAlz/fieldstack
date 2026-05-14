@@ -55,6 +55,9 @@ export function DateTimeRangePicker({
 }: Props) {
   const colors = useTheme();
   const [hint, setHint] = useState<string | null>(null);
+  // Date row layout. Defaults to the horizontal pill rail; toggles to a
+  // 2x7 calendar grid via the calendar icon next to the "Date" label.
+  const [showCalendar, setShowCalendar] = useState(false);
   // Ticks every minute so the date rail rolls "Today" over at midnight and
   // past-slot greying doesn't go stale when the sheet sits open.
   const now = useNowTick(60_000);
@@ -104,24 +107,58 @@ export function DateTimeRangePicker({
   return (
     <View>
       {/* ---- Date row -------------------------------------------------- */}
-      <Text size="md" weight="medium" variant="secondary" style={styles.label}>
-        Date
-      </Text>
-      <FlatList
-        horizontal
-        data={dates}
-        keyExtractor={(d) => d.toISOString()}
-        renderItem={({ item }) => (
-          <DatePill
-            label={formatDateLabel(item)}
-            selected={isSameDay(item, selectedDate)}
-            onPress={() => handleDate(item)}
+      <View style={styles.dateLabelRow}>
+        <Text size="md" weight="medium" variant="secondary" style={styles.label}>
+          Date
+        </Text>
+        <Pressable
+          onPress={() => {
+            selection();
+            setShowCalendar((v) => !v);
+          }}
+          accessibilityRole="button"
+          accessibilityLabel={
+            showCalendar
+              ? "Switch to date list view"
+              : "Switch to calendar view"
+          }
+          accessibilityState={{ expanded: showCalendar }}
+          hitSlop={spacing.sm}
+          style={({ pressed }) => [
+            styles.calendarToggle,
+            { opacity: pressed ? 0.6 : 1 },
+          ]}
+        >
+          <Ionicons
+            name={showCalendar ? "list-outline" : "calendar-outline"}
+            size={18}
+            color={colors.textSecondary}
           />
-        )}
-        ItemSeparatorComponent={Separator}
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.row}
-      />
+        </Pressable>
+      </View>
+      {showCalendar ? (
+        <CalendarGrid
+          dates={dates}
+          selectedDate={selectedDate}
+          onPick={handleDate}
+        />
+      ) : (
+        <FlatList
+          horizontal
+          data={dates}
+          keyExtractor={(d) => d.toISOString()}
+          renderItem={({ item }) => (
+            <DatePill
+              label={formatDateLabel(item)}
+              selected={isSameDay(item, selectedDate)}
+              onPress={() => handleDate(item)}
+            />
+          )}
+          ItemSeparatorComponent={Separator}
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.row}
+        />
+      )}
 
       {/* ---- Start time, grouped --------------------------------------- */}
       <Text size="md" weight="medium" variant="secondary" style={styles.label}>
@@ -304,6 +341,73 @@ function Separator() {
   return <View style={{ width: spacing.sm }} />;
 }
 
+/**
+ * 2-row calendar grid showing the next 14 bookable days. Mirrors the same
+ * date list the horizontal pill rail uses, just laid out as 2x7 cells so the
+ * user can see the whole window at a glance instead of swiping through it.
+ */
+function CalendarGrid({
+  dates,
+  selectedDate,
+  onPick,
+}: {
+  dates: Date[];
+  selectedDate: Date;
+  onPick: (date: Date) => void;
+}) {
+  const colors = useTheme();
+  return (
+    <View style={styles.calendarGrid}>
+      {dates.map((d) => {
+        const isSelected = isSameDay(d, selectedDate);
+        const day = d.getDate();
+        const weekday = d.toLocaleDateString("en-US", { weekday: "short" });
+        return (
+          <Pressable
+            key={d.toISOString()}
+            onPress={() => onPick(d)}
+            accessibilityRole="button"
+            accessibilityState={{ selected: isSelected }}
+            accessibilityLabel={d.toLocaleDateString("en-US", {
+              weekday: "long",
+              month: "short",
+              day: "numeric",
+            })}
+            style={({ pressed }) => [
+              styles.calendarCell,
+              {
+                backgroundColor: isSelected ? colors.brand : colors.surface,
+                borderColor: isSelected ? colors.brand : colors.border,
+                opacity: pressed ? 0.7 : 1,
+              },
+            ]}
+          >
+            <Text
+              size="xs"
+              weight="medium"
+              style={{
+                color: isSelected ? "#FFFFFF" : colors.textSecondary,
+              }}
+            >
+              {weekday}
+            </Text>
+            <Text
+              size="lg"
+              weight="bold"
+              style={{
+                color: isSelected ? "#FFFFFF" : colors.textPrimary,
+                letterSpacing: -0.3,
+              }}
+            >
+              {day}
+            </Text>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Helpers — exported so the parent screen can compute sane defaults
 // ---------------------------------------------------------------------------
@@ -465,6 +569,36 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     marginTop: spacing.lg,
     marginBottom: spacing.sm,
+  },
+  dateLabelRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingRight: spacing.lg,
+  },
+  calendarToggle: {
+    width: 32,
+    height: 32,
+    borderRadius: borderRadius.md,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  calendarGrid: {
+    paddingHorizontal: spacing.lg,
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: spacing.xs,
+  },
+  calendarCell: {
+    // 7 cells per row → (containerWidth - 6*gap) / 7. Use percent so it
+    // adapts to whatever container width the picker is rendered in.
+    width: "13.5%",
+    aspectRatio: 0.85,
+    borderRadius: borderRadius.md,
+    borderWidth: 1.5,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 2,
   },
   row: {
     paddingHorizontal: spacing.lg,
