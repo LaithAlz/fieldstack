@@ -318,10 +318,9 @@ function useFieldSearchState(): UseFieldSearchResult {
 }
 
 /**
- * The /search/fields endpoint currently accepts a single `surface` and a
- * single `size` (see api/search.ts). We model filters as arrays so the UI
- * can offer multi-select via FilterBottomSheet — until the API gains array
- * support, we send the first selected value. Passing none = no filter.
+ * Build the /search/fields query. Surface and size are multi-select on the
+ * UI side, and the API + SQL function now both accept arrays — see PR 17.
+ * Empty arrays are omitted entirely so the server's filter short-circuits.
  */
 function buildSearchParams(
   filters: FieldSearchFilters,
@@ -335,8 +334,8 @@ function buildSearchParams(
     params.lng = location.lng;
     params.radius_km = DEFAULT_RADIUS_KM;
   }
-  if (filters.surface.length > 0) params.surface = filters.surface[0];
-  if (filters.size.length > 0) params.size = filters.size[0];
+  if (filters.surface.length > 0) params.surface = filters.surface;
+  if (filters.size.length > 0) params.size = filters.size;
   if (filters.priceMax !== null) params.price_max = filters.priceMax;
   return params;
 }

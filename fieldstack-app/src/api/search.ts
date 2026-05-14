@@ -7,8 +7,9 @@ export type SearchFieldsParams = {
   lat?: number;
   lng?: number;
   radius_km?: number;
-  surface?: FieldSurface;
-  size?: FieldSize;
+  /** Empty / omitted = no filter; multiple values = match any. */
+  surface?: FieldSurface[];
+  size?: FieldSize[];
   price_max?: number;
   sort?: SearchSort;
 };
@@ -31,9 +32,16 @@ type SearchEnvelope = {
 export async function searchFields(
   params: SearchFieldsParams = {}
 ): Promise<SearchFieldsResult> {
-  const queryParams: Record<string, string | number> = {};
+  const queryParams: Record<string, string | number | string[]> = {};
   for (const [k, v] of Object.entries(params)) {
-    if (v !== undefined) queryParams[k] = v;
+    if (v === undefined) continue;
+    if (Array.isArray(v)) {
+      // Empty array = no filter; skip it so the server doesn't see `?surface=`.
+      if (v.length === 0) continue;
+      queryParams[k] = v;
+    } else {
+      queryParams[k] = v;
+    }
   }
 
   const { body, error } = await request<SearchEnvelope>(

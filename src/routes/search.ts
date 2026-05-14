@@ -2,13 +2,33 @@ import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { searchFields } from "../lib/queries/search.js";
 
+const SURFACE_VALUES = ["turf", "grass", "concrete", "indoor"] as const;
+const SIZE_VALUES = ["5v5", "7v7", "11v11"] as const;
+
+/**
+ * Accept either a single value or a comma-separated list ("turf,grass"). Empty
+ * string → undefined so the SQL filter short-circuits. Each element validated
+ * against the enum.
+ */
+const surfaceList = z
+  .string()
+  .optional()
+  .transform((v) => (v ? v.split(",").map((s) => s.trim()).filter(Boolean) : undefined))
+  .pipe(z.array(z.enum(SURFACE_VALUES)).optional());
+
+const sizeList = z
+  .string()
+  .optional()
+  .transform((v) => (v ? v.split(",").map((s) => s.trim()).filter(Boolean) : undefined))
+  .pipe(z.array(z.enum(SIZE_VALUES)).optional());
+
 const SearchFieldsQuery = z
   .object({
     lat: z.coerce.number().min(-90).max(90).optional(),
     lng: z.coerce.number().min(-180).max(180).optional(),
     radius_km: z.coerce.number().positive().max(500).default(10),
-    surface: z.enum(["turf", "grass", "concrete", "indoor"]).optional(),
-    size: z.enum(["5v5", "7v7", "11v11"]).optional(),
+    surface: surfaceList,
+    size: sizeList,
     price_max: z.coerce.number().positive().optional(),
     sort: z.enum(["distance", "price_asc", "price_desc"]).default("distance"),
   })
@@ -29,8 +49,8 @@ export async function searchRoutes(app: FastifyInstance) {
       lat: q.lat,
       lng: q.lng,
       radiusKm: hasCoords ? q.radius_km : undefined,
-      surface: q.surface,
-      size: q.size,
+      surfaces: q.surface,
+      sizes: q.size,
       priceMax: q.price_max,
       sort: q.sort,
     });
