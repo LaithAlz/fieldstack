@@ -20,6 +20,7 @@ import {
 } from "../lib/calendar";
 import { formatDurationHours } from "../lib/datetime";
 import { lightImpact } from "../lib/haptics";
+import { scheduleBookingReminder } from "../lib/notifications";
 import { borderRadius, spacing } from "../theme/tokens";
 import { useTheme } from "../theme/useTheme";
 import type { Field, Venue } from "../types/api";
@@ -133,6 +134,10 @@ export function BookingTimeSheet({
         date: toIsoDate(selectedDate),
         startTime: selectedTime,
         duration: selectedDuration,
+      });
+      void scheduleBookingReminder({
+        venueName: venue.name,
+        startDate: combineDateAndTime(selectedDate, selectedTime),
       });
       onConfirm?.();
       // Deferred until app returns to foreground — see promptAddToCalendarOnReturn

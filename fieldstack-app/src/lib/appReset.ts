@@ -12,6 +12,7 @@
 import { useCallback } from "react";
 
 import { useBookingHistory } from "./bookingHistory";
+import { cancelAllBookingReminders } from "./notifications";
 import { usePreferredSlot } from "./preferredSlot";
 import { useRecentlyViewed } from "./recentlyViewed";
 import { useSavedVenues } from "./savedVenues";
@@ -28,6 +29,7 @@ export function useAppReset() {
       clearSaved(),
       clearHistory(),
       clearRecent(),
+      cancelAllBookingReminders(),
     ]);
   }, [clearSlot, clearSaved, clearHistory, clearRecent]);
 }
