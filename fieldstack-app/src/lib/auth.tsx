@@ -39,15 +39,25 @@ type AuthResult = {
 function presentAuthError(err: AuthError | null): string | null {
   if (!err) return null;
   const msg = err.message?.toLowerCase() ?? "";
-  if (msg.includes("invalid login credentials")) return "Email or password is incorrect.";
+  if (msg.includes("invalid login credentials")) return "Email, phone, or password is incorrect.";
   if (msg.includes("email not confirmed")) return "Confirm your email — check your inbox for a link.";
-  if (msg.includes("user already registered")) return "That email already has an account. Try signing in.";
+  if (msg.includes("phone not confirmed")) return "Confirm your phone — check your texts for a code.";
+  if (msg.includes("user already registered") || msg.includes("already registered"))
+    return "That account already exists. Try signing in.";
   if (msg.includes("password should be at least")) return "Password must be at least 6 characters.";
   if (msg.includes("rate limit") || msg.includes("too many")) return "Too many attempts. Try again in a minute.";
   if (msg.includes("network")) return "Couldn't reach the server. Check your connection.";
+  if (msg.includes("phone") && (msg.includes("provider") || msg.includes("disabled")))
+    return "Phone sign-up isn't enabled yet — use email instead.";
   // Anything else: don't surface internals.
   return "Something went wrong. Please try again.";
 }
+
+/**
+ * The user contacts us with exactly one of `email` or `phone`. Caller picks
+ * by which key is set; never both, never neither.
+ */
+export type AuthContact = { email: string } | { phone: string };
 
 type ContextValue = {
   user: User | null;
@@ -56,8 +66,12 @@ type ContextValue = {
   hydrated: boolean;
   /** True only while a sign-in / sign-up / sign-out request is in flight. */
   busy: boolean;
-  signIn: (email: string, password: string) => Promise<AuthResult>;
-  signUp: (email: string, password: string) => Promise<AuthResult>;
+  signIn: (contact: AuthContact, password: string) => Promise<AuthResult>;
+  signUp: (
+    contact: AuthContact,
+    password: string,
+    fullName: string
+  ) => Promise<AuthResult>;
   signOut: () => Promise<void>;
 };
 
@@ -128,25 +142,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  const signIn = useCallback<ContextValue["signIn"]>(async (email, password) => {
+  const signIn = useCallback<ContextValue["signIn"]>(async (contact, password) => {
     setBusy(true);
     try {
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      const { error } = await supabase.auth.signInWithPassword({
+        ...contact,
+        password,
+      });
       return { ok: !error, error: presentAuthError(error) };
     } finally {
       setBusy(false);
     }
   }, []);
 
-  const signUp = useCallback<ContextValue["signUp"]>(async (email, password) => {
-    setBusy(true);
-    try {
-      const { error } = await supabase.auth.signUp({ email, password });
-      return { ok: !error, error: presentAuthError(error) };
-    } finally {
-      setBusy(false);
-    }
-  }, []);
+  const signUp = useCallback<ContextValue["signUp"]>(
+    async (contact, password, fullName) => {
+      setBusy(true);
+      try {
+        const { error } = await supabase.auth.signUp({
+          ...contact,
+          password,
+          options: { data: { full_name: fullName } },
+        });
+        return { ok: !error, error: presentAuthError(error) };
+      } finally {
+        setBusy(false);
+      }
+    },
+    []
+  );
 
   const signOut = useCallback(async () => {
     setBusy(true);
