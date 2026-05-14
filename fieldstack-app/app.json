@@ -43,6 +43,12 @@
         {
           "calendarPermission": "FieldStack adds your booked slots to your calendar."
         }
+      ],
+      [
+        "expo-notifications",
+        {
+          "color": "#000000"
+        }
       ]
     ],
     "experiments": {

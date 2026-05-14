@@ -21,6 +21,7 @@ import {
   BookingHistoryProvider,
   useBookingHistory,
 } from "./src/lib/bookingHistory";
+import { initNotifications } from "./src/lib/notifications";
 import { OnboardingProvider } from "./src/lib/onboardingContext";
 import {
   PreferredSlotProvider,
@@ -69,6 +70,7 @@ export default function App() {
 
   useEffect(() => {
     track(EVENT_APP_OPENED);
+    initNotifications();
     let cancelled = false;
     (async () => {
       const onboarded = await withTimeout(getOnboardingComplete(), SPLASH_CAP_MS, false);

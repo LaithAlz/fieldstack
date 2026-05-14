@@ -19,6 +19,7 @@ import {
 } from "../lib/calendar";
 import { formatDurationHours, formatEndTime, formatTime12h } from "../lib/datetime";
 import { lightImpact } from "../lib/haptics";
+import { scheduleBookingReminder } from "../lib/notifications";
 import { borderRadius, spacing } from "../theme/tokens";
 import { useTheme } from "../theme/useTheme";
 import type { Field, FieldSize, FieldSurface, Venue } from "../types/api";
@@ -138,6 +139,15 @@ export function BookingBottomSheet({
         date: toIsoDate(selectedDate),
         startTime: selectedTime,
         duration: selectedDuration,
+      });
+      scheduleBookingReminder({
+        venueName: venue.name,
+        startDate: combineDateAndTime(selectedDate, selectedTime),
+      }).catch((err) => {
+        if (__DEV__) {
+          // eslint-disable-next-line no-console
+          console.warn("[notifications] scheduleBookingReminder failed", err);
+        }
       });
       onConfirm?.();
       promptAddToCalendarOnReturn({
