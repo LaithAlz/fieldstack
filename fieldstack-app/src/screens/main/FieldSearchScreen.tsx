@@ -13,9 +13,9 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { EmptyState } from "../../components/EmptyState";
 import { FieldSearchCard } from "../../components/FieldSearchCard";
+import { FieldSearchCardSkeleton } from "../../components/FieldSearchCardSkeleton";
 import { FilterChipBar } from "../../components/FilterChipBar";
 import { SearchInput } from "../../components/SearchInput";
-import { Skeleton } from "../../components/Skeleton";
 import { Text } from "../../components/Text";
 import { useFieldSearch } from "../../hooks/useFieldSearch";
 import { useLocation } from "../../hooks/useLocation";
@@ -33,7 +33,6 @@ import type { SearchResult } from "../../types/api";
 type Nav = NativeStackNavigationProp<MainStackParamList, "FieldSearch">;
 
 const SKELETON_COUNT = 5;
-const SKELETON_HEIGHT = 96;
 
 // ---------- Screen ----------------------------------------------------------
 
@@ -146,18 +145,15 @@ export function FieldSearchScreen() {
       {/* ---------- List ---------- */}
       {isLoading ? (
         <ScrollView
+          accessibilityLabel="Loading fields"
+          accessibilityLiveRegion="polite"
           contentContainerStyle={[
             styles.listContent,
-            { paddingBottom: insets.bottom + 96 },
+            { paddingBottom: insets.bottom + 96, gap: spacing.md },
           ]}
         >
           {Array.from({ length: SKELETON_COUNT }).map((_, i) => (
-            <Skeleton
-              key={i}
-              width="100%"
-              height={SKELETON_HEIGHT}
-              borderRadius={borderRadius.lg}
-            />
+            <FieldSearchCardSkeleton key={i} />
           ))}
         </ScrollView>
       ) : results.length === 0 ? (

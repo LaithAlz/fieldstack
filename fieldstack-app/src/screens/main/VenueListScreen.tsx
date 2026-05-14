@@ -11,10 +11,10 @@ import { LocationPickerSheet } from "../../components/LocationPickerSheet";
 import { LocationPill } from "../../components/LocationPill";
 import { RecentlyViewedRow } from "../../components/RecentlyViewedRow";
 import { SearchInput } from "../../components/SearchInput";
-import { Skeleton } from "../../components/Skeleton";
 import { Text } from "../../components/Text";
 import { useToast } from "../../components/Toast";
 import { VenueCard } from "../../components/VenueCard";
+import { VenueCardSkeleton } from "../../components/VenueCardSkeleton";
 import { WhenPill } from "../../components/WhenPicker";
 import { useLocation } from "../../hooks/useLocation";
 import { useVenues } from "../../hooks/useVenues";
@@ -286,16 +286,13 @@ export function VenueListScreen() {
 
 function ListSkeleton() {
   return (
-    <View style={[styles.list, { paddingTop: spacing.md }]}>
+    <View
+      accessibilityLabel="Loading venues"
+      accessibilityLiveRegion="polite"
+      style={[styles.list, { paddingTop: spacing.md, gap: spacing.md }]}
+    >
       {Array.from({ length: 5 }, (_, i) => (
-        <View key={i} style={styles.skeletonRow}>
-          <Skeleton width={96} height={96} borderRadius={borderRadius.md} />
-          <View style={styles.skeletonBody}>
-            <Skeleton width="70%" height={18} />
-            <Skeleton width="50%" height={14} />
-            <Skeleton width="40%" height={14} />
-          </View>
-        </View>
+        <VenueCardSkeleton key={i} />
       ))}
     </View>
   );
@@ -341,15 +338,5 @@ const styles = StyleSheet.create({
   },
   listEmpty: {
     flexGrow: 1,
-  },
-  skeletonRow: {
-    flexDirection: "row",
-    gap: spacing.md,
-    marginBottom: spacing.md,
-  },
-  skeletonBody: {
-    flex: 1,
-    justifyContent: "center",
-    gap: spacing.sm,
   },
 });
