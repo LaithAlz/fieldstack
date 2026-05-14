@@ -11,6 +11,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { StyleSheet, View } from "react-native";
 
 import { EVENT_BOOKING_REDIRECT_CONFIRMED, track } from "../lib/analytics";
+import { mockedAvailability } from "../lib/availability";
 import { useBookingHistory } from "../lib/bookingHistory";
 import { buildBookingUrl } from "../lib/bookingUrl";
 import {
@@ -184,6 +185,7 @@ export function BookingTimeSheet({
           onDateChange={onDateChange}
           onStartTimeChange={onStartTimeChange}
           onDurationChange={onDurationChange}
+          getAvailability={(d, t) => mockedAvailability(venue.id, d, t)}
         />
 
         {estimatedTotal !== null ? (

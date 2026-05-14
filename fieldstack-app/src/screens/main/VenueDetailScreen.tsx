@@ -20,6 +20,7 @@ import { Text } from "../../components/Text";
 import { useLocation } from "../../hooks/useLocation";
 import { useVenue } from "../../hooks/useVenue";
 import { useVenueReviews } from "../../hooks/useVenueReviews";
+import { mockedAvailability } from "../../lib/availability";
 import { formatEndTime, formatTime12h } from "../../lib/datetime";
 import {
   preferredSlotDate,
@@ -237,6 +238,7 @@ export function VenueDetailScreen({ route }: Props) {
             onDateChange={setSelectedDate}
             onStartTimeChange={setSelectedTime}
             onDurationChange={setSelectedDuration}
+            getAvailability={(d, t) => mockedAvailability(venueId, d, t)}
           />
 
           <Text size="lg" weight="bold" accessibilityRole="header" style={styles.section}>
