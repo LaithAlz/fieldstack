@@ -397,14 +397,15 @@ export function MapViewScreen() {
           // to a count circle instead of rendering "$0", which reads as a
           // missing-data glitch.
           const hasPositivePrice = m.minPrice !== null && m.minPrice > 0;
-          // Encode the mode + price into the key so react-native-maps forces
-          // a marker remount (and a fresh bitmap snapshot) when filters flip
-          // a venue's price or count. Without this, `tracksViewChanges` stays
-          // false on non-selected pins and the stale snapshot persists.
-          const markerKey = `${m.venue.id}-${hasPositivePrice ? `p${m.minPrice}` : `c${m.fieldCount}`}`;
           return (
             <Marker
-              key={markerKey}
+              // Stable per-venue key. Previously we encoded price/count to
+              // force remounts when filters changed venue data — but that
+              // triggered AIRMap insertReactSubview crashes on the new
+              // architecture in Expo SDK 54. With `tracksViewChanges` on
+              // (below), the native marker re-snapshots in place when its
+              // child VenuePin changes, so we don't need the key churn.
+              key={m.venue.id}
               coordinate={{ latitude: m.venue.lat, longitude: m.venue.lng }}
               onPress={(e) => {
                 // Without stopPropagation the MapView's onPress also fires
@@ -412,10 +413,10 @@ export function MapViewScreen() {
                 e.stopPropagation();
                 handleMarkerPress(m.venue.id);
               }}
-              // react-native-maps snapshots markers when tracksViewChanges is
-              // false. Enable tracking only on the selected pin so its spring
-              // animation propagates to the native marker.
-              tracksViewChanges={isSelected}
+              // Always track so the native snapshot updates when child pin
+              // props change. The perf cost on a <50-pin map is negligible
+              // and the stability is worth it.
+              tracksViewChanges={true}
             >
               {hasPositivePrice && m.minPrice !== null ? (
                 <VenuePin
