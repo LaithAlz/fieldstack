@@ -42,6 +42,13 @@ type Props = {
    * the user knows it's a hint, not a hard block. Slots stay tappable.
    */
   getAvailability?: (date: Date, startTime: string) => AvailabilityBucket;
+  /**
+   * Optional $/hour rate. When provided, duration chips include the running
+   * total so the user doesn't have to multiply in their head (`"2hr · $190"`).
+   * Best-in-class booking apps (Resy, Zocdoc, OpenTable) all surface this
+   * inline rather than waiting for a separate review step.
+   */
+  pricePerHour?: number | null;
 };
 
 export function DateTimeRangePicker({
@@ -52,6 +59,7 @@ export function DateTimeRangePicker({
   onStartTimeChange,
   onDurationChange,
   getAvailability,
+  pricePerHour,
 }: Props) {
   const colors = useTheme();
   const [hint, setHint] = useState<string | null>(null);
@@ -199,6 +207,32 @@ export function DateTimeRangePicker({
         })}
       </View>
 
+      {/* ---- Open-alternative suggestions ------------------------------ */}
+      {/* Only when the user's picked time is flagged busy: surface the next
+          handful of likely-open slots so they don't have to scrub through
+          chips. Mirrors Zocdoc / Hotel Tonight's "next available" pattern. */}
+      {getAvailability && getAvailability(selectedDate, selectedStartTime) === "busy" ? (
+        <View style={styles.suggestionsWrap}>
+          <Text size="sm" weight="medium" variant="secondary" style={styles.suggestionsLabel}>
+            Open soon
+          </Text>
+          <View style={styles.suggestionsRow}>
+            {findNextOpenSlots(dates, slotsByPeriod, getAvailability, selectedDate).map(
+              (s) => (
+                <SuggestionChip
+                  key={`${s.date.toISOString()}-${s.startTime}`}
+                  label={formatSuggestionLabel(s.date, s.startTime, now)}
+                  onPress={() => {
+                    onDateChange(s.date);
+                    onStartTimeChange(s.startTime);
+                  }}
+                />
+              )
+            )}
+          </View>
+        </View>
+      ) : null}
+
       {/* ---- Duration -------------------------------------------------- */}
       <Text size="md" weight="medium" variant="secondary" style={styles.label}>
         Duration
@@ -206,10 +240,18 @@ export function DateTimeRangePicker({
       <View style={[styles.row, styles.durationRow]}>
         {DURATION_OPTIONS.map((d) => {
           const wouldExceed = durationExceedsDay(selectedStartTime, d);
+          const total =
+            pricePerHour !== null && pricePerHour !== undefined
+              ? Math.round(pricePerHour * d)
+              : null;
           return (
             <DurationChip
               key={d}
-              label={formatDuration(d)}
+              label={
+                total !== null
+                  ? `${formatDuration(d)} · $${total}`
+                  : formatDuration(d)
+              }
               selected={d === selectedDuration}
               disabled={wouldExceed}
               onPress={() => handleDuration(d)}
@@ -342,6 +384,93 @@ function Separator() {
 }
 
 /**
+ * Up to 3 likely-open slots starting from the user's currently selected date,
+ * skipping anything `getAvailability` flags as busy. Used to suggest forward
+ * alternatives when the user's pick is busy.
+ */
+function findNextOpenSlots(
+  dates: Date[],
+  slotsByPeriod: Record<Period, string[]>,
+  getAvailability: (date: Date, startTime: string) => AvailabilityBucket,
+  fromDate: Date,
+  limit = 3
+): Array<{ date: Date; startTime: string }> {
+  const allSlots: string[] = [];
+  for (const p of PERIODS) allSlots.push(...slotsByPeriod[p.id]);
+
+  const out: Array<{ date: Date; startTime: string }> = [];
+  // Start at the selected date and walk forward. We don't filter past-slots
+  // here because the caller's date list already starts at today; if the
+  // selected date is today, slots earlier than "now" won't be open anyway
+  // (the picker already greys them) and they'd just be filtered visually.
+  let started = false;
+  for (const date of dates) {
+    if (!started) {
+      if (!isSameDay(date, fromDate)) continue;
+      started = true;
+    }
+    for (const slot of allSlots) {
+      if (getAvailability(date, slot) !== "busy") {
+        out.push({ date, startTime: slot });
+        if (out.length >= limit) return out;
+      }
+    }
+  }
+  return out;
+}
+
+function formatSuggestionLabel(date: Date, startTime: string, now: Date): string {
+  const today = startOfDay(now);
+  const target = startOfDay(date);
+  const diffDays = Math.round(
+    (target.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
+  );
+  const dayLabel =
+    diffDays === 0
+      ? "Today"
+      : diffDays === 1
+      ? "Tomorrow"
+      : target.toLocaleDateString("en-US", { weekday: "short" });
+  return `${dayLabel} ${formatTimeForDisplay(startTime)}`;
+}
+
+function SuggestionChip({
+  label,
+  onPress,
+}: {
+  label: string;
+  onPress: () => void;
+}) {
+  const colors = useTheme();
+  return (
+    <Pressable
+      onPress={() => {
+        selection();
+        onPress();
+      }}
+      accessibilityRole="button"
+      accessibilityLabel={`Switch to ${label}`}
+      style={({ pressed }) => [
+        styles.suggestionChip,
+        {
+          backgroundColor: colors.surface,
+          borderColor: colors.brand,
+          opacity: pressed ? 0.7 : 1,
+        },
+      ]}
+    >
+      <Text
+        size="sm"
+        weight="medium"
+        style={{ color: colors.brand }}
+      >
+        {label}
+      </Text>
+    </Pressable>
+  );
+}
+
+/**
  * 2-row calendar grid showing the next 14 bookable days. Mirrors the same
  * date list the horizontal pill rail uses, just laid out as 2x7 cells so the
  * user can see the whole window at a glance instead of swiping through it.
@@ -412,7 +541,18 @@ function CalendarGrid({
 // Helpers — exported so the parent screen can compute sane defaults
 // ---------------------------------------------------------------------------
 
-export function defaultDateTimeSelections(): {
+/**
+ * Best-guess opening selection for the picker. The "next available slot"
+ * defaults follow what Zocdoc / Hotel Tonight do — land the user on
+ * something tappable, not on a blank state.
+ *
+ * Pass `getAvailability` (typically bound to a venue id) to skip slots the
+ * heuristic marks as busy. Without it the function falls back to the next
+ * valid full hour today.
+ */
+export function defaultDateTimeSelections(
+  getAvailability?: (date: Date, startTime: string) => AvailabilityBucket
+): {
   date: Date;
   startTime: string;
   duration: number;
@@ -421,8 +561,28 @@ export function defaultDateTimeSelections(): {
   let hour = now.getHours();
   if (now.getMinutes() > 0 || now.getSeconds() > 0) hour += 1;
 
-  // After 23:00 there's no full hour left today within the picker's window —
-  // roll over to tomorrow's 6 AM rather than land on a soon-past slot.
+  // Walk forward day-by-day (up to DATE_RAIL_DAYS) looking for the earliest
+  // non-busy full-hour slot inside our 6 AM–11 PM window. Without an
+  // availability function, the first iteration's first slot wins.
+  const isOpen = (date: Date, hh: number): boolean => {
+    const time = `${pad(hh)}:00`;
+    if (!getAvailability) return true;
+    return getAvailability(date, time) !== "busy";
+  };
+
+  for (let offset = 0; offset < DATE_RAIL_DAYS; offset++) {
+    const date = startOfDay(addDays(now, offset));
+    const startHour = offset === 0 ? Math.max(TIME_SLOT_START_HOUR, hour) : TIME_SLOT_START_HOUR;
+    if (startHour > TIME_SLOT_END_HOUR) continue;
+    for (let h = startHour; h <= TIME_SLOT_END_HOUR; h++) {
+      if (isOpen(date, h)) {
+        return { date, startTime: `${pad(h)}:00`, duration: 1 };
+      }
+    }
+  }
+
+  // Every slot in the picker's window is "busy" — fall back to the next
+  // valid hour today so the user still lands on something selectable.
   if (hour > TIME_SLOT_END_HOUR) {
     return {
       date: startOfDay(addDays(now, 1)),
@@ -430,11 +590,9 @@ export function defaultDateTimeSelections(): {
       duration: 1,
     };
   }
-
-  hour = Math.max(TIME_SLOT_START_HOUR, hour);
   return {
     date: startOfDay(now),
-    startTime: `${pad(hour)}:00`,
+    startTime: `${pad(Math.max(TIME_SLOT_START_HOUR, hour))}:00`,
     duration: 1,
   };
 }
@@ -642,6 +800,24 @@ const styles = StyleSheet.create({
     height: 6,
     borderRadius: 3,
     marginRight: spacing.xs,
+  },
+  suggestionsWrap: {
+    paddingHorizontal: spacing.lg,
+    marginTop: spacing.md,
+  },
+  suggestionsLabel: {
+    marginBottom: spacing.xs,
+  },
+  suggestionsRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: spacing.sm,
+  },
+  suggestionChip: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs + 2,
+    borderRadius: borderRadius.xl,
+    borderWidth: 1.5,
   },
   hint: {
     paddingHorizontal: spacing.lg,

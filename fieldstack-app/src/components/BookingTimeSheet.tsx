@@ -18,7 +18,7 @@ import {
   combineDateAndTime,
   promptAddToCalendarOnReturn,
 } from "../lib/calendar";
-import { formatDurationHours } from "../lib/datetime";
+import { formatDurationHours, formatEndTime, formatTime12h } from "../lib/datetime";
 import { lightImpact } from "../lib/haptics";
 import { scheduleBookingReminder } from "../lib/notifications";
 import { borderRadius, spacing } from "../theme/tokens";
@@ -201,11 +201,23 @@ export function BookingTimeSheet({
           onStartTimeChange={onStartTimeChange}
           onDurationChange={onDurationChange}
           getAvailability={getAvailability}
+          pricePerHour={field.price_per_hour}
         />
 
-        {estimatedTotal !== null ? (
-          <View style={[styles.estimate, { borderColor: colors.border }]}>
-            <View style={styles.estimateRow}>
+        {/* Consolidated summary card — what the user is about to book, with
+            running total and operator handoff baked in. Last on-app moment
+            to catch a wrong tap before the external redirect. */}
+        <View style={[styles.summary, { borderColor: colors.border }]}>
+          <Text size="md" weight="bold" style={styles.summaryDate}>
+            {formatFullDate(selectedDate)}
+          </Text>
+          <Text size="sm" variant="secondary" style={styles.summaryTime}>
+            {formatTime12h(selectedTime)} – {formatEndTime(selectedTime, selectedDuration)}
+            {" · "}
+            {formatDurationHours(selectedDuration)}
+          </Text>
+          {estimatedTotal !== null ? (
+            <View style={styles.summaryTotalRow}>
               <Text size="sm" variant="secondary">
                 Estimated total
               </Text>
@@ -213,29 +225,22 @@ export function BookingTimeSheet({
                 ${estimatedTotal}
               </Text>
             </View>
-            <Text size="sm" variant="tertiary" style={styles.estimateBreakdown}>
-              {formatDurationHours(selectedDuration)} × ${Math.round(pricePerHour ?? 0)}/hr · paid on{" "}
-              {operatorName}
+          ) : null}
+          <View style={styles.summaryNoticeRow}>
+            <Ionicons
+              name="open-outline"
+              size={14}
+              color={colors.textTertiary}
+              style={styles.summaryNoticeIcon}
+              accessibilityElementsHidden
+              importantForAccessibility="no-hide-descendants"
+            />
+            <Text size="xs" variant="tertiary" style={styles.summaryNoticeText}>
+              {estimatedTotal !== null
+                ? `Paid on ${operatorName}`
+                : `Booking continues on ${operatorName}`}
             </Text>
           </View>
-        ) : null}
-
-        <View style={[styles.notice, { backgroundColor: colors.surfaceSecondary }]}>
-          <Ionicons
-            name="open-outline"
-            size={18}
-            color={colors.textSecondary}
-            style={styles.noticeIcon}
-            accessibilityElementsHidden
-            importantForAccessibility="no-hide-descendants"
-          />
-          <Text size="sm" variant="secondary" style={styles.noticeText}>
-            You&apos;ll be taken to{" "}
-            <Text size="sm" weight="medium">
-              {operatorName}
-            </Text>{" "}
-            to complete your booking.
-          </Text>
         </View>
 
         <View style={styles.cta}>
@@ -266,6 +271,14 @@ function toIsoDate(d: Date): string {
   return `${y}-${m}-${day}`;
 }
 
+function formatFullDate(d: Date): string {
+  return d.toLocaleDateString("en-US", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+  });
+}
+
 const styles = StyleSheet.create({
   content: {
     paddingHorizontal: spacing.lg,
@@ -278,31 +291,36 @@ const styles = StyleSheet.create({
   subtitle: {
     marginBottom: spacing.lg,
   },
-  estimate: {
+  summary: {
     marginTop: spacing.lg,
     padding: spacing.md,
     borderRadius: borderRadius.md,
     borderWidth: StyleSheet.hairlineWidth,
   },
-  estimateRow: {
+  summaryDate: {
+    letterSpacing: -0.2,
+  },
+  summaryTime: {
+    marginTop: 2,
+  },
+  summaryTotalRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
+    marginTop: spacing.md,
+    paddingTop: spacing.sm,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: "rgba(0,0,0,0.08)",
   },
-  estimateBreakdown: {
-    marginTop: spacing.xs,
-  },
-  notice: {
+  summaryNoticeRow: {
     flexDirection: "row",
     alignItems: "center",
-    padding: spacing.md,
-    borderRadius: borderRadius.md,
-    marginTop: spacing.md,
+    marginTop: spacing.sm,
   },
-  noticeIcon: {
-    marginRight: spacing.sm,
+  summaryNoticeIcon: {
+    marginRight: spacing.xs,
   },
-  noticeText: {
+  summaryNoticeText: {
     flex: 1,
     flexShrink: 1,
   },
