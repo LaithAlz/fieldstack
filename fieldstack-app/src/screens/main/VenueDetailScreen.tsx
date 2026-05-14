@@ -11,6 +11,7 @@ import {
   DateTimeRangePicker,
   defaultDateTimeSelections,
 } from "../../components/DateTimeRangePicker";
+import { ReviewSection } from "../../components/ReviewSection";
 import { EmptyState } from "../../components/EmptyState";
 import { FieldAvailabilityCard } from "../../components/FieldAvailabilityCard";
 import { PhotoGallery } from "../../components/PhotoGallery";
@@ -18,6 +19,7 @@ import { Skeleton } from "../../components/Skeleton";
 import { Text } from "../../components/Text";
 import { useLocation } from "../../hooks/useLocation";
 import { useVenue } from "../../hooks/useVenue";
+import { useVenueReviews } from "../../hooks/useVenueReviews";
 import { formatEndTime, formatTime12h } from "../../lib/datetime";
 import {
   preferredSlotDate,
@@ -50,6 +52,12 @@ export function VenueDetailScreen({ route }: Props) {
 
   const { data: venue, isLoading, error } = useVenue(venueId);
   const { coords } = useLocation();
+  const {
+    reviews,
+    summary: reviewSummary,
+    isLoading: reviewsLoading,
+    refresh: refreshReviews,
+  } = useVenueReviews(venueId);
   const { isSaved, toggle: toggleSaved } = useSavedVenues();
   const { recordView } = useRecentlyViewed();
   const savedForVenue = venue ? isSaved(venue.id) : false;
@@ -254,6 +262,18 @@ export function VenueDetailScreen({ route }: Props) {
               ))}
             </View>
           )}
+
+          <Text size="lg" weight="bold" accessibilityRole="header" style={styles.section}>
+            Reviews
+          </Text>
+          <ReviewSection
+            venueId={venueId}
+            reviews={reviews}
+            avgRating={reviewSummary?.avgRating ?? 0}
+            reviewCount={reviewSummary?.reviewCount ?? 0}
+            isLoading={reviewsLoading}
+            onChanged={() => void refreshReviews()}
+          />
         </View>
       </ScrollView>
 
