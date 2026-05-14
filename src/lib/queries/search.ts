@@ -12,8 +12,9 @@ export type SearchFieldsParams = {
   lat?: number;
   lng?: number;
   radiusKm?: number;
-  surface?: FieldSurface;
-  size?: FieldSize;
+  /** Empty array / undefined = no filter; non-empty = match any. */
+  surfaces?: FieldSurface[];
+  sizes?: FieldSize[];
   priceMax?: number;
   sort: SearchSort; // required at the query layer; the route fills the default
 };
@@ -53,8 +54,8 @@ async function runSearch(params: SearchFieldsParams): Promise<SearchFieldsResult
     p_lat: params.lat ?? null,
     p_lng: params.lng ?? null,
     p_radius_meters: radiusMeters,
-    p_surface: params.surface ?? null,
-    p_size: params.size ?? null,
+    p_surfaces: normalizeArrayParam(params.surfaces),
+    p_sizes: normalizeArrayParam(params.sizes),
     p_price_max: params.priceMax ?? null,
     p_sort: params.sort,
   });
@@ -66,15 +67,22 @@ async function runSearch(params: SearchFieldsParams): Promise<SearchFieldsResult
   return data as unknown as SearchFieldsResult;
 }
 
+/** Coerce an empty / missing array to null so the SQL filter short-circuits. */
+function normalizeArrayParam<T>(arr: T[] | undefined): T[] | null {
+  if (!arr || arr.length === 0) return null;
+  return arr;
+}
+
 function searchKey(p: SearchFieldsParams): string {
-  // Round coords/radius so jitter doesn't fragment cache. Property order is
-  // fixed, so JSON.stringify is stable across calls with the same params.
+  // Round coords/radius so jitter doesn't fragment cache. Sort arrays so
+  // [turf,grass] and [grass,turf] hit the same cache entry. JSON.stringify
+  // is stable for fixed property order.
   const normalized = {
     lat: p.lat !== undefined ? Number(p.lat.toFixed(4)) : null,
     lng: p.lng !== undefined ? Number(p.lng.toFixed(4)) : null,
     radiusKm: p.radiusKm ?? null,
-    surface: p.surface ?? null,
-    size: p.size ?? null,
+    surfaces: [...(p.surfaces ?? [])].sort(),
+    sizes: [...(p.sizes ?? [])].sort(),
     priceMax: p.priceMax ?? null,
     sort: p.sort,
   };
