@@ -24,6 +24,10 @@ export type Venue = {
   amenities: string[];
   website: string | null;
   is_active: boolean;
+  // Optional because migration 007 adds these as nullable columns — legacy
+  // rows + clients that haven't applied the migration still satisfy the type.
+  data_source?: "manual" | "scrape" | "operator_claim" | null;
+  last_scraped_at?: string | null;
 };
 
 export type Field = {
