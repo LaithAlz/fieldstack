@@ -2,10 +2,10 @@ import { Ionicons } from "@expo/vector-icons";
 import { CommonActions, useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useMemo, useState } from "react";
-import { Alert, Pressable, StyleSheet, TextInput, View } from "react-native";
+import { Pressable, StyleSheet, TextInput, View } from "react-native";
 
 import { useAuth } from "../lib/auth";
-import { upsertReview, deleteReview, type Review } from "../lib/reviews";
+import { upsertReview, type Review } from "../lib/reviews";
 import type { DetailParamList } from "../navigation/MainNavigator";
 import { borderRadius, fontFamily, fontSize, spacing } from "../theme/tokens";
 import { useTheme } from "../theme/useTheme";
@@ -28,11 +28,12 @@ type Props = {
 /**
  * Reviews block for VenueDetail. Three parts:
  *   1. Aggregate header (avg + count + star row)
- *   2. Write/edit form for the current user
- *   3. List of everyone's reviews
+ *   2. Write/edit form for the current user (no delete here — that lives
+ *      on the Me tab's "My reviews" so a curious tap doesn't lose data)
+ *   3. Collapsible list of everyone else's reviews
  *
- * Guest users see the aggregate + list; the write form is replaced with a
- * "Sign in to leave a review" prompt that pushes the SignIn screen.
+ * Guest users see the aggregate + collapsible list; the write form is
+ * replaced with a "Sign in to leave a review" prompt that pushes SignIn.
  */
 export function ReviewSection({
   venueId,
@@ -45,6 +46,9 @@ export function ReviewSection({
   const colors = useTheme();
   const { user } = useAuth();
   const nav = useNavigation<NativeStackNavigationProp<DetailParamList>>();
+  // Default collapsed so the write form sits closer to the top of the
+  // section; expand on user tap.
+  const [expanded, setExpanded] = useState(false);
 
   // Pull out the current user's existing review (if any) so the form can
   // pre-fill and we can show "Your review" treatment.
@@ -118,11 +122,42 @@ export function ReviewSection({
       )}
 
       {otherReviews.length > 0 ? (
-        <View style={styles.list}>
-          {otherReviews.map((r) => (
-            <ReviewRow key={r.id} review={r} />
-          ))}
-        </View>
+        <>
+          <Pressable
+            onPress={() => setExpanded((v) => !v)}
+            accessibilityRole="button"
+            accessibilityState={{ expanded }}
+            accessibilityLabel={
+              expanded
+                ? "Hide reviews"
+                : `Show all reviews, ${otherReviews.length}`
+            }
+            style={({ pressed }) => [
+              styles.toggleRow,
+              { borderColor: colors.border, opacity: pressed ? 0.7 : 1 },
+            ]}
+          >
+            <Text size="sm" weight="medium" style={{ color: colors.brand }}>
+              {expanded
+                ? "Hide reviews"
+                : `Show all reviews (${otherReviews.length})`}
+            </Text>
+            <Ionicons
+              name={expanded ? "chevron-up" : "chevron-down"}
+              size={16}
+              color={colors.brand}
+              accessibilityElementsHidden
+              importantForAccessibility="no-hide-descendants"
+            />
+          </Pressable>
+          {expanded ? (
+            <View style={styles.list}>
+              {otherReviews.map((r) => (
+                <ReviewRow key={r.id} review={r} />
+              ))}
+            </View>
+          ) : null}
+        </>
       ) : reviewCount === 0 && !isLoading ? (
         <Text size="sm" variant="tertiary" style={styles.emptyCopy}>
           No reviews yet. Be the first to share a take.
@@ -173,33 +208,6 @@ function ReviewForm({
     onSaved();
   };
 
-  const handleDelete = async () => {
-    if (!existing) return;
-    Alert.alert(
-      "Delete your review?",
-      "Your rating and any comment will be removed.",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: async () => {
-            setBusy(true);
-            const { error: err } = await deleteReview(existing.id);
-            setBusy(false);
-            if (err) {
-              setError(err.message);
-              return;
-            }
-            setRating(0);
-            setBody("");
-            onSaved();
-          },
-        },
-      ]
-    );
-  };
-
   return (
     <View
       style={[
@@ -240,31 +248,16 @@ function ReviewForm({
         </Text>
       ) : null}
 
-      <View style={styles.actions}>
-        <View style={{ flex: 1 }}>
-          <Button
-            label={existing ? "Update review" : "Post review"}
-            onPress={handleSubmit}
-            loading={busy}
-          />
-        </View>
-        {existing ? (
-          <Pressable
-            onPress={handleDelete}
-            accessibilityRole="button"
-            accessibilityLabel="Delete your review"
-            accessibilityState={{ disabled: busy, busy }}
-            disabled={busy}
-            hitSlop={spacing.sm}
-            style={({ pressed }) => [
-              styles.deleteBtn,
-              { opacity: pressed ? 0.6 : 1 },
-            ]}
-          >
-            <Ionicons name="trash-outline" size={20} color={colors.danger} />
-          </Pressable>
-        ) : null}
-      </View>
+      <Button
+        label={existing ? "Update review" : "Post review"}
+        onPress={handleSubmit}
+        loading={busy}
+      />
+      {existing ? (
+        <Text size="xs" variant="tertiary" style={styles.deleteHint}>
+          To delete your review, go to Me → My reviews.
+        </Text>
+      ) : null}
     </View>
   );
 }
@@ -341,16 +334,18 @@ const styles = StyleSheet.create({
   error: {
     marginTop: spacing.xs,
   },
-  actions: {
+  deleteHint: {
+    marginTop: spacing.xs,
+  },
+  toggleRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: spacing.md,
-  },
-  deleteBtn: {
-    width: 44,
-    height: 44,
-    alignItems: "center",
-    justifyContent: "center",
+    justifyContent: "space-between",
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: borderRadius.md,
+    borderWidth: StyleSheet.hairlineWidth,
+    marginBottom: spacing.sm,
   },
   list: {
     gap: spacing.sm,
