@@ -275,6 +275,50 @@ export function VenueDetailScreen({ route }: Props) {
             </View>
           )}
 
+          {/* Booking notes + cancellation policy. Renders only when migration
+              009 is applied and at least one field is non-empty. Surfaces
+              friction *before* the operator redirect so users aren't
+              surprised later. */}
+          {venue.booking_notes || venue.cancellation_policy ? (
+            <>
+              <Text size="lg" weight="bold" accessibilityRole="header" style={styles.section}>
+                Booking notes
+              </Text>
+              <View style={[styles.notesCard, { borderColor: colors.border }]}>
+                {venue.booking_notes ? (
+                  <View style={styles.noteRow}>
+                    <Ionicons
+                      name="information-circle-outline"
+                      size={18}
+                      color={colors.textSecondary}
+                      style={styles.noteIcon}
+                      accessibilityElementsHidden
+                      importantForAccessibility="no-hide-descendants"
+                    />
+                    <Text size="sm" variant="secondary" style={styles.noteText}>
+                      {venue.booking_notes}
+                    </Text>
+                  </View>
+                ) : null}
+                {venue.cancellation_policy ? (
+                  <View style={[styles.noteRow, venue.booking_notes ? styles.noteRowGap : undefined]}>
+                    <Ionicons
+                      name="return-down-back-outline"
+                      size={18}
+                      color={colors.textSecondary}
+                      style={styles.noteIcon}
+                      accessibilityElementsHidden
+                      importantForAccessibility="no-hide-descendants"
+                    />
+                    <Text size="sm" variant="secondary" style={styles.noteText}>
+                      {venue.cancellation_policy}
+                    </Text>
+                  </View>
+                ) : null}
+              </View>
+            </>
+          ) : null}
+
           <Text size="lg" weight="bold" accessibilityRole="header" style={styles.section}>
             Reviews
           </Text>
@@ -470,6 +514,27 @@ const styles = StyleSheet.create({
   },
   freshness: {
     marginTop: spacing.xs,
+  },
+  notesCard: {
+    padding: spacing.md,
+    borderRadius: borderRadius.md,
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  noteRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+  },
+  noteRowGap: {
+    marginTop: spacing.sm,
+  },
+  noteIcon: {
+    marginRight: spacing.sm,
+    marginTop: 1,
+  },
+  noteText: {
+    flex: 1,
+    flexShrink: 1,
+    lineHeight: 20,
   },
   section: {
     marginTop: spacing.xl,
