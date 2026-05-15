@@ -24,6 +24,7 @@ import {
   EVENT_FIELD_VIEWED,
   track,
 } from "../../lib/analytics";
+import { resolveFieldPhotos } from "../../lib/fieldPhotos";
 import { preferredSlotDate, usePreferredSlot } from "../../lib/preferredSlot";
 import type { DetailParamList } from "../../navigation/MainNavigator";
 import { borderRadius, spacing } from "../../theme/tokens";
@@ -156,7 +157,7 @@ export function FieldDetailScreen({ route }: Props) {
         showsVerticalScrollIndicator={false}
       >
         <View>
-          <PhotoGallery photos={venue.photos} />
+          <PhotoGallery photos={resolveFieldPhotos(field.photos, venue.photos)} />
           <FloatingBack onBack={() => nav.goBack()} insets={insets} />
         </View>
 
