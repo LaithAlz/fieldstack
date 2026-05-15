@@ -31,7 +31,19 @@ export type Venue = {
   // Migration 009 — free-text operator notes shown pre-redirect.
   booking_notes?: string | null;
   cancellation_policy?: string | null;
+  // Migration 010 — per-weekday operating hours hint. See lib/venueHours.ts
+  // for the shape and parsing logic.
+  hours?: VenueHoursJson | null;
 };
+
+/**
+ * Raw venue.hours JSON shape from the DB. Keys are weekday abbreviations,
+ * values are "HH:mm-HH:mm" or null when closed. The strict client-side
+ * shape (with parsed minutes) lives in lib/venueHours.ts.
+ */
+export type VenueHoursJson = Partial<
+  Record<"mon" | "tue" | "wed" | "thu" | "fri" | "sat" | "sun", string | null>
+>;
 
 export type Field = {
   id: string;
