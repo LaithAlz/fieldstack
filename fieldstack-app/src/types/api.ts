@@ -58,6 +58,9 @@ export type Field = {
   // Migration 011 — optional per-field photos. Null/empty array →
   // consumer falls back to venue.photos. See lib/fieldPhotos.ts.
   photos?: string[] | null;
+  // Migration 012 — free-text pricing caveat. Shown beside the price when
+  // the operator has variable rates (peak/off-peak/weekend/member etc).
+  price_note?: string | null;
 };
 
 // The list endpoint nests `fields` only; the single-venue endpoint also
