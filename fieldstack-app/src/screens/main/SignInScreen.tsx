@@ -1,5 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useNavigation } from "@react-navigation/native";
+import { CommonActions, useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useState } from "react";
 import {
@@ -62,6 +62,26 @@ export function SignInScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  /**
+   * Exit the SignIn screen. If we were pushed onto an existing stack (the
+   * normal "tap Sign in banner on Profile" flow), pop back. If we were
+   * dispatched here cross-tab without Profile underneath (the Reviews-tab
+   * sign-in CTA path), `goBack` would no-op and leave the MeTab stuck on
+   * SignIn forever. Detect that and reset the stack to Profile instead.
+   */
+  const leaveSignIn = () => {
+    if (nav.canGoBack()) {
+      leaveSignIn();
+      return;
+    }
+    nav.dispatch(
+      CommonActions.reset({
+        index: 0,
+        routes: [{ name: "Profile" }],
+      })
+    );
+  };
+
   const handleSubmit = async () => {
     setError(null);
 
@@ -116,7 +136,7 @@ export function SignInScreen() {
     } else {
       toast.show("Signed in.", { type: "success" });
     }
-    nav.goBack();
+    leaveSignIn();
   };
 
   const switchMode = (next: Mode) => {
@@ -145,7 +165,7 @@ export function SignInScreen() {
     >
       <View style={[styles.topBar, { paddingTop: insets.top + spacing.sm }]}>
         <Pressable
-          onPress={() => nav.goBack()}
+          onPress={() => leaveSignIn()}
           accessibilityRole="button"
           accessibilityLabel="Go back"
           hitSlop={spacing.sm}
