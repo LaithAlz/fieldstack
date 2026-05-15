@@ -48,15 +48,21 @@ export async function searchFields(
 async function runSearch(params: SearchFieldsParams): Promise<SearchFieldsResult> {
   const hasCoords = params.lat !== undefined && params.lng !== undefined;
   const radiusMeters =
-    hasCoords && params.radiusKm !== undefined ? params.radiusKm * 1000 : null;
+    hasCoords && params.radiusKm !== undefined ? params.radiusKm * 1000 : undefined;
 
+  // Regenerated DB types model nullable RPC args as `T | undefined`, so we
+  // map our internal `T | null` shape via `?? undefined`. The Postgres
+  // function treats missing args as null anyway, so the wire effect is the
+  // same — this just satisfies the stricter types.
+  const surfaces = normalizeArrayParam(params.surfaces);
+  const sizes = normalizeArrayParam(params.sizes);
   const { data, error } = await supabase.rpc("search_fields", {
-    p_lat: params.lat ?? null,
-    p_lng: params.lng ?? null,
+    p_lat: params.lat,
+    p_lng: params.lng,
     p_radius_meters: radiusMeters,
-    p_surfaces: normalizeArrayParam(params.surfaces),
-    p_sizes: normalizeArrayParam(params.sizes),
-    p_price_max: params.priceMax ?? null,
+    p_surfaces: surfaces ?? undefined,
+    p_sizes: sizes ?? undefined,
+    p_price_max: params.priceMax,
     p_sort: params.sort,
   });
 
