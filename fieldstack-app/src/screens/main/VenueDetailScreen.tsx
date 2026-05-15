@@ -22,6 +22,7 @@ import { useVenue } from "../../hooks/useVenue";
 import { useVenueReviews } from "../../hooks/useVenueReviews";
 import { mockedAvailability } from "../../lib/availability";
 import { formatEndTime, formatTime12h } from "../../lib/datetime";
+import { formatScrapedAgo } from "../../lib/freshness";
 import {
   preferredSlotDate,
   usePreferredSlot,
@@ -217,6 +218,17 @@ export function VenueDetailScreen({ route }: Props) {
               {line}
             </Text>
           ))}
+          {/* Provenance badge. Renders only when migration 007 is applied
+              and a last-scraped timestamp exists; otherwise the helper
+              returns null and we render nothing. */}
+          {(() => {
+            const freshness = formatScrapedAgo(venue.last_scraped_at);
+            return freshness ? (
+              <Text size="xs" variant="tertiary" style={styles.freshness}>
+                {freshness}
+              </Text>
+            ) : null;
+          })()}
 
           {amenities.length > 0 ? (
             <View style={styles.amenities}>
@@ -455,6 +467,9 @@ const styles = StyleSheet.create({
     flexWrap: "wrap",
     gap: spacing.xs,
     marginTop: spacing.md,
+  },
+  freshness: {
+    marginTop: spacing.xs,
   },
   section: {
     marginTop: spacing.xl,
