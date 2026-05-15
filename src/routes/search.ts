@@ -3,7 +3,7 @@ import { z } from "zod";
 import { searchFields } from "../lib/queries/search.js";
 
 const SURFACE_VALUES = ["turf", "grass", "concrete", "indoor"] as const;
-const SIZE_VALUES = ["5v5", "7v7", "11v11"] as const;
+const SIZE_VALUES = ["5v5", "7v7", "11v11", "3v3", "futsal"] as const;
 
 /**
  * Accept either a single value or a comma-separated list ("turf,grass"). Empty

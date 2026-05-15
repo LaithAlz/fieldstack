@@ -25,6 +25,8 @@ const SIZE_LABEL: Record<FieldSize, string> = {
   "5v5": "5v5",
   "7v7": "7v7",
   "11v11": "11v11",
+  "3v3": "3v3",
+  futsal: "Futsal",
 };
 
 type Props = {
