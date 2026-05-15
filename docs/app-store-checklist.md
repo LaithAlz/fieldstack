@@ -26,11 +26,11 @@ code.
 
 ### Required metadata
 - [ ] **App name**: 30 chars max. e.g. "FieldStack: GTA Soccer Fields"
-- [ ] **Subtitle**: 30 chars. e.g. "Find + book pickup soccer"
+- [ ] **Subtitle**: 30 chars. e.g. "Find every soccer field in GTA"
 - [ ] **Promotional text** (170 chars, editable any time without re-review)
 - [ ] **Description** (4000 chars). Lead with what + why, then features as bullets.
 - [ ] **Keywords** (100 chars total, comma-separated, no spaces between).
-      Suggested: `soccer,pickup,gta,toronto,fields,turf,futsal,booking,pitch,indoor`
+      Suggested: `soccer,gta,toronto,fields,turf,futsal,pitch,indoor,sportsplex,pickup`
 - [ ] **Support URL** (e.g. `https://fieldstack.app/support` or a Notion page)
 - [ ] **Marketing URL** (optional but boosts conversion)
 - [ ] **Privacy policy URL** — *required* — must be live before submission
