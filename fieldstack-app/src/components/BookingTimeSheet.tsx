@@ -20,6 +20,7 @@ import {
 } from "../lib/calendar";
 import { formatDurationHours, formatEndTime, formatTime12h } from "../lib/datetime";
 import { lightImpact } from "../lib/haptics";
+import { getDayHours } from "../lib/venueHours";
 import { scheduleBookingReminder } from "../lib/notifications";
 import { borderRadius, spacing } from "../theme/tokens";
 import { useTheme } from "../theme/useTheme";
@@ -202,6 +203,7 @@ export function BookingTimeSheet({
           onDurationChange={onDurationChange}
           getAvailability={getAvailability}
           pricePerHour={field.price_per_hour}
+          getOpenHours={(d) => getDayHours(venue.hours, d)}
         />
 
         {/* Consolidated summary card — what the user is about to book, with

@@ -49,6 +49,12 @@ type Props = {
    * inline rather than waiting for a separate review step.
    */
   pricePerHour?: number | null;
+  /**
+   * Optional per-date open/close window. Returning null means "no
+   * constraint" — picker falls back to its 6 AM–11 PM default. Slots
+   * outside the range render as disabled (same treatment as past slots).
+   */
+  getOpenHours?: (date: Date) => { openMinutes: number; closeMinutes: number } | null;
 };
 
 export function DateTimeRangePicker({
@@ -60,6 +66,7 @@ export function DateTimeRangePicker({
   onDurationChange,
   getAvailability,
   pricePerHour,
+  getOpenHours,
 }: Props) {
   const colors = useTheme();
   const [hint, setHint] = useState<string | null>(null);
@@ -175,8 +182,15 @@ export function DateTimeRangePicker({
       <View style={styles.periodsWrap}>
         {PERIODS.map((period) => {
           const slots = slotsByPeriod[period.id];
+          // Hours hint for the selected date — null means "no constraint".
+          const hours = getOpenHours?.(selectedDate) ?? null;
+          const isOutsideHours = (slot: string): boolean => {
+            if (!hours) return false;
+            const m = timeStringToMinutes(slot);
+            return m < hours.openMinutes || m >= hours.closeMinutes;
+          };
           const allDisabled = slots.every(
-            (s) => timeStringToMinutes(s) <= pastBoundaryMinutes
+            (s) => timeStringToMinutes(s) <= pastBoundaryMinutes || isOutsideHours(s)
           );
           if (allDisabled) return null;
           return (
@@ -188,6 +202,7 @@ export function DateTimeRangePicker({
                 {slots.map((slot) => {
                   const isPast =
                     timeStringToMinutes(slot) <= pastBoundaryMinutes;
+                  const closedNow = isOutsideHours(slot);
                   const busy =
                     getAvailability?.(selectedDate, slot) === "busy";
                   return (
@@ -195,8 +210,8 @@ export function DateTimeRangePicker({
                       key={slot}
                       label={formatTimeForDisplay(slot)}
                       selected={slot === selectedStartTime}
-                      disabled={isPast}
-                      busy={busy}
+                      disabled={isPast || closedNow}
+                      busy={busy && !closedNow}
                       onPress={() => handleStartTime(slot)}
                     />
                   );

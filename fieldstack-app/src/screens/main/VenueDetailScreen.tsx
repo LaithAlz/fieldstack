@@ -23,6 +23,7 @@ import { useVenueReviews } from "../../hooks/useVenueReviews";
 import { mockedAvailability } from "../../lib/availability";
 import { formatEndTime, formatTime12h } from "../../lib/datetime";
 import { formatScrapedAgo } from "../../lib/freshness";
+import { getDayHours } from "../../lib/venueHours";
 import {
   preferredSlotDate,
   usePreferredSlot,
@@ -249,6 +250,7 @@ export function VenueDetailScreen({ route }: Props) {
             onStartTimeChange={setSelectedTime}
             onDurationChange={setSelectedDuration}
             getAvailability={getAvailability}
+            getOpenHours={(d) => getDayHours(venue.hours, d)}
           />
 
           <Text size="lg" weight="bold" accessibilityRole="header" style={styles.section}>
