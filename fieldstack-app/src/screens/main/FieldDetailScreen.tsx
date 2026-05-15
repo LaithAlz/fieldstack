@@ -207,6 +207,11 @@ export function FieldDetailScreen({ route }: Props) {
               >
                 {priceText}
               </Text>
+              {field.price_note ? (
+                <Text size="sm" variant="secondary" style={styles.priceNote}>
+                  {field.price_note}
+                </Text>
+              ) : null}
             </View>
           ) : null}
 
@@ -383,6 +388,10 @@ const styles = StyleSheet.create({
   },
   priceWrap: {
     marginTop: spacing.lg,
+  },
+  priceNote: {
+    marginTop: spacing.xs,
+    lineHeight: 20,
   },
   section: {
     marginTop: spacing.xl,
