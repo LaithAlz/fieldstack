@@ -204,7 +204,7 @@ export type Database = {
     Enums: {
       integration_type: "none" | "playtomic" | "courtreserve" | "amilia";
       field_surface: "turf" | "grass" | "concrete" | "indoor";
-      field_size: "5v5" | "7v7" | "11v11";
+      field_size: "5v5" | "7v7" | "11v11" | "3v3" | "futsal";
     };
     CompositeTypes: { [_ in never]: never };
   };

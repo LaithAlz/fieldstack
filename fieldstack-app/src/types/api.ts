@@ -3,7 +3,7 @@
 
 export type IntegrationType = "none" | "playtomic" | "courtreserve" | "amilia";
 export type FieldSurface = "turf" | "grass" | "concrete" | "indoor";
-export type FieldSize = "5v5" | "7v7" | "11v11";
+export type FieldSize = "5v5" | "7v7" | "11v11" | "futsal" | "3v3";
 
 export type Operator = {
   id: string;

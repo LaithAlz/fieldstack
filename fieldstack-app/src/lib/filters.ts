@@ -16,9 +16,11 @@ export const SURFACE_OPTIONS: FilterOption<FieldSurface>[] = [
 ];
 
 export const SIZE_OPTIONS: FilterOption<FieldSize>[] = [
+  { id: "3v3", label: "3-a-side" },
   { id: "5v5", label: "5-a-side" },
   { id: "7v7", label: "7-a-side" },
   { id: "11v11", label: "11-a-side" },
+  { id: "futsal", label: "Futsal" },
 ];
 
 import type { SearchSort } from "../api/search";
