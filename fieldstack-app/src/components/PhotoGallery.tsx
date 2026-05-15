@@ -130,6 +130,7 @@ function GalleryItem({
         style={{ width, height }}
         contentFit="cover"
         transition={150}
+        cachePolicy="memory-disk"
         onError={() => setFailed(true)}
       />
     </View>

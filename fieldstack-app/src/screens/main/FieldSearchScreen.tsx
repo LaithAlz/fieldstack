@@ -231,6 +231,13 @@ export function FieldSearchScreen() {
         <FlatList
           data={results}
           keyExtractor={(r) => r.field.id}
+          // Same tuning rationale as VenueListScreen: ~screen of items mounted
+          // up front, then virtualize. FieldSearchCard is slightly shorter
+          // (~100pt) so a bigger initial batch fits.
+          initialNumToRender={7}
+          windowSize={5}
+          maxToRenderPerBatch={8}
+          removeClippedSubviews
           renderItem={({ item }) => (
             <FieldSearchCard
               result={item}
