@@ -28,6 +28,9 @@ export type Venue = {
   // rows + clients that haven't applied the migration still satisfy the type.
   data_source?: "manual" | "scrape" | "operator_claim" | null;
   last_scraped_at?: string | null;
+  // Migration 009 — free-text operator notes shown pre-redirect.
+  booking_notes?: string | null;
+  cancellation_policy?: string | null;
 };
 
 export type Field = {
