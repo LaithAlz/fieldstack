@@ -55,6 +55,9 @@ export type Field = {
   booking_url: string | null;
   booking_platform: IntegrationType;
   is_active: boolean;
+  // Migration 011 — optional per-field photos. Null/empty array →
+  // consumer falls back to venue.photos. See lib/fieldPhotos.ts.
+  photos?: string[] | null;
 };
 
 // The list endpoint nests `fields` only; the single-venue endpoint also
