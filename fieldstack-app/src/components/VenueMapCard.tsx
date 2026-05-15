@@ -105,6 +105,7 @@ export function VenueMapCard({
             style={styles.photo}
             contentFit="cover"
             transition={150}
+            cachePolicy="memory-disk"
             onError={() => setPhotoFailed(true)}
           />
         )}

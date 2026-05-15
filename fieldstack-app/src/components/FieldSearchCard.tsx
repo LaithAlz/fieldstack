@@ -98,6 +98,7 @@ export function FieldSearchCard({ result, userCoords, isBestPrice, onPress }: Pr
             style={styles.photo}
             contentFit="cover"
             transition={150}
+            cachePolicy="memory-disk"
             onError={() => setPhotoFailed(true)}
           />
         )}

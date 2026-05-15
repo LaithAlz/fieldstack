@@ -234,6 +234,15 @@ export function VenueListScreen() {
         <FlatList<VenueWithFields>
           data={filteredVenues}
           keyExtractor={(v) => v.id}
+          // Render a screen-and-a-bit of cards on mount, then virtualize. A
+          // VenueCard is ~120pt tall; 6 covers the typical visible viewport
+          // without a layout pop. windowSize=5 keeps 2 screens above + below
+          // mounted. removeClippedSubviews lets RN unmount the truly-offscreen
+          // ones — material gain on lists past ~30 venues.
+          initialNumToRender={6}
+          windowSize={5}
+          maxToRenderPerBatch={8}
+          removeClippedSubviews
           contentContainerStyle={[
             styles.list,
             // Pad the bottom so the last card doesn't hug the home indicator.

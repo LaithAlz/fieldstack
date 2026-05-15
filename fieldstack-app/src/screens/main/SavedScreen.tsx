@@ -58,6 +58,10 @@ export function SavedScreen() {
       <FlatList<VenueWithFields>
         data={savedVenues}
         keyExtractor={(v) => v.id}
+        initialNumToRender={6}
+        windowSize={5}
+        maxToRenderPerBatch={8}
+        removeClippedSubviews
         contentContainerStyle={[
           styles.list,
           { paddingBottom: insets.bottom + spacing.xl },
