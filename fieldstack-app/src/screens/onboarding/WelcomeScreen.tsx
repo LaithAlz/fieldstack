@@ -17,9 +17,9 @@ import { fontFamily, fontSize, fontWeight, spacing } from "../../theme/tokens";
 import { useTheme } from "../../theme/useTheme";
 
 const FEATURES: { icon: React.ComponentProps<typeof Ionicons>["name"]; label: string }[] = [
-  { icon: "search-outline", label: "Browse pickup-ready fields across the GTA" },
+  { icon: "search-outline", label: "Browse every field across the GTA" },
   { icon: "options-outline", label: "Filter by surface, size, and price" },
-  { icon: "calendar-outline", label: "Pick a slot, get a one-hour reminder" },
+  { icon: "navigate-outline", label: "Open the operator's booking page in one tap" },
 ];
 
 type Props = NativeStackScreenProps<OnboardingStackParamList, "Welcome">;
@@ -65,8 +65,8 @@ export function WelcomeScreen(_props: Props) {
           <Text style={[styles.wordmark, { color: colors.textPrimary }]}>FieldStack</Text>
         </View>
       }
-      title="Find pickup soccer, fast"
-      body="Discover and book fields across the GTA. Share your location so we can rank fields by distance."
+      title="Find soccer fields, fast"
+      body="Discover fields across the GTA in one place. Share your location so we can rank them by distance."
       footer={
         <>
           <Button
