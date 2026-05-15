@@ -19,6 +19,7 @@ export type Database = {
           booking_platform: Database["public"]["Enums"]["integration_type"]
           booking_url: string | null
           created_at: string
+          external_id: string | null
           id: string
           is_active: boolean
           name: string
@@ -33,6 +34,7 @@ export type Database = {
           booking_platform?: Database["public"]["Enums"]["integration_type"]
           booking_url?: string | null
           created_at?: string
+          external_id?: string | null
           id?: string
           is_active?: boolean
           name: string
@@ -47,6 +49,7 @@ export type Database = {
           booking_platform?: Database["public"]["Enums"]["integration_type"]
           booking_url?: string | null
           created_at?: string
+          external_id?: string | null
           id?: string
           is_active?: boolean
           name?: string
@@ -288,6 +291,7 @@ export type Database = {
           cancellation_policy: string | null
           created_at: string
           data_source: string | null
+          external_id: string | null
           hours: Json | null
           id: string
           is_active: boolean
@@ -307,6 +311,7 @@ export type Database = {
           cancellation_policy?: string | null
           created_at?: string
           data_source?: string | null
+          external_id?: string | null
           hours?: Json | null
           id?: string
           is_active?: boolean
@@ -326,6 +331,7 @@ export type Database = {
           cancellation_policy?: string | null
           created_at?: string
           data_source?: string | null
+          external_id?: string | null
           hours?: Json | null
           id?: string
           is_active?: boolean
@@ -1347,6 +1353,7 @@ export type Database = {
           cancellation_policy: string | null
           created_at: string
           data_source: string | null
+          external_id: string | null
           hours: Json | null
           id: string
           is_active: boolean
