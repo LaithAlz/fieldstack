@@ -7,6 +7,7 @@ import { useMemo, useRef } from "react";
 import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { MyReviewsSection } from "../../components/MyReviewsSection";
 import { Text } from "../../components/Text";
 import { VenueScrollRow } from "../../components/VenueScrollRow";
 import { WhenPickerSheet } from "../../components/WhenPicker";
@@ -267,6 +268,14 @@ export function ProfileScreen() {
                 </Pressable>
               ))}
             </View>
+          </View>
+        ) : null}
+
+        {/* ---- My reviews ---- */}
+        {user ? (
+          <View style={styles.sectionSpacer}>
+            <SectionHeader>My reviews</SectionHeader>
+            <MyReviewsSection userId={user.id} />
           </View>
         ) : null}
 

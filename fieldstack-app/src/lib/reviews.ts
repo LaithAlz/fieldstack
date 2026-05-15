@@ -38,6 +38,39 @@ export async function listVenueReviews(
   };
 }
 
+/**
+ * All reviews authored by the given user, joined with each venue's name so
+ * the UI doesn't need a second round trip per row. Sorted most-recent first.
+ */
+export type ReviewWithVenue = Review & {
+  venue: { id: string; name: string };
+};
+
+export async function listMyReviews(
+  userId: string
+): Promise<{ data: ReviewWithVenue[] | null; error: Error | null }> {
+  const { data, error } = await supabase
+    .from("venue_reviews")
+    .select(
+      "id, venue_id, user_id, rating, body, created_at, updated_at, venue:venues(id, name)"
+    )
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false });
+  if (error) return { data: null, error: new Error(error.message) };
+  // supabase-js conservatively types FK joins as arrays. Cast through
+  // unknown — the actual shape is a single object since venue_id is a
+  // one-to-one FK.
+  const rows = (data ?? []) as unknown as Array<
+    ReviewRow & { venue: { id: string; name: string } | null }
+  >;
+  // Drop reviews whose venue join is null (deleted venue) — leaves a clean
+  // list rather than a "[unknown venue]" row.
+  const mapped: ReviewWithVenue[] = rows
+    .filter((r): r is ReviewRow & { venue: { id: string; name: string } } => r.venue !== null)
+    .map((r) => ({ ...mapReview(r), venue: r.venue }));
+  return { data: mapped, error: null };
+}
+
 export async function getVenueReviewSummary(
   venueId: string
 ): Promise<{ data: ReviewSummary | null; error: Error | null }> {
