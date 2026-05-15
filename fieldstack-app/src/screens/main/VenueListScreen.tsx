@@ -47,7 +47,14 @@ export function VenueListScreen() {
     permissionStatus,
     setManualLocation,
   } = useLocation();
-  const { venues, loading, refreshing, error, refresh: refetchVenues } = useVenues({ coords });
+  const {
+    venues,
+    loading,
+    refreshing,
+    error,
+    staleFromCache,
+    refresh: refetchVenues,
+  } = useVenues({ coords });
 
   // Tactile feedback when the user triggers a refresh — matches standard
   // iOS/Android pull-to-refresh feel. Respects Reduce Motion via lightImpact.
@@ -172,6 +179,40 @@ export function VenueListScreen() {
           </Text>
         </Pressable>
       </View>
+
+      {staleFromCache && !refreshing ? (
+        <View
+          style={[
+            styles.offlineBanner,
+            {
+              backgroundColor: colors.surfaceSecondary,
+              borderColor: colors.border,
+            },
+          ]}
+          accessibilityLiveRegion="polite"
+        >
+          <Ionicons
+            name="cloud-offline-outline"
+            size={16}
+            color={colors.textSecondary}
+            accessibilityElementsHidden
+            importantForAccessibility="no-hide-descendants"
+          />
+          <Text size="sm" variant="secondary" style={styles.offlineBannerText}>
+            Showing saved results — couldn&apos;t reach the server.
+          </Text>
+          <Pressable
+            onPress={() => void refetchVenues()}
+            accessibilityRole="button"
+            accessibilityLabel="Retry loading venues"
+            hitSlop={spacing.sm}
+          >
+            <Text size="sm" weight="medium" style={{ color: colors.brand }}>
+              Retry
+            </Text>
+          </Pressable>
+        </View>
+      ) : null}
 
       {loading ? (
         <ListSkeleton />
@@ -338,5 +379,20 @@ const styles = StyleSheet.create({
   },
   listEmpty: {
     flexGrow: 1,
+  },
+  offlineBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    marginHorizontal: spacing.lg,
+    marginBottom: spacing.sm,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: borderRadius.md,
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  offlineBannerText: {
+    flex: 1,
+    flexShrink: 1,
   },
 });
