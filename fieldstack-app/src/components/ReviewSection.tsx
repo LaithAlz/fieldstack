@@ -253,6 +253,7 @@ function ReviewForm({
             onPress={handleDelete}
             accessibilityRole="button"
             accessibilityLabel="Delete your review"
+            accessibilityState={{ disabled: busy, busy }}
             disabled={busy}
             hitSlop={spacing.sm}
             style={({ pressed }) => [

@@ -211,6 +211,7 @@ function SectionHeader({ children }: { children: string }) {
       size="sm"
       variant="secondary"
       weight="medium"
+      accessibilityRole="header"
       style={styles.sectionHeader}
     >
       {children}
