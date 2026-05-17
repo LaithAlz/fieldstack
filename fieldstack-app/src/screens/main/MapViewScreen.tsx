@@ -1,7 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Animated,
   Dimensions,
@@ -110,60 +110,90 @@ function isInRegion(venue: SearchResult["venue"], region: Region): boolean {
  *   the "glitchy disappear/reappear" pins on iOS.
  * - When the pin becomes selected (or its content changes via price/count),
  *   tracking re-enables briefly so the new visual is captured.
+ *
+ * Wrapped in React.memo with a value-based comparison so parent re-renders
+ * (selection change on a sibling marker, filter chip taps, region pans)
+ * don't reach down into every Marker. Without this, every parent re-render
+ * passes a fresh `coordinate` object and a fresh `marker` reference to
+ * the native side; the cluster lib re-evaluates which pins to cluster,
+ * tracksViewChanges flips on, and the resulting snapshot race can briefly
+ * draw a Marker at its container's local (0,0) — the "ghost pin in the
+ * top-left corner" bug.
  */
-function VenueMarker({
-  marker,
-  isSelected,
-  onPress,
-}: {
+type VenueMarkerProps = {
   marker: VenueMarker;
   isSelected: boolean;
   onPress: (venueId: string) => void;
-}) {
-  const hasPositivePrice = marker.minPrice !== null && marker.minPrice > 0;
-  const [tracking, setTracking] = useState(true);
+};
 
-  // Re-enable tracking briefly whenever the visual content changes (selection
-  // flip, or price/count update from a filter). 250ms is enough for the
-  // native snapshot to capture the new appearance before we turn it off.
-  useEffect(() => {
-    setTracking(true);
-    const id = setTimeout(() => setTracking(false), 250);
-    return () => clearTimeout(id);
-  }, [isSelected, hasPositivePrice, marker.minPrice, marker.fieldCount]);
+const VenueMarker = memo(
+  function VenueMarker({ marker, isSelected, onPress }: VenueMarkerProps) {
+    const hasPositivePrice = marker.minPrice !== null && marker.minPrice > 0;
+    const [tracking, setTracking] = useState(true);
 
-  if (marker.venue.lat === null || marker.venue.lng === null) return null;
+    // Re-enable tracking briefly whenever the visual content changes (selection
+    // flip, or price/count update from a filter). 250ms is enough for the
+    // native snapshot to capture the new appearance before we turn it off.
+    useEffect(() => {
+      setTracking(true);
+      const id = setTimeout(() => setTracking(false), 250);
+      return () => clearTimeout(id);
+    }, [isSelected, hasPositivePrice, marker.minPrice, marker.fieldCount]);
 
-  return (
-    <Marker
-      coordinate={{ latitude: marker.venue.lat, longitude: marker.venue.lng }}
-      onPress={(e) => {
-        // Without stopPropagation the MapView's onPress also fires and
-        // immediately deselects the venue we just tapped.
-        e.stopPropagation();
-        onPress(marker.venue.id);
-      }}
-      tracksViewChanges={tracking}
-    >
-      {hasPositivePrice && marker.minPrice !== null ? (
-        <VenuePin
-          mode="price"
-          price={marker.minPrice}
-          fieldCount={marker.fieldCount}
-          venueName={marker.venue.name}
-          selected={isSelected}
-        />
-      ) : (
-        <VenuePin
-          mode="count"
-          fieldCount={marker.fieldCount}
-          venueName={marker.venue.name}
-          selected={isSelected}
-        />
-      )}
-    </Marker>
-  );
-}
+    // Stable coordinate object — a fresh `{ latitude, longitude }` literal on
+    // every render makes the native Marker treat the location as "changed"
+    // even when the numbers are identical, retriggering layout work that
+    // races with tracksViewChanges.
+    const coordinate = useMemo(
+      () => ({ latitude: marker.venue.lat ?? 0, longitude: marker.venue.lng ?? 0 }),
+      [marker.venue.lat, marker.venue.lng]
+    );
+
+    if (marker.venue.lat === null || marker.venue.lng === null) return null;
+
+    return (
+      <Marker
+        coordinate={coordinate}
+        onPress={(e) => {
+          // Without stopPropagation the MapView's onPress also fires and
+          // immediately deselects the venue we just tapped.
+          e.stopPropagation();
+          onPress(marker.venue.id);
+        }}
+        tracksViewChanges={tracking}
+      >
+        {hasPositivePrice && marker.minPrice !== null ? (
+          <VenuePin
+            mode="price"
+            price={marker.minPrice}
+            fieldCount={marker.fieldCount}
+            venueName={marker.venue.name}
+            selected={isSelected}
+          />
+        ) : (
+          <VenuePin
+            mode="count"
+            fieldCount={marker.fieldCount}
+            venueName={marker.venue.name}
+            selected={isSelected}
+          />
+        )}
+      </Marker>
+    );
+  },
+  // Value-based skip. groupByVenue allocates new `marker` objects on every
+  // search result change even when the underlying values are the same — we
+  // only want a re-render when something *visible* changed.
+  (prev, next) =>
+    prev.isSelected === next.isSelected &&
+    prev.onPress === next.onPress &&
+    prev.marker.venue.id === next.marker.venue.id &&
+    prev.marker.venue.lat === next.marker.venue.lat &&
+    prev.marker.venue.lng === next.marker.venue.lng &&
+    prev.marker.venue.name === next.marker.venue.name &&
+    prev.marker.fieldCount === next.marker.fieldCount &&
+    prev.marker.minPrice === next.marker.minPrice
+);
 
 export function MapViewScreen() {
   const colors = useTheme();
@@ -383,10 +413,16 @@ export function MapViewScreen() {
     );
   }, [markers, currentRegion]);
 
-  const handleMarkerPress = (venueId: string) => {
-    setSelectedVenueId(venueId);
-    panToVenue(venueId);
-  };
+  // Stable callback — VenueMarker is memoized on prop equality, so a fresh
+  // function identity on every render would force every marker to re-render
+  // and undo the memo. `panToVenue` is already useCallback'd.
+  const handleMarkerPress = useCallback(
+    (venueId: string) => {
+      setSelectedVenueId(venueId);
+      panToVenue(venueId);
+    },
+    [panToVenue]
+  );
 
   const handleMapPress = () => {
     setSelectedVenueId(null);
