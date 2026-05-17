@@ -126,6 +126,7 @@ async function upsertVenue(v: ScrapedVenue): Promise<string | null> {
         lng: v.lng,
         photos: v.photos,
         amenities: v.amenities,
+        venue_type: v.venueType ?? null,
         is_active: true,
         data_source: "scrape",
         last_scraped_at: new Date().toISOString(),

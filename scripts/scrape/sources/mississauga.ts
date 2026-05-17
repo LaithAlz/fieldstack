@@ -124,6 +124,7 @@ export const mississaugaAdapter: ScrapeAdapter = {
           lng: coord ? coord[0] : null,
           photos: [],
           amenities: [],
+          venueType: "public_park",
           fields: [],
         };
         byVenue.set(vKey, venue);

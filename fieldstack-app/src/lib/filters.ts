@@ -6,7 +6,7 @@
  */
 
 import type { FilterOption } from "../components/FilterBottomSheet";
-import type { FieldSize, FieldSurface } from "../types/api";
+import type { FieldSize, FieldSurface, VenueType } from "../types/api";
 
 export const SURFACE_OPTIONS: FilterOption<FieldSurface>[] = [
   { id: "turf", label: "Turf" },
@@ -22,6 +22,16 @@ export const SIZE_OPTIONS: FilterOption<FieldSize>[] = [
   { id: "11v11", label: "11-a-side" },
   { id: "futsal", label: "Futsal" },
 ];
+
+export const VENUE_TYPE_OPTIONS: FilterOption<VenueType>[] = [
+  { id: "public_park", label: "Public park" },
+  { id: "private", label: "Private facility" },
+  { id: "community_centre", label: "Community centre" },
+];
+
+export function venueTypeLabel(t: VenueType): string {
+  return VENUE_TYPE_OPTIONS.find((o) => o.id === t)?.label ?? t;
+}
 
 import type { SearchSort } from "../api/search";
 

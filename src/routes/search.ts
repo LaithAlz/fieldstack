@@ -4,6 +4,7 @@ import { searchFields } from "../lib/queries/search.js";
 
 const SURFACE_VALUES = ["turf", "grass", "concrete", "indoor"] as const;
 const SIZE_VALUES = ["5v5", "7v7", "11v11", "3v3", "futsal"] as const;
+const VENUE_TYPE_VALUES = ["public_park", "private", "community_centre"] as const;
 
 /**
  * Accept either a single value or a comma-separated list ("turf,grass"). Empty
@@ -22,6 +23,12 @@ const sizeList = z
   .transform((v) => (v ? v.split(",").map((s) => s.trim()).filter(Boolean) : undefined))
   .pipe(z.array(z.enum(SIZE_VALUES)).optional());
 
+const venueTypeList = z
+  .string()
+  .optional()
+  .transform((v) => (v ? v.split(",").map((s) => s.trim()).filter(Boolean) : undefined))
+  .pipe(z.array(z.enum(VENUE_TYPE_VALUES)).optional());
+
 const SearchFieldsQuery = z
   .object({
     lat: z.coerce.number().min(-90).max(90).optional(),
@@ -29,6 +36,7 @@ const SearchFieldsQuery = z
     radius_km: z.coerce.number().positive().max(500).default(10),
     surface: surfaceList,
     size: sizeList,
+    venue_type: venueTypeList,
     price_max: z.coerce.number().positive().optional(),
     sort: z.enum(["distance", "price_asc", "price_desc"]).default("distance"),
   })
@@ -51,6 +59,7 @@ export async function searchRoutes(app: FastifyInstance) {
       radiusKm: hasCoords ? q.radius_km : undefined,
       surfaces: q.surface,
       sizes: q.size,
+      venueTypes: q.venue_type,
       priceMax: q.price_max,
       sort: q.sort,
     });

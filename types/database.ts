@@ -302,6 +302,7 @@ export type Database = {
           name: string
           operator_id: string
           photos: string[]
+          venue_type: Database["public"]["Enums"]["venue_type"] | null
           website: string | null
         }
         Insert: {
@@ -322,6 +323,7 @@ export type Database = {
           name: string
           operator_id: string
           photos?: string[]
+          venue_type?: Database["public"]["Enums"]["venue_type"] | null
           website?: string | null
         }
         Update: {
@@ -342,6 +344,7 @@ export type Database = {
           name?: string
           operator_id?: string
           photos?: string[]
+          venue_type?: Database["public"]["Enums"]["venue_type"] | null
           website?: string | null
         }
         Relationships: [
@@ -749,6 +752,7 @@ export type Database = {
           p_sizes?: Database["public"]["Enums"]["field_size"][]
           p_sort?: string
           p_surfaces?: Database["public"]["Enums"]["field_surface"][]
+          p_venue_types?: Database["public"]["Enums"]["venue_type"][]
         }
         Returns: Json
       }
@@ -1364,6 +1368,7 @@ export type Database = {
           name: string
           operator_id: string
           photos: string[]
+          venue_type: Database["public"]["Enums"]["venue_type"] | null
           website: string | null
         }[]
         SetofOptions: {
@@ -1378,6 +1383,7 @@ export type Database = {
       field_size: "5v5" | "7v7" | "11v11" | "futsal" | "3v3"
       field_surface: "turf" | "grass" | "concrete" | "indoor"
       integration_type: "none" | "playtomic" | "courtreserve" | "amilia"
+      venue_type: "public_park" | "private" | "community_centre"
     }
     CompositeTypes: {
       geometry_dump: {
@@ -1516,6 +1522,7 @@ export const Constants = {
       field_size: ["5v5", "7v7", "11v11", "futsal", "3v3"],
       field_surface: ["turf", "grass", "concrete", "indoor"],
       integration_type: ["none", "playtomic", "courtreserve", "amilia"],
+      venue_type: ["public_park", "private", "community_centre"],
     },
   },
 } as const

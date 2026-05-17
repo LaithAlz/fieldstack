@@ -1,5 +1,5 @@
 import { request } from "./client";
-import type { FieldSize, FieldSurface, SearchResult } from "../types/api";
+import type { FieldSize, FieldSurface, SearchResult, VenueType } from "../types/api";
 
 export type SearchSort = "distance" | "price_asc" | "price_desc";
 
@@ -10,6 +10,7 @@ export type SearchFieldsParams = {
   /** Empty / omitted = no filter; multiple values = match any. */
   surface?: FieldSurface[];
   size?: FieldSize[];
+  venue_type?: VenueType[];
   price_max?: number;
   sort?: SearchSort;
 };

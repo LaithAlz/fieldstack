@@ -13,16 +13,18 @@ import {
   SIZE_OPTIONS,
   SORT_OPTIONS,
   SURFACE_OPTIONS,
+  VENUE_TYPE_OPTIONS,
 } from "../lib/filters";
-import type { FieldSize, FieldSurface } from "../types/api";
+import type { FieldSize, FieldSurface, VenueType } from "../types/api";
 
 import type { FieldSearchFilters, SetFilter } from "./useFieldSearch";
 
-type Which = "surface" | "size" | "price" | "sort";
+type Which = "surface" | "size" | "venueType" | "price" | "sort";
 
 type Config =
   | FilterSheetConfig<FieldSurface>
   | FilterSheetConfig<FieldSize>
+  | FilterSheetConfig<VenueType>
   | FilterSheetConfig<PriceBucket>
   | FilterSheetConfig<SearchSort>;
 
@@ -43,6 +45,7 @@ export function useFilterControls(
     setFilter: SetFilter;
     onOpenSurface: () => void;
     onOpenSize: () => void;
+    onOpenVenueType: () => void;
     onOpenPrice: () => void;
     onOpenSort: () => void;
   };
@@ -74,6 +77,15 @@ export function useFilterControls(
         onApply: (next) => setFilter("size", next),
       };
     }
+    if (which === "venueType") {
+      return {
+        title: "Venue type",
+        mode: "multi",
+        options: VENUE_TYPE_OPTIONS,
+        selected: filters.venueType,
+        onApply: (next) => setFilter("venueType", next),
+      };
+    }
     if (which === "price") {
       return {
         title: "Price",
@@ -98,6 +110,7 @@ export function useFilterControls(
     which,
     filters.surface,
     filters.size,
+    filters.venueType,
     filters.sort,
     priceBucket,
     setFilter,
@@ -119,6 +132,7 @@ export function useFilterControls(
       setFilter,
       onOpenSurface: () => setWhich("surface"),
       onOpenSize: () => setWhich("size"),
+      onOpenVenueType: () => setWhich("venueType"),
       onOpenPrice: () => setWhich("price"),
       onOpenSort: () => setWhich("sort"),
     },

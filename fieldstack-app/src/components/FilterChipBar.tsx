@@ -23,6 +23,7 @@ type Props = {
   setFilter: SetFilter;
   onOpenSurface: () => void;
   onOpenSize: () => void;
+  onOpenVenueType: () => void;
   onOpenPrice: () => void;
   onOpenSort: () => void;
   /** Optional extra styling for the horizontal scroll wrapper. */
@@ -45,6 +46,7 @@ export function FilterChipBar({
   setFilter,
   onOpenSurface,
   onOpenSize,
+  onOpenVenueType,
   onOpenPrice,
   onOpenSort,
   contentStyle,
@@ -90,6 +92,13 @@ export function FilterChipBar({
           count={filters.size.length}
           onPress={onOpenSize}
           onClear={() => setFilter("size", [])}
+        />
+        <FilterChip
+          label="Type"
+          isActive={filters.venueType.length > 0}
+          count={filters.venueType.length}
+          onPress={onOpenVenueType}
+          onClear={() => setFilter("venueType", [])}
         />
         <FilterChip
           label={priceBucket === "any" ? "Price" : priceLabel}

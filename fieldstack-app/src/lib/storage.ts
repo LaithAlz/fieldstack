@@ -8,7 +8,7 @@
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-import type { FieldSize, FieldSurface } from "../types/api";
+import type { FieldSize, FieldSurface, VenueType } from "../types/api";
 
 const KEYS = {
   onboardingComplete: "@fieldstack/onboarding_complete",
@@ -21,6 +21,7 @@ export type StoredCoords = { lat: number; lng: number };
 export type StoredFilters = {
   surface: FieldSurface[];
   size: FieldSize[];
+  venueType: VenueType[];
   priceMax: number | null;
   sort: "distance" | "price_asc" | "price_desc";
 };
@@ -71,16 +72,25 @@ export async function setLastLocation(value: StoredCoords): Promise<void> {
 
 const VALID_SURFACES: FieldSurface[] = ["turf", "grass", "concrete", "indoor"];
 const VALID_SIZES: FieldSize[] = ["5v5", "7v7", "11v11"];
+const VALID_VENUE_TYPES: VenueType[] = ["public_park", "private", "community_centre"];
 const VALID_SORTS = ["distance", "price_asc", "price_desc"] as const;
 
+// venueType is optional in the stored shape — pre-015 caches don't have it.
+// Treat missing as an empty array so the user keeps their other filters
+// after upgrading rather than losing them all to a failed schema check.
 function isValidStoredFilters(parsed: unknown): parsed is StoredFilters {
   if (!parsed || typeof parsed !== "object") return false;
   const p = parsed as Record<string, unknown>;
+  const venueTypeOk =
+    p.venueType === undefined ||
+    (Array.isArray(p.venueType) &&
+      p.venueType.every((t) => VALID_VENUE_TYPES.includes(t as VenueType)));
   return (
     Array.isArray(p.surface) &&
     p.surface.every((s) => VALID_SURFACES.includes(s as FieldSurface)) &&
     Array.isArray(p.size) &&
     p.size.every((s) => VALID_SIZES.includes(s as FieldSize)) &&
+    venueTypeOk &&
     (p.priceMax === null || typeof p.priceMax === "number") &&
     typeof p.sort === "string" &&
     (VALID_SORTS as readonly string[]).includes(p.sort)
@@ -92,7 +102,10 @@ export async function getLastFilters(): Promise<StoredFilters | null> {
     const raw = await AsyncStorage.getItem(KEYS.lastFilters);
     if (raw === null) return null;
     const parsed = JSON.parse(raw) as unknown;
-    return isValidStoredFilters(parsed) ? parsed : null;
+    if (!isValidStoredFilters(parsed)) return null;
+    // Normalize the optional venueType: pre-015 caches lack it; coerce to []
+    // so callers don't have to handle undefined.
+    return { ...parsed, venueType: parsed.venueType ?? [] };
   } catch {
     return null;
   }
