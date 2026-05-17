@@ -7,7 +7,7 @@
  * (e.g. "mississauga:UNIT-1234") so re-runs idempotently update the same row.
  */
 
-import type { FieldSize, FieldSurface } from "./fieldEnums.js";
+import type { FieldSize, FieldSurface, VenueType } from "./fieldEnums.js";
 
 export type ScrapedField = {
   /** Source-namespaced id, e.g. "mississauga:LANDMARK-12345". Unique across all sources. */
@@ -33,6 +33,8 @@ export type ScrapedVenue = {
   photos: string[];
   /** Free-form amenity names: "lights", "indoor", "parking", etc. */
   amenities: string[];
+  /** Ownership/access bucket. Null = unknown (UI treats as unfiltered). */
+  venueType?: VenueType | null;
   /** Operator-side hours hint (see lib/venueHours.ts shape). */
   hours?: Record<string, string | null> | null;
   /** Operator-side notes (booking rules / cancellation) — strings or null. */

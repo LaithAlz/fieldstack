@@ -12,7 +12,7 @@
  */
 
 import type { ScrapeAdapter, ScrapedField, ScrapedVenue } from "../types.js";
-import type { FieldSize, FieldSurface } from "../fieldEnums.js";
+import type { FieldSize, FieldSurface, VenueType } from "../fieldEnums.js";
 
 // GTA + Halton + Hamilton bounding box (south,west,north,east).
 // Wide enough to cover Toronto, Mississauga, Brampton, Vaughan, Markham,
@@ -88,6 +88,26 @@ function buildAddress(tags: OsmTags): string {
   return tags["name"] ?? "Address unavailable";
 }
 
+function deriveVenueType(tags: OsmTags, name: string): VenueType {
+  const lower = name.toLowerCase();
+  // Name signals first — most reliable when the operator brands it.
+  if (
+    lower.includes("community centre") ||
+    lower.includes("community center") ||
+    lower.includes("rec centre") ||
+    lower.includes("recreation centre") ||
+    lower.includes("recreation center") ||
+    lower.includes("ymca")
+  ) {
+    return "community_centre";
+  }
+  // Indoor sports centres + named buildings + soccer-tagged buildings are
+  // commercial / club facilities. Same heuristic the migration's backfill
+  // used for OSM rows.
+  if (looksIndoor(tags)) return "private";
+  return "public_park";
+}
+
 function buildAmenities(tags: OsmTags): string[] {
   const out: string[] = [];
   if (tags["lit"] === "yes" || tags["lighting"] === "yes") out.push("lights");
@@ -149,6 +169,7 @@ export const osmGtaAdapter: ScrapeAdapter = {
         lng: coord.lon,
         photos: [],
         amenities: buildAmenities(tags),
+        venueType: deriveVenueType(tags, name),
         fields: [field],
       });
     }

@@ -593,6 +593,7 @@ export function MapViewScreen() {
               title={
                 filters.surface.length > 0 ||
                 filters.size.length > 0 ||
+                filters.venueType.length > 0 ||
                 filters.priceMax !== null
                   ? "No fields match your filters here"
                   : "No fields in this area"
@@ -600,6 +601,7 @@ export function MapViewScreen() {
               description={
                 filters.surface.length > 0 ||
                 filters.size.length > 0 ||
+                filters.venueType.length > 0 ||
                 filters.priceMax !== null
                   ? "Try clearing a filter or panning to a wider area."
                   : "Try panning to a different neighbourhood or widening your search."

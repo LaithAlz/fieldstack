@@ -8,6 +8,8 @@ const SEARCH_TTL_SECONDS = 30;
 
 export type SearchSort = "distance" | "price_asc" | "price_desc";
 
+export type VenueType = "public_park" | "private" | "community_centre";
+
 export type SearchFieldsParams = {
   lat?: number;
   lng?: number;
@@ -15,6 +17,7 @@ export type SearchFieldsParams = {
   /** Empty array / undefined = no filter; non-empty = match any. */
   surfaces?: FieldSurface[];
   sizes?: FieldSize[];
+  venueTypes?: VenueType[];
   priceMax?: number;
   sort: SearchSort; // required at the query layer; the route fills the default
 };
@@ -56,12 +59,14 @@ async function runSearch(params: SearchFieldsParams): Promise<SearchFieldsResult
   // same — this just satisfies the stricter types.
   const surfaces = normalizeArrayParam(params.surfaces);
   const sizes = normalizeArrayParam(params.sizes);
+  const venueTypes = normalizeArrayParam(params.venueTypes);
   const { data, error } = await supabase.rpc("search_fields", {
     p_lat: params.lat,
     p_lng: params.lng,
     p_radius_meters: radiusMeters,
     p_surfaces: surfaces ?? undefined,
     p_sizes: sizes ?? undefined,
+    p_venue_types: venueTypes ?? undefined,
     p_price_max: params.priceMax,
     p_sort: params.sort,
   });
@@ -89,6 +94,7 @@ function searchKey(p: SearchFieldsParams): string {
     radiusKm: p.radiusKm ?? null,
     surfaces: [...(p.surfaces ?? [])].sort(),
     sizes: [...(p.sizes ?? [])].sort(),
+    venueTypes: [...(p.venueTypes ?? [])].sort(),
     priceMax: p.priceMax ?? null,
     sort: p.sort,
   };

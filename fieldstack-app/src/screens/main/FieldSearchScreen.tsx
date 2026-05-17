@@ -25,6 +25,7 @@ import {
   priceMaxToBucket,
   SIZE_OPTIONS,
   SURFACE_OPTIONS,
+  VENUE_TYPE_OPTIONS,
 } from "../../lib/filters";
 import type { MainStackParamList } from "../../navigation/MainNavigator";
 import { borderRadius, spacing } from "../../theme/tokens";
@@ -61,6 +62,7 @@ export function FieldSearchScreen() {
   const activeFilterCount =
     filters.surface.length +
     filters.size.length +
+    filters.venueType.length +
     (filters.priceMax !== null ? 1 : 0);
   const hasAnyFilter = activeFilterCount > 0;
 
@@ -197,6 +199,15 @@ export function FieldSearchScreen() {
                     label={SIZE_OPTIONS.find((o) => o.id === s)?.label ?? s}
                     onPress={() =>
                       setFilter("size", (prev) => prev.filter((x) => x !== s))
+                    }
+                  />
+                ))}
+                {filters.venueType.map((t) => (
+                  <RemoveChip
+                    key={`type-${t}`}
+                    label={VENUE_TYPE_OPTIONS.find((o) => o.id === t)?.label ?? t}
+                    onPress={() =>
+                      setFilter("venueType", (prev) => prev.filter((x) => x !== t))
                     }
                   />
                 ))}

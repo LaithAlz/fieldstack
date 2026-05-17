@@ -4,6 +4,7 @@
 export type IntegrationType = "none" | "playtomic" | "courtreserve" | "amilia";
 export type FieldSurface = "turf" | "grass" | "concrete" | "indoor";
 export type FieldSize = "5v5" | "7v7" | "11v11" | "futsal" | "3v3";
+export type VenueType = "public_park" | "private" | "community_centre";
 
 export type Operator = {
   id: string;
@@ -34,6 +35,10 @@ export type Venue = {
   // Migration 010 — per-weekday operating hours hint. See lib/venueHours.ts
   // for the shape and parsing logic.
   hours?: VenueHoursJson | null;
+  // Migration 015 — ownership / access bucket. Null = unknown (not yet
+  // classified). The filter UI treats null as "no signal" and includes the
+  // row only when no venue_type filter is active.
+  venue_type?: VenueType | null;
 };
 
 /**
@@ -70,5 +75,5 @@ export type VenueWithFields = Venue & { fields: Field[]; operator?: Operator };
 
 export type SearchResult = {
   field: Field;
-  venue: Pick<Venue, "id" | "name" | "lat" | "lng" | "address" | "photos">;
+  venue: Pick<Venue, "id" | "name" | "lat" | "lng" | "address" | "photos" | "venue_type">;
 };

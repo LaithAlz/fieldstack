@@ -33,7 +33,7 @@ import {
   setLastFilters,
   type StoredFilters,
 } from "../lib/storage";
-import type { FieldSize, FieldSurface, SearchResult } from "../types/api";
+import type { FieldSize, FieldSurface, SearchResult, VenueType } from "../types/api";
 
 const FILTER_DEBOUNCE_MS = 300;
 const LOCATION_DEBOUNCE_MS = 500;
@@ -42,6 +42,7 @@ const DEFAULT_RADIUS_KM = 25;
 export type FieldSearchFilters = {
   surface: FieldSurface[];
   size: FieldSize[];
+  venueType: VenueType[];
   priceMax: number | null;
   sort: SearchSort;
 };
@@ -55,6 +56,7 @@ export type FieldSearchLocation = {
 const DEFAULT_FILTERS: FieldSearchFilters = {
   surface: [],
   size: [],
+  venueType: [],
   priceMax: null,
   sort: "distance",
 };
@@ -245,6 +247,7 @@ function useFieldSearchState(): UseFieldSearchResult {
       track(EVENT_SEARCH_FILTERED, {
         surface: filters.surface,
         size: filters.size,
+        venue_type: filters.venueType,
         price_max: filters.priceMax,
         sort: filters.sort,
         has_location: location.lat !== null && location.lng !== null,
@@ -256,6 +259,7 @@ function useFieldSearchState(): UseFieldSearchResult {
   }, [
     filters.surface,
     filters.size,
+    filters.venueType,
     filters.priceMax,
     filters.sort,
     location.lat,
@@ -336,6 +340,7 @@ function buildSearchParams(
   }
   if (filters.surface.length > 0) params.surface = filters.surface;
   if (filters.size.length > 0) params.size = filters.size;
+  if (filters.venueType.length > 0) params.venue_type = filters.venueType;
   if (filters.priceMax !== null) params.price_max = filters.priceMax;
   return params;
 }
