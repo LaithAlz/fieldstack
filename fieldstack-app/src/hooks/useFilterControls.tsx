@@ -34,7 +34,7 @@ type Config =
  *
  * Why one shared sheet: stacking BottomSheetModals caused @gorhom/bottom-sheet
  * v5's `present()` to silently no-op. Funneling pickers through one modal
- * that swaps its content matches the working `BookingTimeSheet` pattern.
+ * that swaps its content sidesteps that bug.
  */
 export function useFilterControls(
   filters: FieldSearchFilters,

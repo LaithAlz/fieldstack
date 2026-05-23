@@ -1,29 +1,25 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp, NativeStackScreenProps } from "@react-navigation/native-stack";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo } from "react";
 import { Pressable, ScrollView, Share, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { AmenityChip } from "../../components/AmenityChip";
-import { BookingBottomSheet } from "../../components/BookingBottomSheet";
-import {
-  DateTimeRangePicker,
-  defaultDateTimeSelections,
-} from "../../components/DateTimeRangePicker";
+import { Badge } from "../../components/Badge";
+import { Button } from "../../components/Button";
 import { ReviewSection } from "../../components/ReviewSection";
 import { EmptyState } from "../../components/EmptyState";
-import { FieldAvailabilityCard } from "../../components/FieldAvailabilityCard";
 import { PhotoGallery } from "../../components/PhotoGallery";
 import { Text } from "../../components/Text";
+import { useToast } from "../../components/Toast";
 import { VenueDetailSkeleton } from "../../components/VenueDetailSkeleton";
 import { useLocation } from "../../hooks/useLocation";
 import { useVenue } from "../../hooks/useVenue";
 import { useVenueReviews } from "../../hooks/useVenueReviews";
-import { mockedAvailability } from "../../lib/availability";
 import { formatEndTime, formatTime12h } from "../../lib/datetime";
 import { formatScrapedAgo } from "../../lib/freshness";
-import { getDayHours } from "../../lib/venueHours";
+import { openOperatorBooking } from "../../lib/openBooking";
 import {
   preferredSlotDate,
   usePreferredSlot,
@@ -31,12 +27,16 @@ import {
 } from "../../lib/preferredSlot";
 import { useRecentlyViewed } from "../../lib/recentlyViewed";
 import { useSavedVenues } from "../../lib/savedVenues";
-import { EVENT_VENUE_VIEWED, track } from "../../lib/analytics";
+import {
+  EVENT_BOOKING_CTA_TAPPED,
+  EVENT_VENUE_VIEWED,
+  track,
+} from "../../lib/analytics";
 import { formatDistance, haversineKm } from "../../lib/distance";
 import type { DetailParamList } from "../../navigation/MainNavigator";
 import { borderRadius, spacing } from "../../theme/tokens";
 import { useTheme } from "../../theme/useTheme";
-import type { Field } from "../../types/api";
+import type { Field, FieldSize, FieldSurface } from "../../types/api";
 
 // Honest typing: VenueDetail/FieldDetail live in all three tab stacks
 // (Explore / Saved / Me), and from here we only ever navigate to the other
@@ -52,6 +52,7 @@ export function VenueDetailScreen({ route }: Props) {
   const insets = useSafeAreaInsets();
   const nav = useNavigation<Nav>();
   const { slot } = usePreferredSlot();
+  const toast = useToast();
 
   const { data: venue, isLoading, error } = useVenue(venueId);
   const { coords } = useLocation();
@@ -65,11 +66,6 @@ export function VenueDetailScreen({ route }: Props) {
   const { recordView } = useRecentlyViewed();
   const savedForVenue = venue ? isSaved(venue.id) : false;
   const onToggleSave = venue ? () => void toggleSaved(venue.id) : undefined;
-
-  const getAvailability = useCallback(
-    (d: Date, t: string) => mockedAvailability(venueId, d, t),
-    [venueId]
-  );
 
   // System share sheet — gives the user a one-tap way to send the venue to
   // group chat with the optional preferred slot baked in. Native Share is
@@ -94,26 +90,6 @@ export function VenueDetailScreen({ route }: Props) {
       }
     : undefined;
 
-  const initial = useState(() => {
-    if (slot) {
-      return {
-        date: preferredSlotDate(slot),
-        startTime: slot.startTime,
-        duration: slot.duration,
-      };
-    }
-    return defaultDateTimeSelections((d, t) =>
-      mockedAvailability(venueId, d, t)
-    );
-  })[0];
-
-  const [selectedDate, setSelectedDate] = useState(initial.date);
-  const [selectedTime, setSelectedTime] = useState(initial.startTime);
-  const [selectedDuration, setSelectedDuration] = useState(initial.duration);
-
-  const [bookingField, setBookingField] = useState<Field | null>(null);
-  const [bookingVisible, setBookingVisible] = useState(false);
-
   // Fire venue_viewed once per unique venue id + push into MRU list so the
   // home screen surfaces it at the top of "Recently viewed".
   const loadedVenueId = venue?.id;
@@ -130,8 +106,13 @@ export function VenueDetailScreen({ route }: Props) {
   }, [coords, venue]);
 
   const handleBook = (field: Field) => {
-    setBookingField(field);
-    setBookingVisible(true);
+    if (!venue) return;
+    track(EVENT_BOOKING_CTA_TAPPED, {
+      field_id: field.id,
+      venue_id: venue.id,
+      operator_id: venue.operator_id,
+    });
+    void openOperatorBooking({ field, venue, toast });
   };
 
   // ---- Loading -----------------------------------------------------------
@@ -179,7 +160,6 @@ export function VenueDetailScreen({ route }: Props) {
   // ---- Loaded ------------------------------------------------------------
   const fields = venue.fields;
   const amenities = venue.amenities;
-  const operatorName = venue.operator?.name ?? "the operator";
 
   const headerLines = [venue.address, distance ? `${distance} away` : null].filter(
     (s): s is string => Boolean(s)
@@ -240,21 +220,7 @@ export function VenueDetailScreen({ route }: Props) {
           ) : null}
 
           <Text size="lg" weight="bold" accessibilityRole="header" style={styles.section}>
-            Pick a time
-          </Text>
-          <DateTimeRangePicker
-            selectedDate={selectedDate}
-            selectedStartTime={selectedTime}
-            selectedDuration={selectedDuration}
-            onDateChange={setSelectedDate}
-            onStartTimeChange={setSelectedTime}
-            onDurationChange={setSelectedDuration}
-            getAvailability={getAvailability}
-            getOpenHours={(d) => getDayHours(venue.hours, d)}
-          />
-
-          <Text size="lg" weight="bold" accessibilityRole="header" style={styles.section}>
-            Available fields
+            Fields
           </Text>
           {fields.length === 0 ? (
             <Text size="sm" variant="secondary" style={styles.emptyFields}>
@@ -263,11 +229,9 @@ export function VenueDetailScreen({ route }: Props) {
           ) : (
             <View style={styles.fieldList}>
               {fields.map((field) => (
-                <FieldAvailabilityCard
+                <FieldRow
                   key={field.id}
                   field={field}
-                  selectedDate={selectedDate}
-                  selectedTime={selectedTime}
                   onCardPress={() =>
                     nav.navigate("FieldDetail", { fieldId: field.id })
                   }
@@ -335,18 +299,6 @@ export function VenueDetailScreen({ route }: Props) {
         </View>
       </ScrollView>
 
-      {bookingField ? (
-        <BookingBottomSheet
-          visible={bookingVisible}
-          field={bookingField}
-          venue={venue}
-          operatorName={operatorName}
-          selectedDate={selectedDate}
-          selectedTime={selectedTime}
-          selectedDuration={selectedDuration}
-          onDismiss={() => setBookingVisible(false)}
-        />
-      ) : null}
     </View>
   );
 }
@@ -452,6 +404,74 @@ function FloatingTopBar({
 }
 
 // ---------------------------------------------------------------------------
+// Per-field row in the Fields list. Compact card with surface + size badges,
+// optional price, and a Book button that fires the deep-link.
+// ---------------------------------------------------------------------------
+
+const SURFACE_LABEL: Record<FieldSurface, string> = {
+  turf: "Turf",
+  grass: "Grass",
+  concrete: "Concrete",
+  indoor: "Indoor",
+};
+
+const SIZE_LABEL: Record<FieldSize, string> = {
+  "5v5": "5-a-side",
+  "7v7": "7-a-side",
+  "11v11": "11-a-side",
+  "3v3": "3-a-side",
+  futsal: "Futsal",
+};
+
+type FieldRowProps = {
+  field: Field;
+  onCardPress: () => void;
+  onBookPress: () => void;
+};
+
+function FieldRow({ field, onCardPress, onBookPress }: FieldRowProps) {
+  const colors = useTheme();
+  const priceText =
+    field.price_per_hour !== null ? `$${Math.round(field.price_per_hour)}/hr` : null;
+  return (
+    <Pressable
+      onPress={onCardPress}
+      accessibilityRole="button"
+      accessibilityLabel={`Open ${field.name}`}
+      style={({ pressed }) => [
+        styles.fieldRow,
+        {
+          backgroundColor: colors.surface,
+          borderColor: colors.border,
+          opacity: pressed ? 0.85 : 1,
+        },
+      ]}
+    >
+      <View style={styles.fieldRowMain}>
+        <Text size="md" weight="medium" numberOfLines={1}>
+          {field.name}
+        </Text>
+        <View style={styles.fieldRowBadges}>
+          <Badge label={SURFACE_LABEL[field.surface]} />
+          <Badge label={SIZE_LABEL[field.size]} />
+          {priceText ? (
+            <Text size="sm" variant="secondary" style={styles.fieldRowPrice}>
+              {priceText}
+            </Text>
+          ) : null}
+        </View>
+      </View>
+      <Button
+        label="Book"
+        onPress={onBookPress}
+        accessibilityLabel={`Book ${field.name} on operator site`}
+        style={styles.fieldRowButton}
+      />
+    </Pressable>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Styles
 // ---------------------------------------------------------------------------
 
@@ -543,7 +563,32 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   fieldList: {
+    gap: spacing.sm,
+  },
+  fieldRow: {
+    flexDirection: "row",
+    alignItems: "center",
     gap: spacing.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
+    borderRadius: borderRadius.md,
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  fieldRowMain: {
+    flex: 1,
+    gap: spacing.xs,
+  },
+  fieldRowBadges: {
+    flexDirection: "row",
+    alignItems: "center",
+    flexWrap: "wrap",
+    gap: spacing.xs,
+  },
+  fieldRowPrice: {
+    marginLeft: spacing.xs,
+  },
+  fieldRowButton: {
+    paddingHorizontal: spacing.md,
   },
   emptyFields: {
     paddingVertical: spacing.lg,

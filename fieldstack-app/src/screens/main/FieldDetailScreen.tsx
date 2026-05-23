@@ -4,20 +4,19 @@ import type {
   NativeStackNavigationProp,
   NativeStackScreenProps,
 } from "@react-navigation/native-stack";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { AmenityChip } from "../../components/AmenityChip";
 import { Badge } from "../../components/Badge";
-import { BookingTimeSheet } from "../../components/BookingTimeSheet";
 import { Button } from "../../components/Button";
-import { defaultDateTimeSelections } from "../../components/DateTimeRangePicker";
 import { EmptyState } from "../../components/EmptyState";
 import { FieldDetailSkeleton } from "../../components/FieldDetailSkeleton";
 import { PhotoGallery } from "../../components/PhotoGallery";
 import { StickyFooter } from "../../components/StickyFooter";
 import { Text } from "../../components/Text";
+import { useToast } from "../../components/Toast";
 import { useField } from "../../hooks/useField";
 import {
   EVENT_BOOKING_CTA_TAPPED,
@@ -25,7 +24,7 @@ import {
   track,
 } from "../../lib/analytics";
 import { resolveFieldPhotos } from "../../lib/fieldPhotos";
-import { preferredSlotDate, usePreferredSlot } from "../../lib/preferredSlot";
+import { openOperatorBooking } from "../../lib/openBooking";
 import type { DetailParamList } from "../../navigation/MainNavigator";
 import { borderRadius, spacing } from "../../theme/tokens";
 import { useTheme } from "../../theme/useTheme";
@@ -60,29 +59,9 @@ export function FieldDetailScreen({ route }: Props) {
   const colors = useTheme();
   const insets = useSafeAreaInsets();
   const nav = useNavigation<Nav>();
-  const { slot } = usePreferredSlot();
+  const toast = useToast();
 
   const { data: field, isLoading, error } = useField(fieldId);
-
-  // Initial selection seeded from preferred slot when present, else the
-  // standard "today + next full hour" default. Computed once at mount so
-  // the user's in-sheet edits aren't reset when the context re-renders.
-  const initial = useState(() => {
-    if (slot) {
-      return {
-        date: preferredSlotDate(slot),
-        startTime: slot.startTime,
-        duration: slot.duration,
-      };
-    }
-    return defaultDateTimeSelections();
-  })[0];
-
-  const [selectedDate, setSelectedDate] = useState<Date>(initial.date);
-  const [selectedTime, setSelectedTime] = useState<string>(initial.startTime);
-  const [selectedDuration, setSelectedDuration] = useState<number>(initial.duration);
-
-  const [bookingOpen, setBookingOpen] = useState(false);
 
   // Fire field_viewed once per unique field id loaded.
   const loadedFieldId = field?.id;
@@ -97,7 +76,7 @@ export function FieldDetailScreen({ route }: Props) {
       venue_id: field.venue.id,
       operator_id: field.venue.operator_id,
     });
-    setBookingOpen(true);
+    void openOperatorBooking({ field, venue: field.venue, toast });
   };
 
   // ---- Loading -----------------------------------------------------------
@@ -139,7 +118,6 @@ export function FieldDetailScreen({ route }: Props) {
 
   // ---- Loaded ------------------------------------------------------------
   const { venue } = field;
-  const operatorName = venue.operator?.name ?? "the operator";
   const amenities = venue.amenities ?? [];
 
   const hasLighting = amenities.some((a) => LIGHTING_AMENITY_KEYS.has(a.toLowerCase()));
@@ -253,25 +231,11 @@ export function FieldDetailScreen({ route }: Props) {
 
       <StickyFooter>
         <Button
-          label="Book this field"
+          label="Book on operator's site"
           onPress={handleBookPress}
-          accessibilityHint="Opens a sheet to pick a time and confirm your booking"
+          accessibilityHint="Opens the operator's website in your browser"
         />
       </StickyFooter>
-
-      <BookingTimeSheet
-        visible={bookingOpen}
-        field={field}
-        venue={venue}
-        operatorName={operatorName}
-        selectedDate={selectedDate}
-        selectedTime={selectedTime}
-        selectedDuration={selectedDuration}
-        onDateChange={setSelectedDate}
-        onStartTimeChange={setSelectedTime}
-        onDurationChange={setSelectedDuration}
-        onDismiss={() => setBookingOpen(false)}
-      />
     </View>
   );
 }
