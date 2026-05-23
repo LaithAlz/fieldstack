@@ -15,12 +15,13 @@ import "dotenv/config";
 
 import { createClient } from "@supabase/supabase-js";
 
-import { mississaugaAdapter } from "./sources/mississauga.js";
 import { osmGtaAdapter } from "./sources/osmGta.js";
 import type { ScrapeAdapter, ScrapedField, ScrapedVenue } from "./types.js";
 
+// Mississauga adapter intentionally not registered — scope is currently
+// Halton + Hamilton only (see issue #140). The file at sources/mississauga.ts
+// stays for reference; re-add it here when scope expands.
 const ADAPTERS: Record<string, ScrapeAdapter> = {
-  [mississaugaAdapter.source]: mississaugaAdapter,
   [osmGtaAdapter.source]: osmGtaAdapter,
 };
 
