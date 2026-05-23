@@ -2,13 +2,17 @@ import { Ionicons } from "@expo/vector-icons";
 import { useEffect, useMemo, useState } from "react";
 import { FlatList, Pressable, StyleSheet, View } from "react-native";
 
-import type { AvailabilityBucket } from "../lib/availability";
 import { formatEndTime } from "../lib/datetime";
 import { selection } from "../lib/haptics";
 import { borderRadius, fontSize, spacing } from "../theme/tokens";
 import { useTheme } from "../theme/useTheme";
 
 import { Text } from "./Text";
+
+// Optional availability hint surfaced by callers (today: only WhenPickerSheet
+// uses this without passing the callback). Inlined after the mocked
+// availability source was removed in PR #138 — no other consumer left.
+type AvailabilityBucket = "open" | "busy";
 
 const DURATION_OPTIONS = [1, 1.5, 2, 2.5, 3] as const;
 
