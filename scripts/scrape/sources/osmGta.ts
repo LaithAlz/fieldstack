@@ -1,37 +1,53 @@
 /**
- * OpenStreetMap soccer facilities in the GTA region. Catches private
- * commercial venues (indoor turf places, sports centres, club-owned
- * grounds) that the city open-data sources miss.
+ * OpenStreetMap soccer facilities, scoped by municipal admin boundary.
  *
- * Source: Overpass API (free, no auth, no ToS friction for derivative use).
+ * Bounding-box queries (the old approach) leaked neighboring cities into
+ * results — a bbox around Oakville/Hamilton/Milton overlapped with western
+ * Mississauga + Burlington. Overpass `area` lookups against OSM relation IDs
+ * give us proper municipal boundaries, no leakage.
  *
- * We only ingest OSM features that have a `name` tag — anonymous
- * `leisure=pitch` entries in random parks aren't useful for the user. Named
- * features cover the cases that matter: "Hangar 7v7", "Soccer World",
- * "Scarborough Soccer Centre", etc.
+ * Each entry in CITIES is the OSM relation ID for the city's admin boundary.
+ * Area IDs are derived by adding 3_600_000_000 (Overpass convention).
+ *
+ * To extend (e.g. add Burlington / Toronto / Brampton):
+ *   1. Find the OSM relation: nominatim.openstreetmap.org → search the city,
+ *      open the result, copy the relation id (it's in the URL).
+ *   2. Append `{ name, relationId }` here and re-run the scrape.
+ *
+ * Only named features are kept — anonymous `leisure=pitch` rows in random
+ * parks aren't useful for the user.
  */
 
 import type { ScrapeAdapter, ScrapedField, ScrapedVenue } from "../types.js";
 import type { FieldSize, FieldSurface, VenueType } from "../fieldEnums.js";
 
-// GTA + Halton + Hamilton bounding box (south,west,north,east).
-// Wide enough to cover Toronto, Mississauga, Brampton, Vaughan, Markham,
-// Oakville, Burlington, Milton, Hamilton.
-const BBOX = { south: 43.0, west: -80.5, north: 44.0, east: -79.0 };
+type City = { name: string; relationId: number };
+
+const CITIES: City[] = [
+  { name: "Hamilton", relationId: 7034910 }, // City of Hamilton, ON (admin_level=6)
+  { name: "Oakville", relationId: 2407500 }, // Town of Oakville, ON (admin_level=8)
+  { name: "Milton",   relationId: 2414122 }, // Town of Milton, ON (admin_level=8)
+];
+
+const AREA_OFFSET = 3_600_000_000;
 
 const OVERPASS_URL = "https://overpass-api.de/api/interpreter";
 
-const QUERY = `
+function buildQuery(): string {
+  const areas = CITIES.map((c) => `area(${AREA_OFFSET + c.relationId});`).join("");
+  return `
 [out:json][timeout:90];
+(${areas})->.cities;
 (
-  way["leisure"="pitch"]["sport"="soccer"](${BBOX.south},${BBOX.west},${BBOX.north},${BBOX.east});
-  node["leisure"="pitch"]["sport"="soccer"](${BBOX.south},${BBOX.west},${BBOX.north},${BBOX.east});
-  way["leisure"="sports_centre"]["sport"="soccer"](${BBOX.south},${BBOX.west},${BBOX.north},${BBOX.east});
-  node["leisure"="sports_centre"]["sport"="soccer"](${BBOX.south},${BBOX.west},${BBOX.north},${BBOX.east});
-  way["sport"="soccer"]["building"](${BBOX.south},${BBOX.west},${BBOX.north},${BBOX.east});
+  way(area.cities)["leisure"="pitch"]["sport"="soccer"]["name"];
+  node(area.cities)["leisure"="pitch"]["sport"="soccer"]["name"];
+  way(area.cities)["leisure"="sports_centre"]["sport"="soccer"]["name"];
+  node(area.cities)["leisure"="sports_centre"]["sport"="soccer"]["name"];
+  way(area.cities)["sport"="soccer"]["building"]["name"];
 );
 out center tags;
 `.trim();
+}
 
 type OsmTags = Record<string, string | undefined>;
 
@@ -58,17 +74,15 @@ function mapSurface(tag: string | undefined): FieldSurface {
 }
 
 function mapSize(tags: OsmTags): FieldSize {
-  // OSM rarely tags v/v sizes. Use dimensions when available.
   const length = parseInt(tags["length"] ?? "", 10);
   if (Number.isFinite(length)) {
     if (length > 80) return "11v11";
     if (length > 50) return "7v7";
     return "5v5";
   }
-  // Indoor sports_centre with sport=soccer is typically 5v5 / 7v7 / futsal.
   if (tags["leisure"] === "sports_centre") return "5v5";
   if (tags["sport"] === "futsal") return "futsal";
-  return "11v11"; // outdoor pitches default to full-size
+  return "11v11";
 }
 
 function looksIndoor(tags: OsmTags): boolean {
@@ -78,19 +92,8 @@ function looksIndoor(tags: OsmTags): boolean {
   return false;
 }
 
-function buildAddress(tags: OsmTags): string {
-  // OSM addr:* schema. Fall back to the name if nothing structured.
-  const parts = [
-    [tags["addr:housenumber"], tags["addr:street"]].filter(Boolean).join(" "),
-    tags["addr:city"],
-  ].filter((p) => p && p.length > 0);
-  if (parts.length > 0) return parts.join(", ");
-  return tags["name"] ?? "Address unavailable";
-}
-
 function deriveVenueType(tags: OsmTags, name: string): VenueType {
   const lower = name.toLowerCase();
-  // Name signals first — most reliable when the operator brands it.
   if (
     lower.includes("community centre") ||
     lower.includes("community center") ||
@@ -101,11 +104,17 @@ function deriveVenueType(tags: OsmTags, name: string): VenueType {
   ) {
     return "community_centre";
   }
-  // Indoor sports centres + named buildings + soccer-tagged buildings are
-  // commercial / club facilities. Same heuristic the migration's backfill
-  // used for OSM rows.
   if (looksIndoor(tags)) return "private";
   return "public_park";
+}
+
+function buildAddress(tags: OsmTags): string {
+  const parts = [
+    [tags["addr:housenumber"], tags["addr:street"]].filter(Boolean).join(" "),
+    tags["addr:city"],
+  ].filter((p) => p && p.length > 0);
+  if (parts.length > 0) return parts.join(", ");
+  return tags["name"] ?? "Address unavailable";
 }
 
 function buildAmenities(tags: OsmTags): string[] {
@@ -124,7 +133,7 @@ async function fetchOsm(): Promise<OsmElement[]> {
       "Content-Type": "application/x-www-form-urlencoded",
       "User-Agent": "FieldStack-scraper/1.0 (https://fieldstack.app)",
     },
-    body: new URLSearchParams({ data: QUERY }).toString(),
+    body: new URLSearchParams({ data: buildQuery() }).toString(),
   });
   if (!res.ok) {
     throw new Error(`Overpass fetch failed: ${res.status} ${res.statusText}`);
@@ -134,8 +143,8 @@ async function fetchOsm(): Promise<OsmElement[]> {
 }
 
 export const osmGtaAdapter: ScrapeAdapter = {
-  source: "osm-gta",
-  label: "OpenStreetMap (GTA + Hamilton)",
+  source: "osm-halton-hamilton",
+  label: `OpenStreetMap (${CITIES.map((c) => c.name).join(", ")})`,
   async run() {
     const elements = await fetchOsm();
     const venues: ScrapedVenue[] = [];
@@ -143,7 +152,7 @@ export const osmGtaAdapter: ScrapeAdapter = {
     for (const el of elements) {
       const tags = el.tags ?? {};
       const name = tags["name"];
-      if (!name || name.length < 2) continue; // skip unnamed pitches — not useful for users
+      if (!name || name.length < 2) continue;
 
       const coord = el.center ?? { lat: el.lat ?? NaN, lon: el.lon ?? NaN };
       if (!Number.isFinite(coord.lat) || !Number.isFinite(coord.lon)) continue;
