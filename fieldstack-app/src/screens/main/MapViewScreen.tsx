@@ -2,17 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import {
-  Animated,
-  Dimensions,
-  FlatList,
-  type NativeScrollEvent,
-  type NativeSyntheticEvent,
-  Pressable,
-  StyleSheet,
-  View,
-} from "react-native";
-import ClusteredMapView from "react-native-map-clustering";
+import { Animated, Pressable, StyleSheet, View } from "react-native";
 import MapView, { Marker, type Region } from "react-native-maps";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -21,7 +11,7 @@ import { FilterToolbar } from "../../components/FilterToolbar";
 import { ResultCountPill } from "../../components/ResultCountPill";
 import { SearchInput } from "../../components/SearchInput";
 import { Text } from "../../components/Text";
-import { VenueMapCard, VENUE_MAP_CARD_WIDTH } from "../../components/VenueMapCard";
+import { VenueMapCard } from "../../components/VenueMapCard";
 import { VenuePin } from "../../components/VenuePin";
 import { useFieldSearch } from "../../hooks/useFieldSearch";
 import { useFilterControls } from "../../hooks/useFilterControls";
@@ -33,11 +23,6 @@ import type { MainStackParamList } from "../../navigation/MainNavigator";
 import { borderRadius, spacing } from "../../theme/tokens";
 import { useTheme } from "../../theme/useTheme";
 import type { SearchResult } from "../../types/api";
-
-const SCREEN_WIDTH = Dimensions.get("window").width;
-const CARD_GAP = 12;
-const CARD_SNAP = VENUE_MAP_CARD_WIDTH + CARD_GAP;
-const CARD_SIDE_PEEK = (SCREEN_WIDTH - VENUE_MAP_CARD_WIDTH) / 2;
 
 type Nav = NativeStackNavigationProp<MainStackParamList, "MapView">;
 
@@ -259,12 +244,6 @@ export function MapViewScreen() {
     () => getLastRegion() ?? initialRegion
   );
   const mapRef = useRef<MapView>(null);
-  const carouselRef = useRef<FlatList<VenueMarker>>(null);
-  // Set true right before a programmatic scrollToOffset on the carousel; the
-  // resulting onMomentumScrollEnd reads + clears it. Without this, an animated
-  // scroll-to-card can settle one sub-pixel index off and re-flip the
-  // selection back to the neighbour, ping-ponging with the pin tap.
-  const programmaticScrollRef = useRef(false);
   const { isSaved, toggle: toggleSaved } = useSavedVenues();
   // Set true right before a programmatic animateToRegion; cleared by the
   // resulting onRegionChangeComplete. Prevents the pin-tap re-center from
@@ -293,36 +272,20 @@ export function MapViewScreen() {
   const markers = useMemo(() => groupByVenue(results), [results]);
 
   // Markers within the current camera bounds. Drives the ResultCountPill so
-  // "X venues" reflects the visible region rather than the unfiltered result
-  // set. With clustering on, this is still a bbox count — the user might
-  // see fewer cluster bubbles than the number reported, which is the same
-  // semantic Airbnb / Google Maps use ("X stays in this area").
-  //
-  // The carousel intentionally keeps the full marker list so swiping doesn't
-  // change cards out from under the user mid-scroll.
+  // "X venues" reflects the visible region rather than the full result set.
   const visibleMarkers = useMemo(
     () => markers.filter((m) => isInRegion(m.venue, currentRegion)),
     [markers, currentRegion]
   );
 
-  const selectedIndex = useMemo(
+  // Currently selected venue's marker, if any. Drives the single bottom card.
+  const selectedMarker = useMemo(
     () =>
       selectedVenueId
-        ? markers.findIndex((m) => m.venue.id === selectedVenueId)
-        : -1,
+        ? markers.find((m) => m.venue.id === selectedVenueId) ?? null
+        : null,
     [markers, selectedVenueId]
   );
-
-  // Pin tap → scroll the carousel to that card so card + pin stay in sync.
-  // Guard against scrolling before the FlatList has measured (offset === -1).
-  useEffect(() => {
-    if (selectedIndex < 0) return;
-    programmaticScrollRef.current = true;
-    carouselRef.current?.scrollToOffset({
-      offset: selectedIndex * CARD_SNAP,
-      animated: true,
-    });
-  }, [selectedIndex]);
 
   // Successful geocode → fly the map to the new coords. Without this the
   // search bar would update location state but the camera would sit still,
@@ -347,11 +310,8 @@ export function MapViewScreen() {
     lastSearchCenterRef.current = { lat: location.lat, lng: location.lng };
   }, [location.lat, location.lng]);
 
-  // Note: previously we default-selected the first marker on results-load
-  // for visual parity with Airbnb's carousel. With clustering on at city
-  // zoom most pins live inside a cluster bubble — selecting one would show
-  // a card as "active" with no visible pin anchor on the map, which reads
-  // as a glitch. Let the user pick by swipe / tap instead.
+  // Google-Maps pattern: no auto-select. Card stays hidden until the user
+  // taps a pin. Tapping empty map clears selection and slides the card away.
 
   const handleRegionChange = useCallback((region: Region) => {
     setLastRegion(region);
@@ -381,14 +341,13 @@ export function MapViewScreen() {
   };
 
   /**
-   * Smoothly pan/zoom the map onto a venue. Shared by pin-tap and the
-   * carousel-swipe handler so both interactions feel equivalent. Marks
-   * the resulting region change as programmatic so it doesn't trip
-   * "Search this area".
+   * Smoothly pan the map onto a venue when its pin is tapped. Marks the
+   * resulting region change as programmatic so it doesn't trip "Search this
+   * area".
    *
-   * Camera target is shifted south by ~0.12 of latitudeDelta so the pin
-   * lands in the upper-middle of the visible map (the ~140pt carousel
-   * occupies the bottom).
+   * Camera target is shifted south by ~0.18 of latitudeDelta so the pin
+   * lands in the upper portion of the visible map — the bottom card
+   * occupies roughly that much of the screen.
    */
   const panToVenue = useCallback((venueId: string) => {
     const marker = markers.find((m) => m.venue.id === venueId);
@@ -400,10 +359,6 @@ export function MapViewScreen() {
     ) {
       return;
     }
-    // Skip the camera move if the venue is already in view — the user
-    // swiping the carousel between two on-screen venues shouldn't get a
-    // stacked snap-then-pan animation. Pin tap also benefits when the user
-    // taps a pin that's already centered.
     if (isInRegion(marker.venue, currentRegion)) return;
 
     const cached = getLastRegion();
@@ -412,7 +367,7 @@ export function MapViewScreen() {
     isProgrammaticPanRef.current = true;
     mapRef.current.animateToRegion(
       {
-        latitude: marker.venue.lat - latDelta * 0.12,
+        latitude: marker.venue.lat - latDelta * 0.18,
         longitude: marker.venue.lng,
         latitudeDelta: latDelta,
         longitudeDelta: lngDelta,
@@ -436,32 +391,6 @@ export function MapViewScreen() {
     setSelectedVenueId(null);
   };
 
-  // Carousel → pin sync. When the user swipes the cards horizontally, snap
-  // the selection to whichever card is now centered. Uses momentum-scroll-end
-  // rather than onScroll so we don't fire mid-flick (would re-center the map
-  // on every intermediate index).
-  const handleCarouselMomentumEnd = useCallback(
-    (e: NativeSyntheticEvent<NativeScrollEvent>) => {
-      // Ignore the momentum-end from our own scrollToOffset; otherwise a sub-
-      // pixel landing can flip selection back to the neighbour, ping-ponging
-      // against the pin-tap effect.
-      if (programmaticScrollRef.current) {
-        programmaticScrollRef.current = false;
-        return;
-      }
-      const idx = Math.round(e.nativeEvent.contentOffset.x / CARD_SNAP);
-      const venueId = markers[idx]?.venue.id;
-      if (venueId && venueId !== selectedVenueId) {
-        setSelectedVenueId(venueId);
-        // Carousel-swipe should drive the map the same way pin-tap does:
-        // re-center on the newly selected venue so the user actually sees
-        // where the card they're looking at lives.
-        panToVenue(venueId);
-      }
-    },
-    [markers, selectedVenueId, panToVenue]
-  );
-
   const handleCardPress = useCallback(
     (venueId: string) => {
       nav.navigate("VenueDetail", { venueId });
@@ -469,40 +398,33 @@ export function MapViewScreen() {
     [nav]
   );
 
+  // Slide the bottom card up when a venue is selected, down when cleared.
+  // Translate range: 0 = card visible, +220 = card hidden below the screen.
+  const cardOffset = useRef(new Animated.Value(220)).current;
+  useEffect(() => {
+    Animated.spring(cardOffset, {
+      toValue: selectedMarker ? 0 : 220,
+      useNativeDriver: true,
+      friction: 9,
+      tension: 90,
+    }).start();
+  }, [selectedMarker, cardOffset]);
+
   return (
     <View style={styles.root}>
-      <ClusteredMapView
-        mapRef={(ref) => {
-          // ClusteredMapView passes back the underlying react-native-maps ref
-          // via a callback (not the standard ref prop). Stash it on our own
-          // ref so animateToRegion still works.
-          (mapRef as React.MutableRefObject<MapView | null>).current =
-            (ref as unknown as MapView | null) ?? null;
-        }}
+      {/* Plain MapView (no clustering). At our current scope (~tens of
+          venues) clustering buys nothing and react-native-map-clustering's
+          full child re-evaluation on every state change was the source of
+          the pin flicker. Re-introduce clustering only if results exceed
+          ~50 visible markers. */}
+      <MapView
+        ref={mapRef}
         style={StyleSheet.absoluteFill}
         initialRegion={initialRegion}
         onRegionChangeComplete={handleRegionChange}
         onPress={handleMapPress}
         showsUserLocation
         showsMyLocationButton={false}
-        clusterColor={colors.brand}
-        // surface is white in light mode (vs green-700 brand: ~5:1 — passes
-        // AA) and near-black in dark mode (vs green-500 brand: ~10:1). White
-        // alone fails AA against the dark-mode brand at 2.15:1.
-        clusterTextColor={colors.surface}
-        // Clustering thresholds: only group when pins genuinely overlap. The
-        // lib's defaults (minPoints=2, radius=40) cluster pins that are
-        // clearly readable as separate. 5 pins within 28pt of each other is
-        // a real cluster; anything looser should stay as individual pins.
-        minPoints={5}
-        radius={28}
-        onClusterPress={() => {
-          // Cluster tap → lib calls fitToCoordinates → our
-          // onRegionChangeComplete fires. Flag it as programmatic so the
-          // "Search this area" pill doesn't flash from a fit-induced pan.
-          programmaticScrollRef.current = false;
-          isProgrammaticPanRef.current = true;
-        }}
       >
         {markers.map((m) => {
           if (m.venue.lat === null || m.venue.lng === null) return null;
@@ -515,7 +437,7 @@ export function MapViewScreen() {
             />
           );
         })}
-      </ClusteredMapView>
+      </MapView>
 
       {/* Top overlay: search bar (with list-view icon) + filter chips */}
       <View
@@ -652,40 +574,34 @@ export function MapViewScreen() {
         </View>
       ) : null}
 
-      {/* Bottom result carousel — snap-to-card, pin↔card sync */}
-      {markers.length > 0 ? (
-        <View
-          pointerEvents="box-none"
-          style={[styles.carouselWrap, { paddingBottom: insets.bottom + spacing.md }]}
-        >
-          <FlatList
-            ref={carouselRef}
-            data={markers}
-            keyExtractor={(m) => m.venue.id}
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            // snapToInterval (vs pagingEnabled) so each card snaps even though
-            // CARD_SNAP is narrower than the screen — gives the peek-next-card
-            // feel that Airbnb / Hotel Tonight use.
-            snapToInterval={CARD_SNAP}
-            decelerationRate="fast"
-            contentContainerStyle={styles.carouselContent}
-            ItemSeparatorComponent={() => <View style={{ width: CARD_GAP }} />}
-            onMomentumScrollEnd={handleCarouselMomentumEnd}
-            renderItem={({ item }) => (
-              <VenueMapCard
-                venue={item.venue}
-                fieldCount={item.fieldCount}
-                minPrice={item.minPrice}
-                userCoords={userCoords}
-                isSaved={isSaved(item.venue.id)}
-                onPress={() => handleCardPress(item.venue.id)}
-                onToggleSave={() => void toggleSaved(item.venue.id)}
-              />
-            )}
-          />
-        </View>
-      ) : null}
+      {/* Bottom card — Google Maps style. One card for the selected venue,
+          slides up from below the screen on pin tap. Always mounted (so the
+          animation works in both directions); offscreen when nothing is
+          selected. */}
+      <Animated.View
+        pointerEvents={selectedMarker ? "box-none" : "none"}
+        style={[
+          styles.cardWrap,
+          {
+            paddingBottom: insets.bottom + spacing.md,
+            transform: [{ translateY: cardOffset }],
+          },
+        ]}
+      >
+        {selectedMarker ? (
+          <View style={styles.cardInner} pointerEvents="auto">
+            <VenueMapCard
+              venue={selectedMarker.venue}
+              fieldCount={selectedMarker.fieldCount}
+              minPrice={selectedMarker.minPrice}
+              userCoords={userCoords}
+              isSaved={isSaved(selectedMarker.venue.id)}
+              onPress={() => handleCardPress(selectedMarker.venue.id)}
+              onToggleSave={() => void toggleSaved(selectedMarker.venue.id)}
+            />
+          </View>
+        ) : null}
+      </Animated.View>
 
       {sheets}
     </View>
@@ -757,14 +673,14 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     elevation: 3,
   },
-  carouselWrap: {
+  cardWrap: {
     position: "absolute",
     left: 0,
     right: 0,
     bottom: 0,
   },
-  carouselContent: {
-    paddingHorizontal: CARD_SIDE_PEEK,
+  cardInner: {
+    paddingHorizontal: spacing.lg,
   },
   emptyOverlay: {
     position: "absolute",
