@@ -26,6 +26,11 @@ import BottomSheet, {
 } from "@gorhom/bottom-sheet";
 import { useCallback, useMemo, useRef } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
+// TouchableOpacity from react-native-gesture-handler (not react-native) —
+// the only touch component that reliably fires inside BottomSheetFooter.
+// Plain Pressable/Button taps get eaten by gorhom's internal gesture
+// handler scope, which is why "Show N venues" wasn't dismissing.
+import { TouchableOpacity } from "react-native-gesture-handler";
 
 import { selection as selectionHaptic } from "../lib/haptics";
 import {
@@ -45,7 +50,6 @@ import type {
 } from "../hooks/useFieldSearch";
 import type { FieldSize, FieldSurface, VenueType } from "../types/api";
 
-import { Button } from "./Button";
 import { Text } from "./Text";
 
 type Props = {
@@ -99,9 +103,14 @@ export function FiltersSheet({
     clearAll();
   };
 
+  // Imperative close via the sheet ref. State-driven close (flipping the
+  // `visible` prop) was unreliable inside BottomSheetFooter — the prop
+  // round-trip got lost, and the sheet just sat there. Closing through
+  // the ref animates to index -1 directly; our handleSheetChange then
+  // calls onClose() to sync the parent state.
   const handleShow = useCallback(() => {
-    onClose();
-  }, [onClose]);
+    sheetRef.current?.close();
+  }, []);
 
   const priceBucket = priceMaxToBucket(filters.priceMax);
 
@@ -109,6 +118,11 @@ export function FiltersSheet({
   // button stays pinned at the bottom of the sheet. Putting the button
   // as a plain View after BottomSheetScrollView pushed it off-screen at
   // the 80% snap point — the scroll view consumed all remaining space.
+  const label = isLoading
+    ? "Loading…"
+    : resultCount === 1
+      ? "Show 1 venue"
+      : `Show ${resultCount} venues`;
   const renderFooter = useCallback(
     (footerProps: BottomSheetFooterProps) => (
       <BottomSheetFooter
@@ -120,19 +134,18 @@ export function FiltersSheet({
           backgroundColor: colors.surface,
         }}
       >
-        <Button
-          label={
-            isLoading
-              ? "Loading…"
-              : resultCount === 1
-                ? "Show 1 venue"
-                : `Show ${resultCount} venues`
-          }
+        <TouchableOpacity
           onPress={handleShow}
-        />
+          accessibilityRole="button"
+          accessibilityLabel={label}
+          activeOpacity={0.85}
+          style={[styles.applyBtn, { backgroundColor: colors.brand }]}
+        >
+          <Text style={styles.applyLabel}>{label}</Text>
+        </TouchableOpacity>
       </BottomSheetFooter>
     ),
-    [colors.border, colors.surface, isLoading, resultCount, handleShow]
+    [colors.border, colors.surface, colors.brand, label, handleShow]
   );
 
   return (
@@ -366,5 +379,18 @@ const styles = StyleSheet.create({
     paddingTop: spacing.sm,
     paddingBottom: spacing.lg,
     borderTopWidth: StyleSheet.hairlineWidth,
+  },
+  applyBtn: {
+    minHeight: 48,
+    paddingVertical: spacing.sm + 2,
+    paddingHorizontal: spacing.lg,
+    borderRadius: borderRadius.lg,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  applyLabel: {
+    color: "#FFFFFF",
+    fontSize: fontSize.lg,
+    fontWeight: fontWeight.bold,
   },
 });
