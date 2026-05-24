@@ -1,49 +1,29 @@
 <!--
-  Android 13+ themed-icon monochrome layer — full pitch scene in
-  black on transparent (Android tints to match wallpaper).
+  Android 13+ themed-icon monochrome layer — same scene in black on
+  transparent (Android tints to match wallpaper).
 -->
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
   <g transform="translate(512 512) scale(0.62) translate(-512 -512)">
-    <rect
-      x="80" y="200" width="864" height="624"
-      rx="28" ry="28"
-      fill="none"
-      stroke="#000000"
-      stroke-width="26"
-    />
-    <line
-      x1="512" y1="200" x2="512" y2="824"
-      stroke="#000000"
-      stroke-width="26"
-    />
-    <circle
-      cx="512" cy="512" r="88"
-      fill="none"
-      stroke="#000000"
-      stroke-width="26"
-    />
-    <rect x="44" y="468" width="36" height="88" rx="8" ry="8" fill="#000000"/>
-    <rect x="944" y="468" width="36" height="88" rx="8" ry="8" fill="#000000"/>
-    <circle cx="320" cy="430" r="46" fill="#000000"/>
-    <path
-      d="M 220 482
-         L 420 482
-         L 420 528
-         L 370 528
-         L 370 640
-         L 370 740
-         L 332 740
-         L 332 660
-         L 320 644
-         L 308 660
-         L 308 740
-         L 270 740
-         L 270 640
-         L 270 528
-         L 220 528
-         Z"
-      fill="#000000"
-    />
-    <circle cx="440" cy="730" r="40" fill="#000000"/>
+    <rect x="80" y="232" width="864" height="560" fill="none" stroke="#000000" stroke-width="18"/>
+    <line x1="512" y1="232" x2="512" y2="792" stroke="#000000" stroke-width="18"/>
+    <circle cx="512" cy="512" r="80" fill="none" stroke="#000000" stroke-width="18"/>
+    <circle cx="512" cy="512" r="8" fill="#000000"/>
+    <rect x="80" y="362" width="130" height="300" fill="none" stroke="#000000" stroke-width="18"/>
+    <rect x="80" y="442" width="45" height="140" fill="none" stroke="#000000" stroke-width="18"/>
+    <circle cx="175" cy="512" r="8" fill="#000000"/>
+    <path d="M 210 440 A 80 80 0 0 1 210 584" fill="none" stroke="#000000" stroke-width="18"/>
+    <rect x="44" y="480" width="36" height="64" rx="4" ry="4" fill="#000000"/>
+    <rect x="814" y="362" width="130" height="300" fill="none" stroke="#000000" stroke-width="18"/>
+    <rect x="899" y="442" width="45" height="140" fill="none" stroke="#000000" stroke-width="18"/>
+    <circle cx="849" cy="512" r="8" fill="#000000"/>
+    <path d="M 814 440 A 80 80 0 0 0 814 584" fill="none" stroke="#000000" stroke-width="18"/>
+    <rect x="944" y="480" width="36" height="64" rx="4" ry="4" fill="#000000"/>
+    <line x1="290" y1="600" x2="265" y2="720" stroke="#000000" stroke-width="30" stroke-linecap="round"/>
+    <line x1="290" y1="600" x2="410" y2="660" stroke="#000000" stroke-width="30" stroke-linecap="round"/>
+    <line x1="290" y1="600" x2="305" y2="510" stroke="#000000" stroke-width="30" stroke-linecap="round"/>
+    <line x1="305" y1="510" x2="240" y2="530" stroke="#000000" stroke-width="26" stroke-linecap="round"/>
+    <line x1="305" y1="510" x2="365" y2="490" stroke="#000000" stroke-width="26" stroke-linecap="round"/>
+    <circle cx="305" cy="475" r="32" fill="#000000"/>
+    <circle cx="455" cy="680" r="36" fill="#000000"/>
   </g>
 </svg>
