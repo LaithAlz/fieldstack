@@ -399,11 +399,13 @@ export function MapViewScreen() {
   );
 
   // Slide the bottom card up when a venue is selected, down when cleared.
-  // Translate range: 0 = card visible, +220 = card hidden below the screen.
-  const cardOffset = useRef(new Animated.Value(220)).current;
+  // Translate range: 0 = card visible, +320 = card hidden well below screen.
+  // 320 generously over-hides — the Google-Maps card is taller than the old
+  // carousel card and the insets.bottom safe area adds another ~34pt.
+  const cardOffset = useRef(new Animated.Value(320)).current;
   useEffect(() => {
     Animated.spring(cardOffset, {
-      toValue: selectedMarker ? 0 : 220,
+      toValue: selectedMarker ? 0 : 320,
       useNativeDriver: true,
       friction: 9,
       tension: 90,
@@ -583,13 +585,15 @@ export function MapViewScreen() {
         style={[
           styles.cardWrap,
           {
-            paddingBottom: insets.bottom + spacing.md,
+            // Edge-to-edge: no horizontal padding. The card carries its own
+            // bottom inset so the action row clears the home indicator.
+            paddingBottom: insets.bottom,
             transform: [{ translateY: cardOffset }],
           },
         ]}
       >
         {selectedMarker ? (
-          <View style={styles.cardInner} pointerEvents="auto">
+          <View pointerEvents="auto">
             <VenueMapCard
               venue={selectedMarker.venue}
               fieldCount={selectedMarker.fieldCount}
@@ -678,9 +682,6 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-  },
-  cardInner: {
-    paddingHorizontal: spacing.lg,
   },
   emptyOverlay: {
     position: "absolute",
