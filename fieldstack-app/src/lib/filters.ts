@@ -1,8 +1,8 @@
 /**
  * Shared filter option lists + bucket helpers used by every surface that
  * exposes the field-search filter UI (FieldSearchScreen, MapViewScreen,
- * FilterChipBar, etc.). Keeping these in one place means the label "Indoor"
- * or "Under $80" never drifts between screens.
+ * FiltersSheet, FilterToolbar). Keeping these in one place means the label
+ * "Indoor" or "Under $80" never drifts between screens.
  */
 
 import type { FilterOption } from "../components/FilterBottomSheet";

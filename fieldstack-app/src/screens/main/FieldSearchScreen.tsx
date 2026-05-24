@@ -14,7 +14,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { EmptyState } from "../../components/EmptyState";
 import { FieldSearchCard } from "../../components/FieldSearchCard";
 import { FieldSearchCardSkeleton } from "../../components/FieldSearchCardSkeleton";
-import { FilterChipBar } from "../../components/FilterChipBar";
+import { FilterToolbar } from "../../components/FilterToolbar";
 import { SearchInput } from "../../components/SearchInput";
 import { Text } from "../../components/Text";
 import { useFieldSearch } from "../../hooks/useFieldSearch";
@@ -57,7 +57,13 @@ export function FieldSearchScreen() {
     setLocation,
   } = useFieldSearch();
   // Location seeding lives in FieldSearchProvider now so MapView gets it too.
-  const { chipsProps, sheets } = useFilterControls(filters, setFilter);
+  const { toolbarProps, sheets } = useFilterControls(
+    filters,
+    setFilter,
+    total,
+    isLoading,
+    clearFilters
+  );
 
   const activeFilterCount =
     filters.surface.length +
@@ -119,7 +125,7 @@ export function FieldSearchScreen() {
           error={locationError?.message ?? null}
         />
 
-        <FilterChipBar {...chipsProps} />
+        <FilterToolbar {...toolbarProps} />
 
         {/* Count + clear-all row */}
         <View style={styles.countRow}>
