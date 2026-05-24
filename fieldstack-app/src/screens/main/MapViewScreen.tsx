@@ -17,7 +17,7 @@ import MapView, { Marker, type Region } from "react-native-maps";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { EmptyState } from "../../components/EmptyState";
-import { FilterChipBar } from "../../components/FilterChipBar";
+import { FilterToolbar } from "../../components/FilterToolbar";
 import { ResultCountPill } from "../../components/ResultCountPill";
 import { SearchInput } from "../../components/SearchInput";
 import { Text } from "../../components/Text";
@@ -203,14 +203,22 @@ export function MapViewScreen() {
   const { coords: userCoords } = useLocation();
   const {
     results,
+    total,
     isLoading,
     filters,
     location,
     locationError,
     setFilter,
+    clearFilters,
     setLocation,
   } = useFieldSearch();
-  const { chipsProps, sheets } = useFilterControls(filters, setFilter);
+  const { toolbarProps, sheets } = useFilterControls(
+    filters,
+    setFilter,
+    total,
+    isLoading,
+    clearFilters
+  );
 
   // Initial region: prior session position if we have one, else user coords,
   // else downtown Toronto.
@@ -540,16 +548,11 @@ export function MapViewScreen() {
           </Pressable>
         </View>
 
-        {/* `auto` (not `box-none`) so the filter chips reliably receive
-            taps. With `box-none` plus the nested horizontal ScrollView,
-            Pressable chips were silently dropping touches on iOS. The chip
-            strip blocking map gestures within its 44pt band is the same
-            tradeoff Airbnb makes — drag the map below this row. */}
+        {/* `auto` (not `box-none`) so the buttons reliably receive taps —
+            same iOS bug as the prior chip row. The 44pt band blocks map
+            gestures only directly under the buttons. */}
         <View style={styles.chipsWrap} pointerEvents="auto">
-          <FilterChipBar
-            {...chipsProps}
-            contentStyle={styles.chipsContent}
-          />
+          <FilterToolbar {...toolbarProps} />
         </View>
 
         {/* Result count — live-updates as filters / pan apply */}
