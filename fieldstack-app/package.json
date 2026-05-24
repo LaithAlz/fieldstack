@@ -3,6 +3,10 @@
   "main": "index.js",
   "version": "1.0.0",
   "scripts": {
+    "sync-api-url": "node scripts/sync-api-url.js",
+    "prestart": "npm run sync-api-url",
+    "preandroid": "npm run sync-api-url",
+    "preios": "npm run sync-api-url",
     "start": "expo start",
     "android": "expo start --android",
     "ios": "expo start --ios",
