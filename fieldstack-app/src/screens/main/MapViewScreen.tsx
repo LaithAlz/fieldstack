@@ -1,6 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import * as Linking from "expo-linking";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Animated, Pressable, StyleSheet, View } from "react-native";
 import MapView, { Marker, type Region } from "react-native-maps";
@@ -10,6 +11,7 @@ import { EmptyState } from "../../components/EmptyState";
 import { FilterToolbar } from "../../components/FilterToolbar";
 import { ResultCountPill } from "../../components/ResultCountPill";
 import { SearchInput } from "../../components/SearchInput";
+import { Text } from "../../components/Text";
 import { VenueMapCard } from "../../components/VenueMapCard";
 import { VenuePin } from "../../components/VenuePin";
 import { useFieldSearch } from "../../hooks/useFieldSearch";
@@ -530,6 +532,27 @@ export function MapViewScreen() {
         ) : null}
       </Animated.View>
 
+      {/* OpenStreetMap attribution — ODbL license requires visible credit
+          for OSM-derived data (we got our venue list from Overpass).
+          Tapping opens the OSM copyright page. Bottom-left, above Apple's
+          own Maps attribution and the home indicator. Hidden when the
+          bottom card is up so it's not double-stacked. */}
+      {!selectedMarker ? (
+        <Pressable
+          onPress={() => Linking.openURL("https://www.openstreetmap.org/copyright")}
+          accessibilityRole="link"
+          accessibilityLabel="OpenStreetMap copyright"
+          style={[
+            styles.attribution,
+            { bottom: insets.bottom + 4, backgroundColor: colors.surface },
+          ]}
+        >
+          <Text size="xs" variant="secondary">
+            © OpenStreetMap
+          </Text>
+        </Pressable>
+      ) : null}
+
       {sheets}
     </View>
   );
@@ -589,6 +612,18 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
+  },
+  attribution: {
+    position: "absolute",
+    left: spacing.sm,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 4,
+    borderRadius: borderRadius.md,
+    shadowColor: "#000",
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    shadowOffset: { width: 0, height: 1 },
+    elevation: 2,
   },
   emptyOverlay: {
     position: "absolute",
