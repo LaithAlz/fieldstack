@@ -1,18 +1,27 @@
 <!--
-  Onside app icon.
-  1024×1024 brand-green tile + bold white "O" monogram.
-  Designed per the favicon-gen skill rules: 3-5 shapes max, high
-  contrast, brand color, solid bg for iOS. Reads cleanly at 60px.
+  Onside app icon — center of a pitch from above.
+  Brand-green tile, ring (the center circle of a pitch), bisected by
+  a halfway line that stops short of the icon edges so it reads as a
+  pitch mark, not a Greek phi.
+  Three shapes; readable at 60px home-screen size.
+  Solid background per favicon-gen iOS rules — no alpha.
 -->
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
   <!-- Background tile -->
   <rect width="1024" height="1024" fill="#15803D"/>
 
-  <!-- "O" monogram. Built from two circles (outer white, inner brand
-       green) instead of a stroked circle so the ring weight stays
-       crisp at every render size. Slightly off-center horizontally for
-       optical balance (the rounded form's visual center sits a touch
-       right of geometric center). -->
-  <circle cx="512" cy="512" r="320" fill="#FFFFFF"/>
-  <circle cx="512" cy="512" r="200" fill="#15803D"/>
+  <!-- Halfway line — runs roughly the height of the ring + a small cap
+       on each end. Doesn't extend to the icon edges so the ring stays
+       the primary mark. -->
+  <rect x="488" y="160" width="48" height="704" rx="24" ry="24" fill="#FFFFFF"/>
+
+  <!-- Center circle — stroke only so the green tile shows through inside.
+       Stroke width 80 → ~4.7px at 60x60, still bold. Radius 300 leaves
+       comfortable padding around the icon edges. -->
+  <circle
+    cx="512" cy="512" r="300"
+    fill="none"
+    stroke="#FFFFFF"
+    stroke-width="80"
+  />
 </svg>
