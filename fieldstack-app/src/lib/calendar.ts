@@ -140,7 +140,7 @@ function presentCalendarAlert(args: CalendarPromptArgs): void {
               startDate: args.startDate,
               durationHours: args.durationHours,
               location: args.venueAddress ?? undefined,
-              notes: `Booked through ${args.operatorName} · added from FieldStack`,
+              notes: `Booked through ${args.operatorName} · added from Onside`,
             });
             if (ok) {
               args.onResult("Added to your calendar.", "success");
@@ -150,7 +150,7 @@ function presentCalendarAlert(args: CalendarPromptArgs): void {
             // the user isn't stranded digging through OS settings manually.
             Alert.alert(
               "Calendar access is off",
-              "Enable it in Settings to let FieldStack add events.",
+              "Enable it in Settings to let Onside add events.",
               [
                 { text: "Cancel", style: "cancel" },
                 {

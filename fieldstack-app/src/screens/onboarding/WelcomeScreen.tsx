@@ -62,7 +62,7 @@ export function WelcomeScreen(_props: Props) {
       hero={
         <View style={styles.brandStack}>
           <IconDisc icon="football" size={120} />
-          <Text style={[styles.wordmark, { color: colors.textPrimary }]}>FieldStack</Text>
+          <Text style={[styles.wordmark, { color: colors.textPrimary }]}>Onside</Text>
         </View>
       }
       title="Find soccer fields, fast"

@@ -127,6 +127,6 @@ async function ensureAndroidChannel(): Promise<void> {
   await Notifications.setNotificationChannelAsync(ANDROID_CHANNEL, {
     name: "Booking reminders",
     importance: Notifications.AndroidImportance.DEFAULT,
-    description: "One-hour heads up before slots you booked through FieldStack.",
+    description: "One-hour heads up before slots you booked through Onside.",
   });
 }

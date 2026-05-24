@@ -15,14 +15,14 @@
       "ios": { "simulator": false },
       "channel": "preview",
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://api-staging.fieldstack.app"
+        "EXPO_PUBLIC_API_URL": "https://api-staging.getonside.ca"
       }
     },
     "production": {
       "autoIncrement": true,
       "channel": "production",
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://api.fieldstack.app"
+        "EXPO_PUBLIC_API_URL": "https://api.getonside.ca"
       }
     }
   },

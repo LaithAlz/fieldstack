@@ -393,7 +393,7 @@ export function SignInScreen() {
         <View style={styles.modeSwitchRow}>
           <Text size="sm" variant="secondary">
             {mode === "signin"
-              ? "New to FieldStack?"
+              ? "New to Onside?"
               : "Already have an account?"}
           </Text>
           <Pressable
