@@ -1,52 +1,83 @@
 <!--
-  Onside app icon — little player on a pitch.
-  Top-down pitch (perimeter + halfway line + center circle) with a small
-  player silhouette placed off-center in the right half (attacking).
-  Brand-green tile, white markings + player.
-  Six shapes — one over the favicon-gen 5 cap, but the center circle is
-  the cue that ties everything to "soccer pitch" so it earns its slot.
+  Onside app icon — full pitch scene.
+  Top-down soccer field with perimeter + halfway line + center circle,
+  a goal at each end, a full-body player silhouette (head + T-shaped
+  shoulders + torso + split legs), and a ball at the player's feet.
+
+  Nine shapes — well past the favicon-gen 5-cap, but this is what the
+  user asked for. The tradeoff is recognized: at 60px home-screen size
+  the field markings stay crisp, the player + ball read as small
+  white silhouettes, fine detail (toes/fingers) is intentionally
+  omitted so the silhouettes don't muddy.
 -->
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
-  <!-- Background grass -->
+  <!-- Grass -->
   <rect width="1024" height="1024" fill="#15803D"/>
 
-  <!-- Pitch perimeter — slightly landscape (864×664) so it reads as a
-       soccer field, not a generic rounded rectangle. Stroke 36 stays
-       legible down to 60px. -->
+  <!-- Pitch perimeter — landscape 864×624, rounded so it doesn't read
+       as a generic rect. Stroke 26 stays legible down to 60px. -->
   <rect
-    x="80" y="180" width="864" height="664"
-    rx="32" ry="32"
+    x="80" y="200" width="864" height="624"
+    rx="28" ry="28"
     fill="none"
     stroke="#FFFFFF"
-    stroke-width="36"
+    stroke-width="26"
   />
 
-  <!-- Halfway line — vertical through the middle of the pitch -->
+  <!-- Halfway line -->
   <line
-    x1="512" y1="180" x2="512" y2="844"
+    x1="512" y1="200" x2="512" y2="824"
     stroke="#FFFFFF"
-    stroke-width="36"
+    stroke-width="26"
   />
 
-  <!-- Center circle. Filled with brand green so the halfway line stops
-       at the circle's edge inside the ring, matching a real pitch. -->
+  <!-- Center circle. Filled green so the halfway line stops at the
+       ring's edge inside, matching real pitch markings. -->
   <circle
-    cx="512" cy="512" r="110"
+    cx="512" cy="512" r="88"
     fill="#15803D"
     stroke="#FFFFFF"
-    stroke-width="36"
+    stroke-width="26"
   />
 
-  <!-- Little player — right half of the pitch, off-center toward the
-       attacking end. Head circle + dome body, sized small relative to
-       the pitch ("little") but still readable at 60px. -->
-  <circle cx="740" cy="600" r="48" fill="#FFFFFF"/>
+  <!-- Left goal — vertical bar sticking out to the left of the pitch.
+       From top-down, the goal mouth runs parallel to the goal line
+       and the goal box sticks BACK (outward) from the field. -->
+  <rect x="44" y="468" width="36" height="88" rx="8" ry="8" fill="#FFFFFF"/>
+
+  <!-- Right goal — mirror -->
+  <rect x="944" y="468" width="36" height="88" rx="8" ry="8" fill="#FFFFFF"/>
+
+  <!-- Player head — placed in the left half of the pitch. Sized to keep
+       the field dominant but proportional with the body below. -->
+  <circle cx="320" cy="430" r="46" fill="#FFFFFF"/>
+
+  <!-- Player body — single path drawn clockwise from top-left of the
+       shoulder bar. Shoulders are wider than torso (T-silhouette but
+       not extreme), torso tapers down to legs, two legs split by a
+       V-cut at the crotch. Limb widths chosen so individual elements
+       (arm, leg) stay readable at small icon sizes. -->
   <path
-    d="M 670 770
-       L 670 720
-       A 70 70 0 0 1 810 720
-       L 810 770
+    d="M 220 482
+       L 420 482
+       L 420 528
+       L 370 528
+       L 370 640
+       L 370 740
+       L 332 740
+       L 332 660
+       L 320 644
+       L 308 660
+       L 308 740
+       L 270 740
+       L 270 640
+       L 270 528
+       L 220 528
        Z"
     fill="#FFFFFF"
   />
+
+  <!-- Soccer ball — at player's feet level, in front of the player but
+       clear of the center circle and halfway line. -->
+  <circle cx="440" cy="730" r="40" fill="#FFFFFF"/>
 </svg>
