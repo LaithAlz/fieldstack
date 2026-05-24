@@ -10,13 +10,11 @@ import { EmptyState } from "../../components/EmptyState";
 import { FilterToolbar } from "../../components/FilterToolbar";
 import { ResultCountPill } from "../../components/ResultCountPill";
 import { SearchInput } from "../../components/SearchInput";
-import { Text } from "../../components/Text";
 import { VenueMapCard } from "../../components/VenueMapCard";
 import { VenuePin } from "../../components/VenuePin";
 import { useFieldSearch } from "../../hooks/useFieldSearch";
 import { useFilterControls } from "../../hooks/useFilterControls";
 import { useLocation } from "../../hooks/useLocation";
-import { haversineKm } from "../../lib/distance";
 import { getLastRegion, setLastRegion } from "../../lib/mapState";
 import { useSavedVenues } from "../../lib/savedVenues";
 import type { MainStackParamList } from "../../navigation/MainNavigator";
@@ -26,7 +24,6 @@ import type { SearchResult } from "../../types/api";
 
 type Nav = NativeStackNavigationProp<MainStackParamList, "MapView">;
 
-const PAN_REFETCH_THRESHOLD_KM = 5;
 const DEFAULT_DELTA = 0.15; // ~16km — comfortable starting zoom for a city
 const DEFAULT_TORONTO: Region = {
   latitude: 43.6709,
@@ -224,14 +221,6 @@ export function MapViewScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Last center we actually ran a search against. Used to decide when to show
-  // the "Search this area" button.
-  const lastSearchCenterRef = useRef<{ lat: number; lng: number }>({
-    lat: initialRegion.latitude,
-    lng: initialRegion.longitude,
-  });
-
-  const [showSearchHere, setShowSearchHere] = useState(false);
   const [selectedVenueId, setSelectedVenueId] = useState<string | null>(null);
   // Tracked alongside the persisted ref so React can derive `visibleMarkers`
   // from the current camera bounds — "X venues" should reflect what's in
@@ -246,28 +235,9 @@ export function MapViewScreen() {
   const mapRef = useRef<MapView>(null);
   const { isSaved, toggle: toggleSaved } = useSavedVenues();
   // Set true right before a programmatic animateToRegion; cleared by the
-  // resulting onRegionChangeComplete. Prevents the pin-tap re-center from
-  // tripping the "Search this area" pill via the distance threshold check.
+  // resulting onRegionChangeComplete. Prevents pin-tap / geocode pans from
+  // triggering an auto-refetch (the user didn't pan, we did).
   const isProgrammaticPanRef = useRef(false);
-
-  // Drives the fade/slide-in for the "Search this area" pill.
-  const searchHereOpacity = useRef(new Animated.Value(0)).current;
-  const searchHereOffset = useRef(new Animated.Value(-8)).current;
-
-  useEffect(() => {
-    Animated.parallel([
-      Animated.timing(searchHereOpacity, {
-        toValue: showSearchHere ? 1 : 0,
-        duration: 200,
-        useNativeDriver: true,
-      }),
-      Animated.timing(searchHereOffset, {
-        toValue: showSearchHere ? 0 : -8,
-        duration: 200,
-        useNativeDriver: true,
-      }),
-    ]).start();
-  }, [showSearchHere, searchHereOpacity, searchHereOffset]);
 
   const markers = useMemo(() => groupByVenue(results), [results]);
 
@@ -290,7 +260,7 @@ export function MapViewScreen() {
   // Successful geocode → fly the map to the new coords. Without this the
   // search bar would update location state but the camera would sit still,
   // which feels broken (typing "Mississauga" should pan the map there).
-  // Mark the pan as programmatic so it doesn't trip "Search this area".
+  // Mark the pan as programmatic so it doesn't trip the auto-refetch.
   useEffect(() => {
     if (location.lat === null || location.lng === null) return;
     if (!mapRef.current) return;
@@ -307,38 +277,31 @@ export function MapViewScreen() {
       },
       400
     );
-    lastSearchCenterRef.current = { lat: location.lat, lng: location.lng };
   }, [location.lat, location.lng]);
 
   // Google-Maps pattern: no auto-select. Card stays hidden until the user
   // taps a pin. Tapping empty map clears selection and slides the card away.
 
-  const handleRegionChange = useCallback((region: Region) => {
-    setLastRegion(region);
-    setCurrentRegion(region);
-    // Skip the pan-distance check when the camera just moved because of a
-    // programmatic re-center (pin tap). The user didn't pan.
-    if (isProgrammaticPanRef.current) {
-      isProgrammaticPanRef.current = false;
-      return;
-    }
-    const dist = haversineKm(
-      { lat: region.latitude, lng: region.longitude },
-      { lat: lastSearchCenterRef.current.lat, lng: lastSearchCenterRef.current.lng }
-    );
-    setShowSearchHere(dist > PAN_REFETCH_THRESHOLD_KM);
-  }, []);
-
-  const handleSearchHere = () => {
-    const region = getLastRegion();
-    if (!region) return;
-    lastSearchCenterRef.current = { lat: region.latitude, lng: region.longitude };
-    setShowSearchHere(false);
-    // Re-anchor the search at the new center. Empty text leaves the existing
-    // location label in place — the user explicitly panned, so we just need
-    // the new coords on the wire.
-    setLocation("", { lat: region.latitude, lng: region.longitude });
-  };
+  // Auto-refetch whenever the user settles the camera on a new region.
+  // `onRegionChangeComplete` only fires when the pan ends, so we don't
+  // hammer the API mid-drag — and useFieldSearch's 300ms debounce
+  // coalesces rapid pans into one fetch.
+  //
+  // Reintroduce a "Search this area" button with a much larger threshold
+  // (~3-city pan, ~50km) once the dataset grows enough that auto-refetch
+  // on every pan becomes wasteful.
+  const handleRegionChange = useCallback(
+    (region: Region) => {
+      setLastRegion(region);
+      setCurrentRegion(region);
+      if (isProgrammaticPanRef.current) {
+        isProgrammaticPanRef.current = false;
+        return;
+      }
+      setLocation("", { lat: region.latitude, lng: region.longitude });
+    },
+    [setLocation]
+  );
 
   /**
    * Smoothly pan the map onto a venue when its pin is tapped. Marks the
@@ -491,58 +454,20 @@ export function MapViewScreen() {
           />
         </View>
 
-        {/* "Search this area" — fades + slides in after a meaningful pan */}
-        <Animated.View
-          pointerEvents={showSearchHere ? "auto" : "none"}
-          style={[
-            styles.searchHereWrap,
-            {
-              opacity: searchHereOpacity,
-              transform: [{ translateY: searchHereOffset }],
-            },
-          ]}
-        >
-          <Pressable
-            onPress={handleSearchHere}
-            accessibilityRole="button"
-            accessibilityLabel="Search this area"
-            accessibilityElementsHidden={!showSearchHere}
-            importantForAccessibility={showSearchHere ? "yes" : "no-hide-descendants"}
-            style={({ pressed }) => [
-              styles.searchHere,
-              {
-                backgroundColor: colors.surface,
-                opacity: pressed ? 0.8 : 1,
-              },
-            ]}
-          >
-            <Ionicons
-              name="refresh"
-              size={16}
-              color={colors.textPrimary}
-              style={{ marginRight: spacing.xs }}
-            />
-            <Text size="sm" weight="medium">
-              Search this area
-            </Text>
-          </Pressable>
-        </Animated.View>
       </View>
 
-      {/* No results — guide the user back to something useful instead of
-          leaving them on an empty map. Active filter clear or "Search this
-          area" both move forward; matches the FieldSearchScreen empty
-          treatment so behavior reads as one product, not two. */}
+      {/* No results — descriptive only; auto-refetch on pan handles the
+          "recover" action (the user just pans toward a city with venues).
+          No CTA button because tapping it would be tautological. */}
       {!isLoading && markers.length === 0 ? (
         <View
-          pointerEvents="box-none"
+          pointerEvents="none"
           style={[
             styles.emptyOverlay,
             { paddingBottom: insets.bottom + spacing.lg },
           ]}
         >
           <View
-            pointerEvents="auto"
             style={[
               styles.emptyCard,
               {
@@ -566,11 +491,9 @@ export function MapViewScreen() {
                 filters.size.length > 0 ||
                 filters.venueType.length > 0 ||
                 filters.priceMax !== null
-                  ? "Try clearing a filter or panning to a wider area."
-                  : "Try panning to a different neighbourhood or widening your search."
+                  ? "Try clearing a filter or panning toward Oakville, Hamilton, or Milton."
+                  : "Pan toward Oakville, Hamilton, or Milton to see venues."
               }
-              actionLabel="Search this area"
-              onAction={handleSearchHere}
             />
           </View>
         </View>
@@ -649,28 +572,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginTop: spacing.md,
   },
-  searchHereWrap: {
-    alignItems: "center",
-    marginTop: spacing.sm,
-  },
   iconButton: {
     width: 40,
     height: 40,
     borderRadius: borderRadius.xl,
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: "#000",
-    shadowOpacity: 0.12,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 3,
-  },
-  searchHere: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: borderRadius.xl,
     shadowColor: "#000",
     shadowOpacity: 0.12,
     shadowRadius: 6,
