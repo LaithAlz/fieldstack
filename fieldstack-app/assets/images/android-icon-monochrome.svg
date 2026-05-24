@@ -1,35 +1,49 @@
 <!--
-  Android 13+ themed-icon monochrome layer — same shapes, black on
-  transparent (Android tints to match wallpaper).
+  Android 13+ themed-icon monochrome layer — full pitch scene in
+  black on transparent (Android tints to match wallpaper).
 -->
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
   <g transform="translate(512 512) scale(0.62) translate(-512 -512)">
     <rect
-      x="80" y="180" width="864" height="664"
-      rx="32" ry="32"
+      x="80" y="200" width="864" height="624"
+      rx="28" ry="28"
       fill="none"
       stroke="#000000"
-      stroke-width="36"
+      stroke-width="26"
     />
     <line
-      x1="512" y1="180" x2="512" y2="844"
+      x1="512" y1="200" x2="512" y2="824"
       stroke="#000000"
-      stroke-width="36"
+      stroke-width="26"
     />
     <circle
-      cx="512" cy="512" r="110"
+      cx="512" cy="512" r="88"
       fill="none"
       stroke="#000000"
-      stroke-width="36"
+      stroke-width="26"
     />
-    <circle cx="740" cy="600" r="48" fill="#000000"/>
+    <rect x="44" y="468" width="36" height="88" rx="8" ry="8" fill="#000000"/>
+    <rect x="944" y="468" width="36" height="88" rx="8" ry="8" fill="#000000"/>
+    <circle cx="320" cy="430" r="46" fill="#000000"/>
     <path
-      d="M 670 770
-         L 670 720
-         A 70 70 0 0 1 810 720
-         L 810 770
+      d="M 220 482
+         L 420 482
+         L 420 528
+         L 370 528
+         L 370 640
+         L 370 740
+         L 332 740
+         L 332 660
+         L 320 644
+         L 308 660
+         L 308 740
+         L 270 740
+         L 270 640
+         L 270 528
+         L 220 528
          Z"
       fill="#000000"
     />
+    <circle cx="440" cy="730" r="40" fill="#000000"/>
   </g>
 </svg>
