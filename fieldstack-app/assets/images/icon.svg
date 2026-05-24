@@ -1,22 +1,26 @@
 <!--
-  Onside app icon — professional take.
-  Single focal point: black kicking-pose silhouette on the brand-green
-  tile. Field dropped per pro icon research (Nike, Strava, Spotify,
-  Apple Fitness all use a single bold mark, not a scene). Player
-  scaled to ~55% icon height with comfortable padding all around so
-  the silhouette breathes and reads clearly at 60px home-screen size.
+  Onside app icon — player + subtle field watermark.
+  Brand-green tile with a faint white pitch outline (rounded perimeter
+  + halfway line + center circle) sitting BEHIND a black kicking-pose
+  player silhouette. Field is rendered with ~25% white opacity so it
+  reads as a watermark / context, not as a competing focal point.
 
-  Source: CC0 silhouette from svgrepo via potrace (306925.svg).
-  Black fill kept from source; positioned centered with slight
-  upward bias so the kicking foot + ball don't run into the bottom.
+  Player SVG: CC0 (svgrepo, potrace-vectorized).
 -->
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <!-- Brand green tile -->
   <rect width="1024" height="1024" fill="#15803D"/>
 
-  <!-- Player + ball, centered. Player source bbox roughly 938x1280
-       (potrace coords). Scale 0.42 → ~394 wide x ~538 tall (≈53%
-       of icon height). Translate centers it horizontally and offsets
-       vertically so the player + ball composition reads centered. -->
+  <!-- Field watermark — subtle white at ~25% opacity. Rounded corners
+       on the perimeter for a softer, more modern feel. Three shapes:
+       perimeter, halfway line, center circle. -->
+  <g opacity="0.25" stroke="#FFFFFF" fill="none" stroke-width="18">
+    <rect x="100" y="240" width="824" height="544" rx="48" ry="48"/>
+    <line x1="512" y1="240" x2="512" y2="784"/>
+    <circle cx="512" cy="512" r="100"/>
+  </g>
+
+  <!-- Player + ball — dominant focal point, black, centered. -->
   <g transform="translate(315 245) scale(0.42)">
 <g transform="translate(0.000000,1280.000000) scale(0.100000,-0.100000)"
 fill="#000000" stroke="none">
