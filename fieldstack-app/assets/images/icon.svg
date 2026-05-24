@@ -1,27 +1,33 @@
 <!--
-  Onside app icon — center of a pitch from above.
-  Brand-green tile, ring (the center circle of a pitch), bisected by
-  a halfway line that stops short of the icon edges so it reads as a
-  pitch mark, not a Greek phi.
-  Three shapes; readable at 60px home-screen size.
-  Solid background per favicon-gen iOS rules — no alpha.
+  Onside app icon — player + ball on a pitch.
+  Brand-green tile (= grass), white player silhouette (head + dome
+  body), a soccer ball at the player's feet, on a white pitch line.
+  Five shapes — at the favicon-gen rule's upper bound but still
+  readable at 60px.
+  Solid background for iOS (no alpha).
 -->
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
-  <!-- Background tile -->
+  <!-- Pitch -->
   <rect width="1024" height="1024" fill="#15803D"/>
 
-  <!-- Halfway line — runs roughly the height of the ring + a small cap
-       on each end. Doesn't extend to the icon edges so the ring stays
-       the primary mark. -->
-  <rect x="488" y="160" width="48" height="704" rx="24" ry="24" fill="#FFFFFF"/>
+  <!-- Ground / pitch line -->
+  <rect x="140" y="900" width="744" height="32" rx="16" ry="16" fill="#FFFFFF"/>
 
-  <!-- Center circle — stroke only so the green tile shows through inside.
-       Stroke width 80 → ~4.7px at 60x60, still bold. Radius 300 leaves
-       comfortable padding around the icon edges. -->
-  <circle
-    cx="512" cy="512" r="300"
-    fill="none"
-    stroke="#FFFFFF"
-    stroke-width="80"
+  <!-- Player body, shifted slightly left so the ball has space on the
+       right and the composition feels like "player standing with ball". -->
+  <path
+    d="M 240 700
+       A 180 180 0 0 1 600 700
+       L 600 900
+       L 240 900
+       Z"
+    fill="#FFFFFF"
   />
+
+  <!-- Player head -->
+  <circle cx="420" cy="390" r="120" fill="#FFFFFF"/>
+
+  <!-- Soccer ball at the player's feet, on the pitch line. White on green
+       reads as a ball from context (no need for hex pattern at this size). -->
+  <circle cx="780" cy="830" r="100" fill="#FFFFFF"/>
 </svg>

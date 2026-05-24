@@ -1,15 +1,19 @@
 <!--
-  Android 13+ themed-icon monochrome layer. Same shape in black on
-  transparent — Android tints to match the user's wallpaper.
+  Android 13+ themed-icon monochrome layer — same shapes, black on
+  transparent (Android tints to match wallpaper).
 -->
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
   <g transform="translate(512 512) scale(0.62) translate(-512 -512)">
-    <rect x="488" y="160" width="48" height="704" rx="24" ry="24" fill="#000000"/>
-    <circle
-      cx="512" cy="512" r="300"
-      fill="none"
-      stroke="#000000"
-      stroke-width="80"
+    <rect x="140" y="900" width="744" height="32" rx="16" ry="16" fill="#000000"/>
+    <path
+      d="M 240 700
+         A 180 180 0 0 1 600 700
+         L 600 900
+         L 240 900
+         Z"
+      fill="#000000"
     />
+    <circle cx="420" cy="390" r="120" fill="#000000"/>
+    <circle cx="780" cy="830" r="100" fill="#000000"/>
   </g>
 </svg>
