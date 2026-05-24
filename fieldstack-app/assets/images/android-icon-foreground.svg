@@ -1,19 +1,35 @@
 <!--
-  Android adaptive icon foreground — same player+ball mark scaled to
-  the ~66% safe zone so launcher mask shapes can't crop it.
+  Android adaptive icon foreground — same mark scaled to the ~66%
+  safe zone so launcher mask shapes can't crop it.
 -->
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
   <g transform="translate(512 512) scale(0.62) translate(-512 -512)">
-    <rect x="140" y="900" width="744" height="32" rx="16" ry="16" fill="#FFFFFF"/>
+    <rect
+      x="80" y="180" width="864" height="664"
+      rx="32" ry="32"
+      fill="none"
+      stroke="#FFFFFF"
+      stroke-width="36"
+    />
+    <line
+      x1="512" y1="180" x2="512" y2="844"
+      stroke="#FFFFFF"
+      stroke-width="36"
+    />
+    <circle
+      cx="512" cy="512" r="110"
+      fill="#15803D"
+      stroke="#FFFFFF"
+      stroke-width="36"
+    />
+    <circle cx="740" cy="600" r="48" fill="#FFFFFF"/>
     <path
-      d="M 240 700
-         A 180 180 0 0 1 600 700
-         L 600 900
-         L 240 900
+      d="M 670 770
+         L 670 720
+         A 70 70 0 0 1 810 720
+         L 810 770
          Z"
       fill="#FFFFFF"
     />
-    <circle cx="420" cy="390" r="120" fill="#FFFFFF"/>
-    <circle cx="780" cy="830" r="100" fill="#FFFFFF"/>
   </g>
 </svg>

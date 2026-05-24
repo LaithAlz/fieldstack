@@ -1,33 +1,52 @@
 <!--
-  Onside app icon — player + ball on a pitch.
-  Brand-green tile (= grass), white player silhouette (head + dome
-  body), a soccer ball at the player's feet, on a white pitch line.
-  Five shapes — at the favicon-gen rule's upper bound but still
-  readable at 60px.
-  Solid background for iOS (no alpha).
+  Onside app icon — little player on a pitch.
+  Top-down pitch (perimeter + halfway line + center circle) with a small
+  player silhouette placed off-center in the right half (attacking).
+  Brand-green tile, white markings + player.
+  Six shapes — one over the favicon-gen 5 cap, but the center circle is
+  the cue that ties everything to "soccer pitch" so it earns its slot.
 -->
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
-  <!-- Pitch -->
+  <!-- Background grass -->
   <rect width="1024" height="1024" fill="#15803D"/>
 
-  <!-- Ground / pitch line -->
-  <rect x="140" y="900" width="744" height="32" rx="16" ry="16" fill="#FFFFFF"/>
+  <!-- Pitch perimeter — slightly landscape (864×664) so it reads as a
+       soccer field, not a generic rounded rectangle. Stroke 36 stays
+       legible down to 60px. -->
+  <rect
+    x="80" y="180" width="864" height="664"
+    rx="32" ry="32"
+    fill="none"
+    stroke="#FFFFFF"
+    stroke-width="36"
+  />
 
-  <!-- Player body, shifted slightly left so the ball has space on the
-       right and the composition feels like "player standing with ball". -->
+  <!-- Halfway line — vertical through the middle of the pitch -->
+  <line
+    x1="512" y1="180" x2="512" y2="844"
+    stroke="#FFFFFF"
+    stroke-width="36"
+  />
+
+  <!-- Center circle. Filled with brand green so the halfway line stops
+       at the circle's edge inside the ring, matching a real pitch. -->
+  <circle
+    cx="512" cy="512" r="110"
+    fill="#15803D"
+    stroke="#FFFFFF"
+    stroke-width="36"
+  />
+
+  <!-- Little player — right half of the pitch, off-center toward the
+       attacking end. Head circle + dome body, sized small relative to
+       the pitch ("little") but still readable at 60px. -->
+  <circle cx="740" cy="600" r="48" fill="#FFFFFF"/>
   <path
-    d="M 240 700
-       A 180 180 0 0 1 600 700
-       L 600 900
-       L 240 900
+    d="M 670 770
+       L 670 720
+       A 70 70 0 0 1 810 720
+       L 810 770
        Z"
     fill="#FFFFFF"
   />
-
-  <!-- Player head -->
-  <circle cx="420" cy="390" r="120" fill="#FFFFFF"/>
-
-  <!-- Soccer ball at the player's feet, on the pitch line. White on green
-       reads as a ball from context (no need for hex pattern at this size). -->
-  <circle cx="780" cy="830" r="100" fill="#FFFFFF"/>
 </svg>
