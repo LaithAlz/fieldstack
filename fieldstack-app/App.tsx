@@ -25,6 +25,7 @@ import {
   initSentry,
 } from "./src/lib/analyticsProviders";
 import { AuthProvider, useAuth } from "./src/lib/auth";
+import { BlockedUsersProvider, useBlockedUsers } from "./src/lib/blockedUsers";
 import {
   BookingHistoryProvider,
   useBookingHistory,
@@ -160,14 +161,16 @@ export default function App() {
                     <SavedVenuesProvider>
                       <BookingHistoryProvider>
                         <RecentlyViewedProvider>
-                          {/* Hold render until persisted state has hydrated,
-                              so deep links don't see empty defaults. */}
-                          <PersistenceGate>
-                            <NavigationContainer theme={navTheme}>
-                              <RootNavigator />
-                            </NavigationContainer>
-                            <StatusBar style="auto" />
-                          </PersistenceGate>
+                          <BlockedUsersProvider>
+                            {/* Hold render until persisted state has hydrated,
+                                so deep links don't see empty defaults. */}
+                            <PersistenceGate>
+                              <NavigationContainer theme={navTheme}>
+                                <RootNavigator />
+                              </NavigationContainer>
+                              <StatusBar style="auto" />
+                            </PersistenceGate>
+                          </BlockedUsersProvider>
                         </RecentlyViewedProvider>
                       </BookingHistoryProvider>
                     </SavedVenuesProvider>
@@ -188,12 +191,14 @@ function PersistenceGate({ children }: { children: React.ReactNode }) {
   const { hydrated: historyHydrated } = useBookingHistory();
   const { hydrated: recentHydrated } = useRecentlyViewed();
   const { hydrated: authHydrated } = useAuth();
+  const { hydrated: blockedHydrated } = useBlockedUsers();
   if (
     !slotHydrated ||
     !savedHydrated ||
     !historyHydrated ||
     !recentHydrated ||
-    !authHydrated
+    !authHydrated ||
+    !blockedHydrated
   ) {
     return null;
   }

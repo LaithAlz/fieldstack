@@ -2,10 +2,11 @@ import { Ionicons } from "@expo/vector-icons";
 import { CommonActions, useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useMemo, useState } from "react";
-import { Pressable, StyleSheet, TextInput, View } from "react-native";
+import { Alert, Pressable, StyleSheet, TextInput, View } from "react-native";
 
 import { useAuth } from "../lib/auth";
-import { upsertReview, type Review } from "../lib/reviews";
+import { useBlockedUsers } from "../lib/blockedUsers";
+import { reportReview, upsertReview, type Review } from "../lib/reviews";
 import type { DetailParamList } from "../navigation/MainNavigator";
 import { borderRadius, fontFamily, fontSize, spacing } from "../theme/tokens";
 import { useTheme } from "../theme/useTheme";
@@ -13,6 +14,7 @@ import { useTheme } from "../theme/useTheme";
 import { Button } from "./Button";
 import { StarRating } from "./StarRating";
 import { Text } from "./Text";
+import { useToast } from "./Toast";
 
 const MAX_BODY = 2000;
 
@@ -45,6 +47,8 @@ export function ReviewSection({
 }: Props) {
   const colors = useTheme();
   const { user } = useAuth();
+  const toast = useToast();
+  const { isBlocked, block } = useBlockedUsers();
   const nav = useNavigation<NativeStackNavigationProp<DetailParamList>>();
   // Default collapsed so the write form sits closer to the top of the
   // section; expand on user tap.
@@ -56,11 +60,71 @@ export function ReviewSection({
     () => (user ? reviews.find((r) => r.userId === user.id) ?? null : null),
     [reviews, user]
   );
-  const otherReviews = useMemo(
-    () =>
-      user ? reviews.filter((r) => r.userId !== user.id) : Array.from(reviews),
-    [reviews, user]
-  );
+  const otherReviews = useMemo(() => {
+    const base = user ? reviews.filter((r) => r.userId !== user.id) : Array.from(reviews);
+    // Strip out anyone the current user has blocked. App Review Guideline
+    // 1.2 requires that a blocked user's content stop appearing.
+    return base.filter((r) => !isBlocked(r.userId));
+  }, [reviews, user, isBlocked]);
+
+  const handleReport = (review: Review) => {
+    if (!user) {
+      toast.show("Sign in to report a review.", { type: "info" });
+      return;
+    }
+    Alert.alert(
+      "Report this review?",
+      "Flag this review for moderation. Our team will take a look.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Report",
+          style: "destructive",
+          onPress: async () => {
+            const { error } = await reportReview({
+              reviewId: review.id,
+              reporterId: user.id,
+            });
+            if (error) {
+              toast.show("Couldn't submit report. Try again.", { type: "error" });
+              return;
+            }
+            toast.show("Thanks — we'll review it.", { type: "success" });
+          },
+        },
+      ]
+    );
+  };
+
+  const handleBlock = (review: Review) => {
+    Alert.alert(
+      "Block this user?",
+      "You won't see any reviews from this user. You can unblock anytime from Settings.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Block",
+          style: "destructive",
+          onPress: async () => {
+            await block(review.userId);
+            toast.show("User blocked.", { type: "success" });
+          },
+        },
+      ]
+    );
+  };
+
+  const openReviewMenu = (review: Review) => {
+    Alert.alert(
+      "Review options",
+      undefined,
+      [
+        { text: "Cancel", style: "cancel" },
+        { text: "Report review", style: "destructive", onPress: () => handleReport(review) },
+        { text: "Block this user", style: "destructive", onPress: () => handleBlock(review) },
+      ]
+    );
+  };
 
   return (
     <View>
@@ -153,7 +217,7 @@ export function ReviewSection({
           {expanded ? (
             <View style={styles.list}>
               {otherReviews.map((r) => (
-                <ReviewRow key={r.id} review={r} />
+                <ReviewRow key={r.id} review={r} onOpenMenu={() => openReviewMenu(r)} />
               ))}
             </View>
           ) : null}
@@ -264,7 +328,7 @@ function ReviewForm({
 
 // ---------------------------------------------------------------------------
 
-function ReviewRow({ review }: { review: Review }) {
+function ReviewRow({ review, onOpenMenu }: { review: Review; onOpenMenu: () => void }) {
   const colors = useTheme();
   const date = useMemo(() => {
     const d = new Date(review.createdAt);
@@ -279,9 +343,27 @@ function ReviewRow({ review }: { review: Review }) {
     >
       <View style={styles.reviewHeader}>
         <StarRating value={review.rating} size={14} />
-        <Text size="xs" variant="tertiary">
-          {date}
-        </Text>
+        <View style={styles.reviewHeaderRight}>
+          <Text size="xs" variant="tertiary">
+            {date}
+          </Text>
+          <Pressable
+            onPress={onOpenMenu}
+            accessibilityRole="button"
+            accessibilityLabel="More review options"
+            hitSlop={spacing.sm}
+            style={({ pressed }) => [
+              styles.reviewMenuBtn,
+              { opacity: pressed ? 0.5 : 1 },
+            ]}
+          >
+            <Ionicons
+              name="ellipsis-horizontal"
+              size={18}
+              color={colors.textTertiary}
+            />
+          </Pressable>
+        </View>
       </View>
       {review.body ? (
         <Text size="sm" style={styles.reviewBody}>
@@ -360,6 +442,17 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+  },
+  reviewHeaderRight: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.xs,
+  },
+  reviewMenuBtn: {
+    width: 28,
+    height: 28,
+    alignItems: "center",
+    justifyContent: "center",
   },
   reviewBody: {
     marginTop: spacing.xs,

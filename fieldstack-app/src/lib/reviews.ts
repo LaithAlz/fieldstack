@@ -137,6 +137,34 @@ export async function deleteReview(
   return { error: null };
 }
 
+/**
+ * File a moderation report against a review. Insert-only — the table is
+ * not readable from the client (RLS-locked to service_role) so we can't
+ * tell the user whether they've already reported this one. The unique
+ * constraint on (review_id, reporter_id) means re-reporting is a no-op
+ * at the DB level (returns 409); we treat that as success from the UI's
+ * perspective so the user sees a confirming toast either way.
+ */
+export async function reportReview(input: {
+  reviewId: string;
+  reporterId: string;
+  reason?: string;
+}): Promise<{ error: Error | null }> {
+  const { error } = await supabase.from("review_reports").insert({
+    review_id: input.reviewId,
+    reporter_id: input.reporterId,
+    reason: input.reason ?? "inappropriate",
+  });
+  if (error) {
+    // 23505 = unique_violation. Treat as success — the user has already
+    // reported this review; nothing to do.
+    const code = (error as { code?: string }).code;
+    if (code === "23505") return { error: null };
+    return { error: new Error(error.message) };
+  }
+  return { error: null };
+}
+
 // ---------------------------------------------------------------------------
 
 type ReviewRow = {
