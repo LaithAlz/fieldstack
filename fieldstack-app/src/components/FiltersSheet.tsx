@@ -20,6 +20,8 @@ import { Ionicons } from "@expo/vector-icons";
 import BottomSheet, {
   BottomSheetBackdrop,
   type BottomSheetBackdropProps,
+  BottomSheetFooter,
+  type BottomSheetFooterProps,
   BottomSheetScrollView,
 } from "@gorhom/bottom-sheet";
 import { useCallback, useMemo, useRef } from "react";
@@ -97,11 +99,41 @@ export function FiltersSheet({
     clearAll();
   };
 
-  const handleShow = () => {
+  const handleShow = useCallback(() => {
     onClose();
-  };
+  }, [onClose]);
 
   const priceBucket = priceMaxToBucket(filters.priceMax);
+
+  // BottomSheetFooter renders OUTSIDE the scrollable area so the Apply
+  // button stays pinned at the bottom of the sheet. Putting the button
+  // as a plain View after BottomSheetScrollView pushed it off-screen at
+  // the 80% snap point — the scroll view consumed all remaining space.
+  const renderFooter = useCallback(
+    (footerProps: BottomSheetFooterProps) => (
+      <BottomSheetFooter
+        {...footerProps}
+        bottomInset={0}
+        style={{
+          ...styles.footer,
+          borderTopColor: colors.border,
+          backgroundColor: colors.surface,
+        }}
+      >
+        <Button
+          label={
+            isLoading
+              ? "Loading…"
+              : resultCount === 1
+                ? "Show 1 venue"
+                : `Show ${resultCount} venues`
+          }
+          onPress={handleShow}
+        />
+      </BottomSheetFooter>
+    ),
+    [colors.border, colors.surface, isLoading, resultCount, handleShow]
+  );
 
   return (
     <View
@@ -115,6 +147,7 @@ export function FiltersSheet({
         enablePanDownToClose
         onChange={handleSheetChange}
         backdropComponent={renderBackdrop}
+        footerComponent={renderFooter}
         backgroundStyle={{ backgroundColor: colors.surface }}
         handleIndicatorStyle={{ backgroundColor: colors.border }}
       >
@@ -206,19 +239,6 @@ export function FiltersSheet({
             />
           </Section>
         </BottomSheetScrollView>
-
-        <View style={[styles.footer, { borderTopColor: colors.border, backgroundColor: colors.surface }]}>
-          <Button
-            label={
-              isLoading
-                ? "Loading…"
-                : resultCount === 1
-                  ? "Show 1 venue"
-                  : `Show ${resultCount} venues`
-            }
-            onPress={handleShow}
-          />
-        </View>
       </BottomSheet>
     </View>
   );
@@ -316,7 +336,10 @@ const styles = StyleSheet.create({
   },
   content: {
     paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.xl,
+    // Leave room for the sticky BottomSheetFooter (~Button height + padding
+    // + inset). Without this the last filter section sits behind the
+    // "Show N venues" button.
+    paddingBottom: 96,
   },
   section: {
     paddingVertical: spacing.md,

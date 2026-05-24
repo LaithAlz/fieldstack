@@ -15,6 +15,7 @@
 
 import { Ionicons } from "@expo/vector-icons";
 import { Pressable, Share, StyleSheet, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { formatDistance, haversineKm } from "../lib/distance";
 import { selection } from "../lib/haptics";
@@ -54,6 +55,7 @@ export function VenueMapCard({
   onToggleSave,
 }: Props) {
   const colors = useTheme();
+  const insets = useSafeAreaInsets();
 
   const distance =
     userCoords && venue.lat !== null && venue.lng !== null
@@ -82,7 +84,14 @@ export function VenueMapCard({
     <View
       style={[
         styles.card,
-        { backgroundColor: colors.surface, shadowColor: "#000" },
+        {
+          backgroundColor: colors.surface,
+          shadowColor: "#000",
+          // Inset the home-indicator area INSIDE the card so the white
+          // surface extends edge-to-edge at the bottom and the action row
+          // stays clear of the gesture bar.
+          paddingBottom: spacing.md + insets.bottom,
+        },
       ]}
     >
       {/* Drag handle — visual only; the card doesn't actually drag yet. */}
@@ -201,7 +210,7 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     paddingTop: spacing.xs,
-    paddingBottom: spacing.md,
+    // paddingBottom applied inline (insets.bottom + spacing.md).
     shadowOpacity: 0.18,
     shadowRadius: 14,
     shadowOffset: { width: 0, height: -2 },
