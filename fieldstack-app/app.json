@@ -1,23 +1,23 @@
 {
   "expo": {
-    "name": "fieldstack-app",
-    "slug": "fieldstack-app",
+    "name": "Onside",
+    "slug": "onside",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "fieldstackapp",
+    "scheme": "onside",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "app.fieldstack.mobile",
+      "bundleIdentifier": "app.onside.mobile",
       "config": {
         "usesNonExemptEncryption": false
       },
       "infoPlist": {
-        "NSLocationWhenInUseUsageDescription": "FieldStack uses your location to rank nearby soccer fields and show distance.",
-        "NSCalendarsUsageDescription": "FieldStack adds your booked slots to your calendar.",
-        "NSUserTrackingUsageDescription": "FieldStack does not track you across apps or websites."
+        "NSLocationWhenInUseUsageDescription": "Onside uses your location to rank nearby soccer fields and show distance.",
+        "NSCalendarsUsageDescription": "Onside adds your booked slots to your calendar.",
+        "NSUserTrackingUsageDescription": "Onside does not track you across apps or websites."
       },
       "privacyManifests": {
         "NSPrivacyAccessedAPITypes": [
@@ -84,7 +84,7 @@
       }
     },
     "android": {
-      "package": "app.fieldstack.mobile",
+      "package": "app.onside.mobile",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -114,7 +114,7 @@
       [
         "expo-calendar",
         {
-          "calendarPermission": "FieldStack adds your booked slots to your calendar."
+          "calendarPermission": "Onside adds your booked slots to your calendar."
         }
       ],
       [

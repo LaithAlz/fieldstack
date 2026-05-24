@@ -1,42 +1,18 @@
 <!--
-  FieldStack app icon.
-  1024×1024, brand green background, stylized soccer field from above.
-  Source-of-truth SVG; PNGs are generated via rsvg-convert (see scripts).
-  No transparency on the iOS variant — Apple rounds corners itself.
+  Onside app icon.
+  1024×1024 brand-green tile + bold white "O" monogram.
+  Designed per the favicon-gen skill rules: 3-5 shapes max, high
+  contrast, brand color, solid bg for iOS. Reads cleanly at 60px.
 -->
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
   <!-- Background tile -->
   <rect width="1024" height="1024" fill="#15803D"/>
 
-  <!-- Field outline. Stroke width 56 → ~3.3px at 60×60 home-screen size,
-       still legible. Rounded corners so it reads as field, not as a frame. -->
-  <rect
-    x="140" y="160"
-    width="744" height="704"
-    rx="32" ry="32"
-    fill="none"
-    stroke="#FFFFFF"
-    stroke-width="56"
-  />
-
-  <!-- Halfway line — the visual cue that says "this is a soccer field"
-       and not just a generic rectangle with a circle. -->
-  <line
-    x1="512" y1="160"
-    x2="512" y2="864"
-    stroke="#FFFFFF"
-    stroke-width="56"
-  />
-
-  <!-- Center circle. Filled with brand green so the halfway line doesn't
-       cross through it (matches a real pitch). -->
-  <circle
-    cx="512" cy="512" r="130"
-    fill="#15803D"
-    stroke="#FFFFFF"
-    stroke-width="56"
-  />
-
-  <!-- Center spot -->
-  <circle cx="512" cy="512" r="20" fill="#FFFFFF"/>
+  <!-- "O" monogram. Built from two circles (outer white, inner brand
+       green) instead of a stroked circle so the ring weight stays
+       crisp at every render size. Slightly off-center horizontally for
+       optical balance (the rounded form's visual center sits a touch
+       right of geometric center). -->
+  <circle cx="512" cy="512" r="320" fill="#FFFFFF"/>
+  <circle cx="512" cy="512" r="200" fill="#15803D"/>
 </svg>

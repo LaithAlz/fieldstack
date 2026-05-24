@@ -1,30 +1,14 @@
 <!--
-  Android 13+ themed-icon monochrome layer. Single-color (black) on
-  transparent — Android tints it to match the user's wallpaper theme.
-  Same shape + safe zone as the foreground.
+  Android 13+ themed-icon monochrome layer. Same "O" silhouette, black
+  on transparent — Android tints it to match the user's wallpaper.
 -->
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
-  <g transform="translate(512 512) scale(0.62) translate(-512 -512)">
-    <rect
-      x="140" y="160"
-      width="744" height="704"
-      rx="32" ry="32"
-      fill="none"
-      stroke="#000000"
-      stroke-width="56"
-    />
-    <line
-      x1="512" y1="160"
-      x2="512" y2="864"
-      stroke="#000000"
-      stroke-width="56"
-    />
-    <circle
-      cx="512" cy="512" r="130"
-      fill="none"
-      stroke="#000000"
-      stroke-width="56"
-    />
-    <circle cx="512" cy="512" r="20" fill="#000000"/>
-  </g>
+  <path
+    fill-rule="evenodd"
+    d="M 512 292
+       a 220 220 0 1 0 0.001 0 z
+       M 512 374
+       a 138 138 0 1 1 -0.001 0 z"
+    fill="#000000"
+  />
 </svg>

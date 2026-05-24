@@ -70,7 +70,7 @@ export function SettingsScreen() {
   };
 
   const emailSupport = async () => {
-    const url = `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent("FieldStack feedback")}`;
+    const url = `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent("Onside feedback")}`;
     try {
       await Linking.openURL(url);
     } catch {
@@ -195,7 +195,7 @@ export function SettingsScreen() {
 
         <View style={styles.versionWrap}>
           <Text size="xs" variant="tertiary">
-            FieldStack · v{version}
+            Onside · v{version}
           </Text>
         </View>
       </ScrollView>

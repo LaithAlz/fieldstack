@@ -84,7 +84,7 @@ export class ErrorBoundary extends Component<Props, State> {
 
   private contact = async () => {
     const { error, errorInfo } = this.state;
-    const subject = "FieldStack crash report";
+    const subject = "Onside crash report";
     const body = [
       "Hi,",
       "",
