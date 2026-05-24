@@ -11,8 +11,8 @@ import type { Venue } from "../types/api";
 
 import { Text } from "./Text";
 
-// Card itself measures 280×120; carousel pad math lives in the parent.
-export const VENUE_MAP_CARD_WIDTH = 280;
+// Google-Maps-style bottom card — fills the parent's content width.
+// Parent (MapViewScreen) controls horizontal padding.
 const PHOTO_SIZE = 88;
 
 type PreviewVenue = Pick<Venue, "id" | "name" | "photos" | "lat" | "lng">;
@@ -29,13 +29,14 @@ type Props = {
 };
 
 /**
- * Compact venue card used in the map's bottom carousel. Distinct from the
- * full-width `VenueCard` (list) because the carousel format demands a fixed
- * width with peek of neighbours — sharing a single card would mean a
- * `compact` mode on `VenueCard` that compromised both layouts.
+ * Compact venue card used in the map's bottom slot (Google-Maps style:
+ * one card for the currently selected pin). Distinct from the full-width
+ * `VenueCard` (list) because this one carries a photo thumbnail on the
+ * left, save heart on the right, and shorter copy — sharing one component
+ * across both placements would compromise both.
  *
- * Pure presentational; parent owns selection state, navigation, and the save
- * toggle handler.
+ * Pure presentational; parent owns selection state, navigation, and the
+ * save toggle handler.
  */
 export function VenueMapCard({
   venue,
@@ -157,7 +158,6 @@ export function VenueMapCard({
 
 const styles = StyleSheet.create({
   card: {
-    width: VENUE_MAP_CARD_WIDTH,
     flexDirection: "row",
     padding: spacing.sm + 2,
     borderRadius: borderRadius.lg,
