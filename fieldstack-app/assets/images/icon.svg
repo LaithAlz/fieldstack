@@ -1,21 +1,25 @@
 <!--
-  Onside app icon — real SVG silhouettes.
-  Background: brand green. Field: CC0 soccer-field-1 from svgrepo.com
-  (even-odd fill, white markings on the green BG). Player + ball: CC0
-  anatomical kicking silhouette (potrace-vectorized) scaled small and
-  positioned in the left half of the field.
-  Both sources CC0 / public domain — safe for commercial use.
+  Onside app icon — professional take.
+  Single focal point: black kicking-pose silhouette on the brand-green
+  tile. Field dropped per pro icon research (Nike, Strava, Spotify,
+  Apple Fitness all use a single bold mark, not a scene). Player
+  scaled to ~55% icon height with comfortable padding all around so
+  the silhouette breathes and reads clearly at 60px home-screen size.
+
+  Source: CC0 silhouette from svgrepo via potrace (306925.svg).
+  Black fill kept from source; positioned centered with slight
+  upward bias so the kicking foot + ball don't run into the bottom.
 -->
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
   <rect width="1024" height="1024" fill="#15803D"/>
 
-  <g transform="scale(2)">
-    <path fill-rule="evenodd" fill="#FFFFFF" d="M0,73.783v364.433h512v-11.175V73.783H0z M22.358,205.741h54.726v118.446H22.358V205.741z M244.827,320.936 		c-13.732-2.337-26.002-8.852-35.466-18.306c-11.954-11.962-19.316-28.383-19.318-46.63c0.003-18.254,7.364-34.668,19.318-46.638 		c9.465-9.454,21.735-15.962,35.466-18.306V320.936z M167.684,256c0.004,44.982,33.652,82.026,77.143,87.532v72.319H22.358v-69.307 		h77.084V183.383H22.358V96.141h222.465l0.004,72.328C201.332,173.989,167.688,211.017,167.684,256z M489.643,324.187h-54.726 		V205.741h54.726V324.187z M489.643,183.383h-77.088v163.161h77.088v69.307H267.185l-0.004-72.319 		c43.491-5.513,77.132-42.55,77.14-87.532c-0.008-44.983-33.652-82.01-77.14-87.532l-0.004-72.328h222.466V183.383z 		 M267.181,320.936v-129.88c13.732,2.345,25.998,8.853,35.459,18.306c11.955,11.969,19.316,28.384,19.319,46.638 		c-0.004,18.247-7.364,34.668-19.319,46.63C293.178,312.084,280.912,318.591,267.181,320.936z"/>
-  </g>
-
-  <g transform="translate(140 380) scale(0.30)">
+  <!-- Player + ball, centered. Player source bbox roughly 938x1280
+       (potrace coords). Scale 0.42 → ~394 wide x ~538 tall (≈53%
+       of icon height). Translate centers it horizontally and offsets
+       vertically so the player + ball composition reads centered. -->
+  <g transform="translate(315 245) scale(0.42)">
 <g transform="translate(0.000000,1280.000000) scale(0.100000,-0.100000)"
-fill="#FFFFFF" stroke="none">
+fill="#000000" stroke="none">
 <path d="M5786 12781 c-22 -24 -171 -62 -237 -60 -53 2 -68 -8 -69 -46 -1 -60
 -37 -95 -99 -95 -47 0 -60 -9 -71 -50 -5 -20 -23 -51 -40 -68 -17 -18 -30 -43
 -30 -57 0 -13 -13 -37 -29 -54 -35 -36 -51 -101 -51 -206 0 -64 -3 -77 -22
