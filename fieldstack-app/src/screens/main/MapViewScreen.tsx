@@ -585,9 +585,9 @@ export function MapViewScreen() {
         style={[
           styles.cardWrap,
           {
-            // Edge-to-edge: no horizontal padding. The card carries its own
-            // bottom inset so the action row clears the home indicator.
-            paddingBottom: insets.bottom,
+            // No wrapper padding — the card itself carries the
+            // bottom inset so its white surface goes flush to the screen
+            // edge with no map showing through underneath.
             transform: [{ translateY: cardOffset }],
           },
         ]}

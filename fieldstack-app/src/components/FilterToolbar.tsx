@@ -73,13 +73,8 @@ export function FilterToolbar({ filters, onOpenFilters, onOpenSort }: Props) {
             { color: filtersActive ? colors.brand : colors.textPrimary },
           ]}
         >
-          Filters
+          {activeCount > 0 ? `Filters · ${activeCount}` : "Filters"}
         </Text>
-        {activeCount > 0 ? (
-          <View style={[styles.badge, { backgroundColor: colors.brand }]}>
-            <Text style={styles.badgeText}>{activeCount}</Text>
-          </View>
-        ) : null}
       </Pressable>
 
       <Pressable
@@ -139,19 +134,5 @@ const styles = StyleSheet.create({
     fontSize: fontSize.md,
     fontWeight: fontWeight.medium,
     marginLeft: 4,
-  },
-  badge: {
-    minWidth: 20,
-    height: 20,
-    paddingHorizontal: spacing.xs,
-    borderRadius: borderRadius.lg,
-    alignItems: "center",
-    justifyContent: "center",
-    marginLeft: spacing.xs,
-  },
-  badgeText: {
-    color: "#FFFFFF",
-    fontSize: fontSize.xs,
-    fontWeight: fontWeight.bold,
   },
 });
