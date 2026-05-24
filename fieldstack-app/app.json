@@ -10,6 +10,10 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
+      "bundleIdentifier": "app.fieldstack.mobile",
+      "config": {
+        "usesNonExemptEncryption": false
+      },
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "FieldStack uses your location to rank nearby soccer fields and show distance.",
         "NSCalendarsUsageDescription": "FieldStack adds your booked slots to your calendar.",
@@ -80,6 +84,7 @@
       }
     },
     "android": {
+      "package": "app.fieldstack.mobile",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
