@@ -1,15 +1,24 @@
 <!--
-  Android adaptive icon foreground — subtle field + slate player +
-  ONSIDE wordmark, all inside the ~66% safe zone.
+  Android adaptive icon foreground — subtle field + goal + centered
+  player, scaled inside the ~66% safe zone.
 -->
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
   <g transform="translate(512 512) scale(0.62) translate(-512 -512)">
-    <g opacity="0.25" stroke="#FFFFFF" fill="none" stroke-width="16">
-      <rect x="120" y="180" width="784" height="500" rx="44" ry="44"/>
-      <line x1="512" y1="180" x2="512" y2="680"/>
-      <circle cx="512" cy="430" r="90"/>
+    <g opacity="0.22" stroke="#FFFFFF" fill="none" stroke-width="18">
+      <rect x="100" y="240" width="824" height="544" rx="48" ry="48"/>
+      <line x1="512" y1="240" x2="512" y2="784"/>
+      <circle cx="512" cy="512" r="100"/>
     </g>
-    <g transform="translate(362 165) scale(0.32)">
+    <path
+      d="M 300 480 L 300 300 L 724 300 L 724 480"
+      fill="none"
+      stroke="#FFFFFF"
+      stroke-width="20"
+      stroke-linecap="square"
+      stroke-linejoin="miter"
+      opacity="0.85"
+    />
+    <g transform="translate(332 207) scale(0.38)">
 <g transform="translate(0.000000,1280.000000) scale(0.100000,-0.100000)"
 fill="#1F2937" stroke="none">
 <path d="M5786 12781 c-22 -24 -171 -62 -237 -60 -53 2 -68 -8 -69 -46 -1 -60
@@ -115,14 +124,5 @@ l-36 49 0 108 c0 133 -15 198 -88 369 -72 172 -82 206 -83 295 -2 133 -1 133
 519 798 269 1222 -51 87 -209 247 -291 295 -180 106 -386 153 -578 131z"/>
 </g>
     </g>
-    <text
-      x="512" y="900"
-      font-family="Helvetica Neue, Helvetica, Arial, sans-serif"
-      font-weight="900"
-      font-size="130"
-      letter-spacing="6"
-      text-anchor="middle"
-      fill="#FFFFFF"
-    >ONSIDE</text>
   </g>
 </svg>
