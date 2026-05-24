@@ -1,21 +1,31 @@
+/**
+ * Google-Maps-style bottom card for the currently selected map venue.
+ *
+ * Layout:
+ *   [drag handle]
+ *   Title (bold)
+ *   Subtitle: type · distance · N fields
+ *   [open ▸ Details]              [Save] [Share]
+ *
+ * Edge-to-edge — anchors to the bottom of the screen, no side margins,
+ * rounded top corners only. Matches Google Maps' bottom-of-screen place
+ * card pattern: the card itself is tappable to open VenueDetail (where
+ * the real Book CTA lives); Save + Share are inline icon actions.
+ */
+
 import { Ionicons } from "@expo/vector-icons";
-import { Image } from "expo-image";
-import { useState } from "react";
-import { Pressable, StyleSheet, View } from "react-native";
+import { Pressable, Share, StyleSheet, View } from "react-native";
 
 import { formatDistance, haversineKm } from "../lib/distance";
+import { selection } from "../lib/haptics";
 import type { Coords } from "../lib/location";
-import { borderRadius, spacing } from "../theme/tokens";
+import { borderRadius, fontSize, fontWeight, spacing } from "../theme/tokens";
 import { useTheme } from "../theme/useTheme";
-import type { Venue } from "../types/api";
+import type { Venue, VenueType } from "../types/api";
 
 import { Text } from "./Text";
 
-// Google-Maps-style bottom card — fills the parent's content width.
-// Parent (MapViewScreen) controls horizontal padding.
-const PHOTO_SIZE = 88;
-
-type PreviewVenue = Pick<Venue, "id" | "name" | "photos" | "lat" | "lng">;
+type PreviewVenue = Pick<Venue, "id" | "name" | "address" | "lat" | "lng" | "venue_type">;
 
 type Props = {
   venue: PreviewVenue;
@@ -28,16 +38,12 @@ type Props = {
   onToggleSave: () => void;
 };
 
-/**
- * Compact venue card used in the map's bottom slot (Google-Maps style:
- * one card for the currently selected pin). Distinct from the full-width
- * `VenueCard` (list) because this one carries a photo thumbnail on the
- * left, save heart on the right, and shorter copy — sharing one component
- * across both placements would compromise both.
- *
- * Pure presentational; parent owns selection state, navigation, and the
- * save toggle handler.
- */
+const VENUE_TYPE_LABEL: Record<VenueType, string> = {
+  public_park: "Public park",
+  private: "Private facility",
+  community_centre: "Community centre",
+};
+
 export function VenueMapCard({
   venue,
   fieldCount,
@@ -48,9 +54,6 @@ export function VenueMapCard({
   onToggleSave,
 }: Props) {
   const colors = useTheme();
-  const [photoFailed, setPhotoFailed] = useState(false);
-  const photoSrc = venue.photos[0];
-  const showFallback = !photoSrc || photoFailed;
 
   const distance =
     userCoords && venue.lat !== null && venue.lng !== null
@@ -58,89 +61,58 @@ export function VenueMapCard({
       : null;
 
   const fieldsLabel = `${fieldCount} ${fieldCount === 1 ? "field" : "fields"}`;
-  const priceLabel = minPrice !== null && minPrice > 0
-    ? `From $${Math.round(minPrice)}/hr`
-    : null;
+  const typeLabel = venue.venue_type ? VENUE_TYPE_LABEL[venue.venue_type] : null;
+  const priceLabel =
+    minPrice !== null && minPrice > 0 ? `From $${Math.round(minPrice)}/hr` : null;
 
-  const a11yLabel = [
-    venue.name,
-    isSaved ? "Saved" : null,
-    distance ? `${distance} away` : null,
-    fieldsLabel,
-    priceLabel,
-  ]
-    .filter(Boolean)
-    .join(", ");
+  const subtitle = [typeLabel, distance, fieldsLabel].filter(Boolean).join(" · ");
+
+  const handleShare = async () => {
+    selection();
+    try {
+      await Share.share({
+        message: `${venue.name}${venue.address ? `\n${venue.address}` : ""}`,
+      });
+    } catch {
+      // User cancel or genuine failure — either way, no surfacing needed.
+    }
+  };
 
   return (
-    <Pressable
-      onPress={onPress}
-      accessibilityRole="button"
-      accessibilityLabel={a11yLabel}
-      style={({ pressed }) => [
+    <View
+      style={[
         styles.card,
-        {
-          backgroundColor: colors.surface,
-          borderColor: colors.border,
-          opacity: pressed ? 0.85 : 1,
-        },
+        { backgroundColor: colors.surface, shadowColor: "#000" },
       ]}
     >
-      <View
-        style={[
-          styles.photoWrap,
-          { backgroundColor: colors.surfaceSecondary },
-        ]}
-      >
-        {showFallback ? (
-          <View
-            accessibilityElementsHidden
-            importantForAccessibility="no-hide-descendants"
-            style={[styles.fallback, { backgroundColor: colors.brand + "14" }]}
-          >
-            <Ionicons name="football" size={32} color={colors.brand} />
-          </View>
-        ) : (
-          <Image
-            source={photoSrc}
-            style={styles.photo}
-            contentFit="cover"
-            transition={150}
-            cachePolicy="memory-disk"
-            onError={() => setPhotoFailed(true)}
-          />
-        )}
+      {/* Drag handle — visual only; the card doesn't actually drag yet. */}
+      <View style={styles.handleWrap}>
+        <View style={[styles.handle, { backgroundColor: colors.border }]} />
       </View>
 
-      <View style={styles.body}>
+      {/* Tappable body — title + subtitle + price. Wrapping just the textual
+          area in a Pressable means the action buttons below stay independent
+          and don't compete with the card tap. */}
+      <Pressable
+        onPress={onPress}
+        accessibilityRole="button"
+        accessibilityLabel={`Open ${venue.name}`}
+        style={({ pressed }) => [styles.body, { opacity: pressed ? 0.7 : 1 }]}
+      >
         <View style={styles.titleRow}>
-          <Text size="md" weight="bold" numberOfLines={1} style={styles.name}>
+          <Text
+            style={[styles.title, { color: colors.textPrimary }]}
+            numberOfLines={1}
+          >
             {venue.name}
           </Text>
-          <Pressable
-            // RN Pressable doesn't bubble to a parent Pressable, so the heart
-            // tap is naturally isolated from the card's onPress.
-            onPress={onToggleSave}
-            accessibilityRole="button"
-            accessibilityLabel={isSaved ? "Unsave venue" : "Save venue"}
-            accessibilityState={{ selected: isSaved }}
-            hitSlop={spacing.sm}
-            style={({ pressed }) => [
-              styles.heart,
-              { opacity: pressed ? 0.6 : 1 },
-            ]}
-          >
-            <Ionicons
-              name={isSaved ? "heart" : "heart-outline"}
-              size={18}
-              color={isSaved ? colors.danger : colors.textSecondary}
-            />
-          </Pressable>
         </View>
 
-        <Text size="sm" variant="secondary" numberOfLines={1}>
-          {[distance, fieldsLabel].filter(Boolean).join(" · ")}
-        </Text>
+        {subtitle ? (
+          <Text size="sm" variant="secondary" numberOfLines={1} style={styles.subtitle}>
+            {subtitle}
+          </Text>
+        ) : null}
 
         {priceLabel ? (
           <Text
@@ -151,57 +123,151 @@ export function VenueMapCard({
             {priceLabel}
           </Text>
         ) : null}
+      </Pressable>
+
+      {/* Action row — "Details" as the primary affordance on the left
+          (mirrors the card body tap, but explicit), Save + Share as
+          icon-with-label on the right. Google Maps' card uses the same
+          rhythm: one primary blue action, then icon shortcuts. */}
+      <View style={styles.actions}>
+        <Pressable
+          onPress={onPress}
+          accessibilityRole="button"
+          accessibilityLabel={`Open ${venue.name} details`}
+          style={({ pressed }) => [
+            styles.primaryBtn,
+            { backgroundColor: colors.brand, opacity: pressed ? 0.85 : 1 },
+          ]}
+        >
+          <Ionicons name="arrow-forward" size={16} color="#FFFFFF" />
+          <Text style={styles.primaryLabel}>Details</Text>
+        </Pressable>
+
+        <View style={styles.iconActions}>
+          <IconAction
+            icon={isSaved ? "heart" : "heart-outline"}
+            label={isSaved ? "Saved" : "Save"}
+            color={isSaved ? colors.danger : colors.textPrimary}
+            onPress={onToggleSave}
+            accessibilityLabel={isSaved ? "Unsave venue" : "Save venue"}
+          />
+          <IconAction
+            icon="share-outline"
+            label="Share"
+            color={colors.textPrimary}
+            onPress={handleShare}
+            accessibilityLabel="Share venue"
+          />
+        </View>
       </View>
+    </View>
+  );
+}
+
+// ---------------------------------------------------------------------------
+
+type IconActionProps = {
+  icon: React.ComponentProps<typeof Ionicons>["name"];
+  label: string;
+  color: string;
+  onPress: () => void;
+  accessibilityLabel: string;
+};
+
+function IconAction({ icon, label, color, onPress, accessibilityLabel }: IconActionProps) {
+  return (
+    <Pressable
+      onPress={() => {
+        selection();
+        onPress();
+      }}
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel}
+      hitSlop={spacing.xs}
+      style={({ pressed }) => [styles.iconAction, { opacity: pressed ? 0.6 : 1 }]}
+    >
+      <Ionicons name={icon} size={22} color={color} />
+      <Text style={[styles.iconLabel, { color }]} numberOfLines={1}>
+        {label}
+      </Text>
     </Pressable>
   );
 }
 
+// ---------------------------------------------------------------------------
+
 const styles = StyleSheet.create({
   card: {
-    flexDirection: "row",
-    padding: spacing.sm + 2,
-    borderRadius: borderRadius.lg,
-    borderWidth: StyleSheet.hairlineWidth,
-    gap: spacing.sm + 2,
-    shadowColor: "#000",
-    shadowOpacity: 0.12,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 4,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingTop: spacing.xs,
+    paddingBottom: spacing.md,
+    shadowOpacity: 0.18,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: -2 },
+    elevation: 12,
   },
-  photoWrap: {
-    width: PHOTO_SIZE,
-    height: PHOTO_SIZE,
-    borderRadius: borderRadius.md,
-    overflow: "hidden",
-  },
-  photo: {
-    width: "100%",
-    height: "100%",
-  },
-  fallback: {
-    flex: 1,
+  handleWrap: {
     alignItems: "center",
-    justifyContent: "center",
+    paddingVertical: spacing.xs,
+  },
+  handle: {
+    width: 36,
+    height: 4,
+    borderRadius: 2,
   },
   body: {
-    flex: 1,
-    justifyContent: "center",
-    gap: 2,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.sm,
   },
   titleRow: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    gap: spacing.sm,
   },
-  name: {
-    flexShrink: 1,
+  title: {
+    flex: 1,
+    fontSize: fontSize.xl,
+    fontWeight: fontWeight.bold,
+    letterSpacing: -0.3,
   },
-  heart: {
-    width: 28,
-    height: 28,
+  subtitle: {
+    marginTop: 2,
+  },
+  actions: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.md,
+    gap: spacing.md,
+  },
+  primaryBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.xs,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm + 2,
+    borderRadius: borderRadius.md,
+    minHeight: 40,
+  },
+  primaryLabel: {
+    color: "#FFFFFF",
+    fontSize: fontSize.md,
+    fontWeight: fontWeight.bold,
+  },
+  iconActions: {
+    flex: 1,
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    gap: spacing.lg,
+  },
+  iconAction: {
     alignItems: "center",
     justifyContent: "center",
+    minWidth: 48,
+  },
+  iconLabel: {
+    fontSize: fontSize.xs,
+    fontWeight: fontWeight.medium,
+    marginTop: 2,
   },
 });

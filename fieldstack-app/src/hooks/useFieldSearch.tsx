@@ -37,7 +37,10 @@ import type { FieldSize, FieldSurface, SearchResult, VenueType } from "../types/
 
 const FILTER_DEBOUNCE_MS = 300;
 const LOCATION_DEBOUNCE_MS = 500;
-const DEFAULT_RADIUS_KM = 25;
+// 75km covers all three current target cities (Oakville/Hamilton/Milton)
+// from any default anchor in the GTA. Tighten when scope expands and
+// distances become user-meaningful again.
+const DEFAULT_RADIUS_KM = 75;
 
 export type FieldSearchFilters = {
   surface: FieldSurface[];
