@@ -1,0 +1,99 @@
+# Operators (the businesses that run private soccer facilities).
+# Each entry becomes a row in the `operators` table. The scraper
+# matches scraped venues against this registry by name + aliases —
+# matched venues get linked to the operator and inherit its booking
+# URL when the venue itself doesn't carry one.
+#
+# Schema:
+#   name          (required) — canonical operator name, becomes the
+#                              operators.name in the DB.
+#   website       — operator's main marketing site
+#   booking_url   — direct link to where users actually book a slot.
+#                   If absent, the website is used as a fallback.
+#   integration_type — 'none' | 'playtomic' | 'courtreserve' | 'amilia'.
+#                      Defaults to 'none'. Set when the operator uses a
+#                      known booking platform — lets us deep-link
+#                      with pre-filled date/time when we want to.
+#   aliases       — alternate names that scraped venues might appear as.
+#                   Case-insensitive substring match. Add a new alias when
+#                   you see a venue that should be linked but isn't.
+#
+# Booking URL TODOs: many operators here have website set but
+# booking_url missing or pointing at the homepage. Fill in real
+# deep-links as you find them — search the operator's site for "Book
+# Now" / "Reserve" buttons.
+
+operators:
+  # ===== Mississauga / Brampton area =====
+  - name: Hershey Centres
+    website: https://hersheycentres.com
+    booking_url: https://hersheycentres.com
+    aliases:
+      - Hershey 1
+      - Hershey 2
+      - Hershey Centre
+
+  - name: Paramount Fine Foods Centre
+    website: https://paramountfinefoodscentre.com
+    booking_url: https://paramountfinefoodscentre.com
+    aliases:
+      - Paramount Fine Foods Centre Field House
+
+  - name: The Soccer Centre
+    website: https://thesoccercentre.com
+    booking_url: https://thesoccercentre.com
+    aliases:
+      - The Soccer Centre
+
+  - name: Brampton Soccer Centre
+    website: https://www.brampton.ca/EN/residents/Recreation/Locations/Pages/Brampton-Soccer-Centre.aspx
+    booking_url: https://www.brampton.ca/EN/residents/Recreation/Locations/Pages/Brampton-Soccer-Centre.aspx
+    aliases:
+      - Brampton Soccer Centre
+
+  # ===== Toronto / Scarborough =====
+  - name: Toronto Soccerplex
+    website: https://torontosoccerplex.ca
+    booking_url: https://torontosoccerplex.ca
+    aliases:
+      - Toronto Soccerplex
+      - Soccerplex
+
+  - name: Scarborough Soccer Centre
+    website: https://scarboroughsoccercentre.com
+    booking_url: https://scarboroughsoccercentre.com
+    aliases:
+      - Scarborough Soccer Centre
+
+  - name: Toronto City Sports Centre
+    website: https://www.torontocitysportscentre.com
+    booking_url: https://www.torontocitysportscentre.com
+    aliases:
+      - Toronto City Sports Centre
+
+  # ===== York region =====
+  - name: Milliken Mills Soccer Dome
+    website: https://www.markham.ca/wps/portal/home/recreation/recreation-facilities/milliken-mills-park
+    booking_url: https://www.markham.ca/wps/portal/home/recreation/recreation-facilities/milliken-mills-park
+    aliases:
+      - Milliken Mills Soccer Dome
+
+  # ===== Hamilton =====
+  - name: Soccer World
+    website: https://soccerworld.ca
+    booking_url: https://soccerworld.ca
+    aliases:
+      - Soccer World
+
+  - name: Wentworth Arenas
+    website: https://wentwortharenas.ca
+    booking_url: https://wentwortharenas.ca
+    aliases:
+      - Wentworth Arenas
+
+  # ===== Halton =====
+  - name: Sherwood Forest Park Field
+    website: ""
+    booking_url: ""
+    aliases:
+      - Sherwood Forest Park Field

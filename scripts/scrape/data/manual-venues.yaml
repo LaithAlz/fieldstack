@@ -1,0 +1,26 @@
+# Venues OSM doesn't have but we know exist. Each entry becomes a row
+# in the `venues` table via the `manual` scrape source. Operator field
+# is matched against operators.yaml (case-insensitive) — if not found,
+# the venue falls back to the placeholder operator and a warning is
+# logged.
+#
+# Schema:
+#   external_id   (required) — unique per venue, prefix "manual:" so
+#                              we never collide with OSM ids.
+#   name          (required)
+#   operator      — operator name from operators.yaml. Optional.
+#   address       — postal-style string
+#   lat, lng      (required) — used for map rendering + distance sort
+#   venue_type    — 'public_park' | 'private' | 'community_centre'
+#   amenities     — list of free-form strings ('indoor', 'lights', etc.)
+#   fields        — list of fields under the venue
+#       external_id (required) — prefix "manual:" too
+#       name        (required)
+#       size        — '5v5' | '7v7' | '11v11' | 'futsal' | '3v3'
+#       surface     — 'turf' | 'grass' | 'concrete' | 'indoor'
+#       price_per_hour — number, optional
+#
+# This file starts empty — populate as you notice OSM gaps in the
+# scraped data. Run `bun run scrape -- manual` to ingest changes.
+
+venues: []
