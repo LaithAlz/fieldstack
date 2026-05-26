@@ -1,0 +1,50 @@
+# Cities the OSM scraper sweeps. Each entry is an OSM admin-boundary
+# relation — the scraper does an Overpass `area` query against these,
+# which is how we get clean per-city scopes without bbox leakage.
+#
+# To add a city:
+#   1. Open nominatim.openstreetmap.org and search for it.
+#   2. Find the result whose type is "boundary" / "administrative".
+#   3. Copy the relation ID from the URL (or the OSM ID column).
+#   4. Verify it's the right Ontario one (Wikidata Q-id is the safest cross-check).
+#
+# Each city's admin_level is noted because Toronto and Hamilton are
+# admin_level=6 (single-tier municipalities) while the rest are 8.
+# The scraper doesn't care — but you do, when looking these up.
+
+cities:
+  # Halton + Hamilton corridor (original scope)
+  - name: Hamilton
+    osm_relation_id: 7034910
+    wikidata: Q133116
+  - name: Burlington
+    osm_relation_id: 2407513
+    wikidata: Q34218
+  - name: Oakville
+    osm_relation_id: 2407500
+    wikidata: Q424984
+  - name: Milton
+    osm_relation_id: 2414122
+    wikidata: Q425057
+
+  # Peel + Toronto
+  - name: Mississauga
+    osm_relation_id: 1954127
+    wikidata: Q50816
+  - name: Brampton
+    osm_relation_id: 2407358
+    wikidata: Q44198
+  - name: Toronto
+    osm_relation_id: 324211
+    wikidata: Q172
+
+  # York
+  - name: Vaughan
+    osm_relation_id: 324212
+    wikidata: Q44013
+  - name: Markham
+    osm_relation_id: 324213
+    wikidata: Q44016
+  - name: Richmond Hill
+    osm_relation_id: 2407259
+    wikidata: Q52998
