@@ -29,7 +29,7 @@ const OVERPASS_URL = "https://overpass-api.de/api/interpreter";
 function buildQueryForCity(relationId: number): string {
   const areaId = AREA_OFFSET + relationId;
   return `
-[out:json][timeout:90];
+[out:json][timeout:120];
 area(${areaId})->.city;
 (
   way(area.city)["leisure"="pitch"]["sport"="soccer"]["name"];
@@ -55,6 +55,7 @@ type OsmElement = {
 
 type OsmResponse = {
   elements: OsmElement[];
+  remark?: string;
 };
 
 function mapSurface(tag: string | undefined): FieldSurface {
@@ -163,6 +164,12 @@ async function fetchOsmForCity(
         );
       }
       const body = (await res.json()) as OsmResponse;
+      // Overpass returns HTTP 200 even on timeout — detect it via the
+      // remark field so the backoff retry loop can handle it.
+      if (body.remark?.toLowerCase().includes("timed out")) {
+        lastErr = new Error(`Overpass timeout for ${cityName}`);
+        continue;
+      }
       return body.elements ?? [];
     } catch (err) {
       lastErr = err;
