@@ -87,22 +87,18 @@ function isInRegion(venue: SearchResult["venue"], region: Region): boolean {
 /**
  * Renders a single venue's <Marker>.
  *
- * tracksViewChanges is always false — we never want the native layer to
- * re-snapshot mid-pan. Instead the parent gives each marker a key that
- * encodes its visible state (selection + price + fieldCount). When that
- * state changes React unmounts the old marker and mounts a fresh one;
- * the initial mount always snapshots once, at the right moment, with no
- * timing window to race against.
+ * tracksViewChanges={false} always — pins never re-snapshot during panning.
+ * Pin appearance is static (no selection state), so the key only changes
+ * when price or fieldCount changes — never on tap/deselect — eliminating
+ * the remount-on-deselect flash. Selection feedback is the bottom card only.
  */
 type VenueMarkerProps = {
   marker: VenueMarker;
-  isSelected: boolean;
   onPress: (venueId: string) => void;
 };
 
 const VenueMarker = memo(function VenueMarker({
   marker,
-  isSelected,
   onPress,
 }: VenueMarkerProps) {
   const coordinate = useMemo(
@@ -129,14 +125,12 @@ const VenueMarker = memo(function VenueMarker({
           price={marker.minPrice}
           fieldCount={marker.fieldCount}
           venueName={marker.venue.name}
-          selected={isSelected}
         />
       ) : (
         <VenuePin
           mode="count"
           fieldCount={marker.fieldCount}
           venueName={marker.venue.name}
-          selected={isSelected}
         />
       )}
     </Marker>
@@ -359,17 +353,13 @@ export function MapViewScreen() {
       >
         {markers.map((m) => {
           if (m.venue.lat === null || m.venue.lng === null) return null;
-          const isSelected = selectedVenueId === m.venue.id;
-          // Key encodes every visible dimension of the pin. When any of
-          // these change, React unmounts the old Marker and mounts a new
-          // one — that fresh mount takes a single clean snapshot with no
-          // tracksViewChanges race window.
-          const key = `${m.venue.id}-${isSelected ? 1 : 0}-${m.fieldCount}-${m.minPrice ?? "x"}`;
+          // Key only encodes content (price/count), not selection — pins
+          // have no selected state so tapping never triggers a remount.
+          const key = `${m.venue.id}-${m.fieldCount}-${m.minPrice ?? "x"}`;
           return (
             <VenueMarker
               key={key}
               marker={m}
-              isSelected={isSelected}
               onPress={handleMarkerPress}
             />
           );
