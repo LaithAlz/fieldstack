@@ -87,10 +87,14 @@ function isInRegion(venue: SearchResult["venue"], region: Region): boolean {
 /**
  * Renders a single venue's <Marker>.
  *
- * tracksViewChanges={false} always — pins never re-snapshot during panning.
- * Pin appearance is static (no selection state), so the key only changes
- * when price or fieldCount changes — never on tap/deselect — eliminating
- * the remount-on-deselect flash. Selection feedback is the bottom card only.
+ * Key is always just `venue.id` — never changes for an existing venue.
+ * Changing the key causes AIRMap to call insertReactSubview:atIndex: with
+ * an out-of-bounds index under the Fabric interop layer, crashing the app.
+ *
+ * tracksViewChanges is false by default and briefly re-enabled only when
+ * the pin's visible content (price or fieldCount) changes — typically from
+ * a filter change, not a tap. Selection is not tracked at all; the bottom
+ * card is the only selection feedback.
  */
 type VenueMarkerProps = {
   marker: VenueMarker;
@@ -101,6 +105,17 @@ const VenueMarker = memo(function VenueMarker({
   marker,
   onPress,
 }: VenueMarkerProps) {
+  const [tracking, setTracking] = useState(true);
+
+  // Re-snapshot only when displayed content changes (filter-driven). Not
+  // triggered by selection — pins have no selected state, so taps never
+  // cause a re-snapshot or a native subview mutation.
+  useEffect(() => {
+    setTracking(true);
+    const id = setTimeout(() => setTracking(false), 250);
+    return () => clearTimeout(id);
+  }, [marker.minPrice, marker.fieldCount]);
+
   const coordinate = useMemo(
     () => ({ latitude: marker.venue.lat ?? 0, longitude: marker.venue.lng ?? 0 }),
     [marker.venue.lat, marker.venue.lng]
@@ -117,7 +132,7 @@ const VenueMarker = memo(function VenueMarker({
         e.stopPropagation();
         onPress(marker.venue.id);
       }}
-      tracksViewChanges={false}
+      tracksViewChanges={tracking}
     >
       {hasPositivePrice && marker.minPrice !== null ? (
         <VenuePin
@@ -353,12 +368,9 @@ export function MapViewScreen() {
       >
         {markers.map((m) => {
           if (m.venue.lat === null || m.venue.lng === null) return null;
-          // Key only encodes content (price/count), not selection — pins
-          // have no selected state so tapping never triggers a remount.
-          const key = `${m.venue.id}-${m.fieldCount}-${m.minPrice ?? "x"}`;
           return (
             <VenueMarker
-              key={key}
+              key={m.venue.id}
               marker={m}
               onPress={handleMarkerPress}
             />
