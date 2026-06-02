@@ -84,18 +84,10 @@ function isInRegion(venue: SearchResult["venue"], region: Region): boolean {
   );
 }
 
-/**
- * Renders a single venue's <Marker>.
- *
- * Key is always just `venue.id` — never changes for an existing venue.
- * Changing the key causes AIRMap to call insertReactSubview:atIndex: with
- * an out-of-bounds index under the Fabric interop layer, crashing the app.
- *
- * tracksViewChanges is false by default and briefly re-enabled only when
- * the pin's visible content (price or fieldCount) changes — typically from
- * a filter change, not a tap. Selection is not tracked at all; the bottom
- * card is the only selection feedback.
- */
+// Marker key is always `venue.id` — stable for the lifetime of the search
+// results. tracksViewChanges is permanently false: any flip (even true→false)
+// triggers a shadow-tree commit that races with Reanimated's animation commits
+// and corrupts AIRMap's subview index under the Fabric interop layer.
 type VenueMarkerProps = {
   marker: VenueMarker;
   onPress: (venueId: string) => void;
@@ -105,17 +97,6 @@ const VenueMarker = memo(function VenueMarker({
   marker,
   onPress,
 }: VenueMarkerProps) {
-  const [tracking, setTracking] = useState(true);
-
-  // Re-snapshot only when displayed content changes (filter-driven). Not
-  // triggered by selection — pins have no selected state, so taps never
-  // cause a re-snapshot or a native subview mutation.
-  useEffect(() => {
-    setTracking(true);
-    const id = setTimeout(() => setTracking(false), 250);
-    return () => clearTimeout(id);
-  }, [marker.minPrice, marker.fieldCount]);
-
   const coordinate = useMemo(
     () => ({ latitude: marker.venue.lat ?? 0, longitude: marker.venue.lng ?? 0 }),
     [marker.venue.lat, marker.venue.lng]
@@ -132,7 +113,7 @@ const VenueMarker = memo(function VenueMarker({
         e.stopPropagation();
         onPress(marker.venue.id);
       }}
-      tracksViewChanges={tracking}
+      tracksViewChanges={false}
     >
       {hasPositivePrice && marker.minPrice !== null ? (
         <VenuePin
