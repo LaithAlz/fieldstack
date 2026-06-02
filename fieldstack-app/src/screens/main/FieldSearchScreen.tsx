@@ -1,7 +1,8 @@
 import { Ionicons } from "@expo/vector-icons";
+import type { BottomSheetModal } from "@gorhom/bottom-sheet";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useRef } from "react";
 import {
   FlatList,
   Pressable,
@@ -15,11 +16,17 @@ import { EmptyState } from "../../components/EmptyState";
 import { FieldSearchCard } from "../../components/FieldSearchCard";
 import { FieldSearchCardSkeleton } from "../../components/FieldSearchCardSkeleton";
 import { FilterToolbar } from "../../components/FilterToolbar";
-import { SearchInput } from "../../components/SearchInput";
+import { LocationPickerSheet } from "../../components/LocationPickerSheet";
+import { LocationPill } from "../../components/LocationPill";
 import { Text } from "../../components/Text";
 import { useFieldSearch } from "../../hooks/useFieldSearch";
 import { useFilterControls } from "../../hooks/useFilterControls";
 import { useLocation } from "../../hooks/useLocation";
+import {
+  getCurrentCoords,
+  openLocationSettings,
+  requestPermission,
+} from "../../lib/location";
 import {
   PRICE_OPTIONS,
   priceMaxToBucket,
@@ -43,7 +50,7 @@ export function FieldSearchScreen() {
   const insets = useSafeAreaInsets();
   const nav = useNavigation<Nav>();
 
-  const { coords: userCoords } = useLocation();
+  const { coords: userCoords, permissionStatus } = useLocation();
 
   const {
     results,
@@ -51,11 +58,41 @@ export function FieldSearchScreen() {
     isLoading,
     filters,
     location,
-    locationError,
     setFilter,
     clearFilters,
     setLocation,
   } = useFieldSearch();
+
+  const pickerRef = useRef<BottomSheetModal>(null);
+  const openPicker = useCallback(() => pickerRef.current?.present(), []);
+  const closePicker = useCallback(() => pickerRef.current?.dismiss(), []);
+
+  const handleSelectCity = useCallback(
+    (coords: { lat: number; lng: number }, label: string) => {
+      setLocation(label, coords);
+      closePicker();
+    },
+    [closePicker, setLocation]
+  );
+
+  const handleUseMyLocation = useCallback(async () => {
+    const fresh = await getCurrentCoords();
+    if (fresh) {
+      setLocation("Near you", fresh);
+      closePicker();
+    }
+  }, [closePicker, setLocation]);
+
+  const handleRequestPermission = useCallback(async () => {
+    const status = await requestPermission();
+    if (status === "granted") {
+      await handleUseMyLocation();
+    } else {
+      void openLocationSettings();
+      closePicker();
+    }
+  }, [closePicker, handleUseMyLocation]);
+
   // Location seeding lives in FieldSearchProvider now so MapView gets it too.
   const { toolbarProps, sheets } = useFilterControls(
     filters,
@@ -119,10 +156,10 @@ export function FieldSearchScreen() {
           },
         ]}
       >
-        <SearchInput
-          value={location.text}
-          onChangeText={(t) => setLocation(t)}
-          error={locationError?.message ?? null}
+        <LocationPill
+          label={location.text || "Select area"}
+          permissionStatus={permissionStatus}
+          onPress={openPicker}
         />
 
         <FilterToolbar {...toolbarProps} />
@@ -303,6 +340,14 @@ export function FieldSearchScreen() {
       </View>
 
       {sheets}
+
+      <LocationPickerSheet
+        ref={pickerRef}
+        permissionStatus={permissionStatus}
+        onSelect={handleSelectCity}
+        onUseMyLocation={handleUseMyLocation}
+        onRequestPermission={handleRequestPermission}
+      />
     </View>
   );
 }

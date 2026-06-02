@@ -16,12 +16,16 @@ type LocationOption = {
 };
 
 const PRESETS: LocationOption[] = [
-  { id: "toronto", label: "Toronto", coords: { lat: 43.6532, lng: -79.3832 } },
-  { id: "north-york", label: "North York", coords: { lat: 43.7615, lng: -79.4111 } },
-  { id: "scarborough", label: "Scarborough", coords: { lat: 43.7764, lng: -79.2318 } },
-  { id: "etobicoke", label: "Etobicoke", coords: { lat: 43.6205, lng: -79.5132 } },
+  { id: "hamilton", label: "Hamilton", coords: { lat: 43.2557, lng: -79.8711 } },
+  { id: "burlington", label: "Burlington", coords: { lat: 43.3255, lng: -79.799 } },
+  { id: "oakville", label: "Oakville", coords: { lat: 43.4675, lng: -79.6877 } },
+  { id: "milton", label: "Milton", coords: { lat: 43.5183, lng: -79.8774 } },
   { id: "mississauga", label: "Mississauga", coords: { lat: 43.589, lng: -79.6441 } },
   { id: "brampton", label: "Brampton", coords: { lat: 43.7315, lng: -79.7624 } },
+  { id: "toronto", label: "Toronto", coords: { lat: 43.6532, lng: -79.3832 } },
+  { id: "vaughan", label: "Vaughan", coords: { lat: 43.8361, lng: -79.498 } },
+  { id: "richmond-hill", label: "Richmond Hill", coords: { lat: 43.8828, lng: -79.4403 } },
+  { id: "markham", label: "Markham", coords: { lat: 43.8561, lng: -79.337 } },
 ];
 
 type Props = {
@@ -41,7 +45,7 @@ export const LocationPickerSheet = forwardRef<BottomSheetModal, Props>(
     ref
   ) {
     const colors = useTheme();
-    const snapPoints = useMemo(() => ["55%"], []);
+    const snapPoints = useMemo(() => ["75%"], []);
 
     const handlePresetPress = useCallback(
       (option: LocationOption) => {
