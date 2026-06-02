@@ -1,4 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
+import type { BottomSheetModal } from "@gorhom/bottom-sheet";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import * as Linking from "expo-linking";
@@ -9,14 +10,20 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { EmptyState } from "../../components/EmptyState";
 import { FilterToolbar } from "../../components/FilterToolbar";
+import { LocationPickerSheet } from "../../components/LocationPickerSheet";
+import { LocationPill } from "../../components/LocationPill";
 import { ResultCountPill } from "../../components/ResultCountPill";
-import { SearchInput } from "../../components/SearchInput";
 import { Text } from "../../components/Text";
 import { VenueMapCard } from "../../components/VenueMapCard";
 import { VenuePin } from "../../components/VenuePin";
 import { useFieldSearch } from "../../hooks/useFieldSearch";
 import { useFilterControls } from "../../hooks/useFilterControls";
 import { useLocation } from "../../hooks/useLocation";
+import {
+  getCurrentCoords,
+  openLocationSettings,
+  requestPermission,
+} from "../../lib/location";
 import { getLastRegion, setLastRegion } from "../../lib/mapState";
 import { useSavedVenues } from "../../lib/savedVenues";
 import type { MainStackParamList } from "../../navigation/MainNavigator";
@@ -138,14 +145,13 @@ export function MapViewScreen() {
   const insets = useSafeAreaInsets();
   const nav = useNavigation<Nav>();
 
-  const { coords: userCoords } = useLocation();
+  const { coords: userCoords, permissionStatus } = useLocation();
   const {
     results,
     total,
     isLoading,
     filters,
     location,
-    locationError,
     setFilter,
     clearFilters,
     setLocation,
@@ -157,6 +163,36 @@ export function MapViewScreen() {
     isLoading,
     clearFilters
   );
+
+  const pickerRef = useRef<BottomSheetModal>(null);
+  const openPicker = useCallback(() => pickerRef.current?.present(), []);
+  const closePicker = useCallback(() => pickerRef.current?.dismiss(), []);
+
+  const handleSelectCity = useCallback(
+    (coords: { lat: number; lng: number }, label: string) => {
+      setLocation(label, coords);
+      closePicker();
+    },
+    [closePicker, setLocation]
+  );
+
+  const handleUseMyLocation = useCallback(async () => {
+    const fresh = await getCurrentCoords();
+    if (fresh) {
+      setLocation("Near you", fresh);
+      closePicker();
+    }
+  }, [closePicker, setLocation]);
+
+  const handleRequestPermission = useCallback(async () => {
+    const status = await requestPermission();
+    if (status === "granted") {
+      await handleUseMyLocation();
+    } else {
+      void openLocationSettings();
+      closePicker();
+    }
+  }, [closePicker, handleUseMyLocation]);
 
   // Initial region: prior session position if we have one, else user coords,
   // else downtown Toronto.
@@ -194,6 +230,10 @@ export function MapViewScreen() {
   // resulting onRegionChangeComplete. Prevents pin-tap / geocode pans from
   // triggering an auto-refetch (the user didn't pan, we did).
   const isProgrammaticPanRef = useRef(false);
+  // Stable ref to current location label so handleRegionChange (useCallback
+  // with no location.text dep) can read it without going stale.
+  const locationTextRef = useRef(location.text);
+  locationTextRef.current = location.text;
 
   const markers = useMemo(() => groupByVenue(results), [results]);
 
@@ -254,7 +294,7 @@ export function MapViewScreen() {
         isProgrammaticPanRef.current = false;
         return;
       }
-      setLocation("", { lat: region.latitude, lng: region.longitude });
+      setLocation(locationTextRef.current, { lat: region.latitude, lng: region.longitude });
     },
     [setLocation]
   );
@@ -365,12 +405,11 @@ export function MapViewScreen() {
         style={[styles.topOverlay, { top: insets.top + spacing.sm }]}
       >
         <View style={styles.searchRow} pointerEvents="box-none">
-          <View style={styles.searchWrap} pointerEvents="auto">
-            <SearchInput
-              value={location.text}
-              onChangeText={(t) => setLocation(t)}
-              error={locationError?.message ?? null}
-              placeholder="Search city, neighbourhood, or postal"
+          <View pointerEvents="auto">
+            <LocationPill
+              label={location.text || "Select area"}
+              permissionStatus={permissionStatus}
+              onPress={openPicker}
             />
           </View>
           <Pressable
@@ -507,6 +546,14 @@ export function MapViewScreen() {
       ) : null}
 
       {sheets}
+
+      <LocationPickerSheet
+        ref={pickerRef}
+        permissionStatus={permissionStatus}
+        onSelect={handleSelectCity}
+        onUseMyLocation={handleUseMyLocation}
+        onRequestPermission={handleRequestPermission}
+      />
     </View>
   );
 }
@@ -525,17 +572,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: spacing.lg,
     gap: spacing.sm,
-  },
-  searchWrap: {
-    flex: 1,
-    // Lift the input off the map base layer so it reads on light + dark
-    // satellite tiles. Matches the list-icon's existing shadow weight so
-    // they sit together as a single floating row.
-    shadowColor: "#000",
-    shadowOpacity: 0.15,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 3,
   },
   chipsWrap: {
     paddingHorizontal: spacing.lg,
