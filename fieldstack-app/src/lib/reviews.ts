@@ -30,7 +30,8 @@ export async function listVenueReviews(
     .from("venue_reviews")
     .select("id, venue_id, user_id, rating, body, created_at, updated_at")
     .eq("venue_id", venueId)
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false })
+    .limit(50);
   if (error) return { data: null, error: new Error(error.message) };
   return {
     data: (data ?? []).map(mapReview),
@@ -55,7 +56,8 @@ export async function listMyReviews(
       "id, venue_id, user_id, rating, body, created_at, updated_at, venue:venues(id, name)"
     )
     .eq("user_id", userId)
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false })
+    .limit(200);
   if (error) return { data: null, error: new Error(error.message) };
   // supabase-js conservatively types FK joins as arrays. Cast through
   // unknown — the actual shape is a single object since venue_id is a

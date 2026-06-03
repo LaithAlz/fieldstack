@@ -91,7 +91,7 @@ function searchKey(p: SearchFieldsParams): string {
   const normalized = {
     lat: p.lat !== undefined ? Number(p.lat.toFixed(4)) : null,
     lng: p.lng !== undefined ? Number(p.lng.toFixed(4)) : null,
-    radiusKm: p.radiusKm ?? null,
+    radiusKm: p.radiusKm !== undefined ? Number(p.radiusKm.toFixed(1)) : null,
     surfaces: [...(p.surfaces ?? [])].sort(),
     sizes: [...(p.sizes ?? [])].sort(),
     venueTypes: [...(p.venueTypes ?? [])].sort(),

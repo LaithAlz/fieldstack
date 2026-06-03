@@ -49,7 +49,7 @@ export async function searchRoutes(app: FastifyInstance) {
   // GET /search/fields — composable field search with caching.
   // sort=distance with no coords falls back to name-order in SQL, so the
   // no-param case (`/search/fields`) is a valid "browse all" request.
-  app.get("/search/fields", async (req) => {
+  app.get("/search/fields", async (req, reply) => {
     const q = SearchFieldsQuery.parse(req.query);
 
     const hasCoords = q.lat !== undefined && q.lng !== undefined;
@@ -64,6 +64,7 @@ export async function searchRoutes(app: FastifyInstance) {
       sort: q.sort,
     });
 
+    reply.header("Cache-Control", "public, max-age=30, stale-while-revalidate=60");
     return { data: result.data, total: result.total, error: null };
   });
 }
