@@ -161,9 +161,10 @@ export function VenueDetailScreen({ route }: Props) {
   const fields = venue.fields;
   const amenities = venue.amenities;
 
-  const headerLines = [venue.address, distance ? `${distance} away` : null].filter(
-    (s): s is string => Boolean(s)
-  );
+  const headerLines = [
+    { id: "address", text: venue.address },
+    { id: "distance", text: distance ? `${distance} away` : null },
+  ].filter((l): l is { id: string; text: string } => Boolean(l.text));
 
   return (
     <View style={[styles.root, { backgroundColor: colors.surface }]}>
@@ -194,9 +195,9 @@ export function VenueDetailScreen({ route }: Props) {
           >
             {venue.name}
           </Text>
-          {headerLines.map((line) => (
-            <Text key={line} size="sm" variant="secondary">
-              {line}
+          {headerLines.map(({ id, text }) => (
+            <Text key={id} size="sm" variant="secondary">
+              {text}
             </Text>
           ))}
           {/* Provenance badge. Renders only when migration 007 is applied
