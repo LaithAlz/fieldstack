@@ -31,7 +31,7 @@ import {
   useBookingHistory,
 } from "./src/lib/bookingHistory";
 import { initNotifications } from "./src/lib/notifications";
-import { OnboardingProvider } from "./src/lib/onboardingContext";
+import { OnboardingProvider, useOnboarding } from "./src/lib/onboardingContext";
 import {
   PreferredSlotProvider,
   usePreferredSlot,
@@ -156,7 +156,7 @@ export default function App() {
           <BottomSheetModalProvider>
             <ToastProvider>
               <AuthProvider>
-                <OnboardingProvider initialIsOnboarded={initialIsOnboarded}>
+                <OnboardingProvider initialIsOnboarded={initialIsOnboarded} onboardingResolved={isReady}>
                   <PreferredSlotProvider>
                     <SavedVenuesProvider>
                       <BookingHistoryProvider>
@@ -192,13 +192,15 @@ function PersistenceGate({ children }: { children: React.ReactNode }) {
   const { hydrated: recentHydrated } = useRecentlyViewed();
   const { hydrated: authHydrated } = useAuth();
   const { hydrated: blockedHydrated } = useBlockedUsers();
+  const { hydrated: onboardingHydrated } = useOnboarding();
   if (
     !slotHydrated ||
     !savedHydrated ||
     !historyHydrated ||
     !recentHydrated ||
     !authHydrated ||
-    !blockedHydrated
+    !blockedHydrated ||
+    !onboardingHydrated
   ) {
     return null;
   }

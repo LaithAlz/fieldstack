@@ -45,6 +45,7 @@ export function VenueListScreen() {
     coords,
     label,
     permissionStatus,
+    coordsFetchFailed,
     setManualLocation,
   } = useLocation();
   const {
@@ -278,6 +279,14 @@ export function VenueListScreen() {
                 description="Try a different name or clear the search."
                 actionLabel="Clear search"
                 onAction={() => setNameQuery("")}
+              />
+            ) : coordsFetchFailed ? (
+              <EmptyState
+                icon="location-outline"
+                title="Unable to get your location"
+                description="We couldn't read your GPS coordinates. Pick a neighbourhood manually."
+                actionLabel="Pick an area"
+                onAction={openPicker}
               />
             ) : (
               <EmptyState

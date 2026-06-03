@@ -251,12 +251,13 @@ function ReviewForm({
   const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = async () => {
+    if (busy) return;
+    setError(null);
     if (rating < 1) {
       setError("Pick at least one star.");
       return;
     }
     setBusy(true);
-    setError(null);
     const trimmed = body.trim();
     const { error: err } = await upsertReview({
       userId,
@@ -316,6 +317,7 @@ function ReviewForm({
         label={existing ? "Update review" : "Post review"}
         onPress={handleSubmit}
         loading={busy}
+        disabled={busy}
       />
       {existing ? (
         <Text size="xs" variant="tertiary" style={styles.deleteHint}>

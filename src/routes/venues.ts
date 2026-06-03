@@ -20,7 +20,7 @@ const VenueIdParams = z.object({ id: z.string().uuid() });
 
 const FieldFiltersQuery = z.object({
   surface: z.enum(["turf", "grass", "concrete", "indoor"]).optional(),
-  size: z.enum(["5v5", "7v7", "11v11"]).optional(),
+  size: z.enum(["5v5", "7v7", "11v11", "futsal", "3v3"]).optional(),
 });
 
 export async function venuesRoutes(app: FastifyInstance) {
@@ -28,7 +28,7 @@ export async function venuesRoutes(app: FastifyInstance) {
   app.get("/venues", async (req) => {
     const q = ListVenuesQuery.parse(req.query);
 
-    const data = await listVenues({
+    const result = await listVenues({
       lat: q.lat,
       lng: q.lng,
       // Only pass radiusKm when both coords are present; the query layer treats
@@ -36,7 +36,7 @@ export async function venuesRoutes(app: FastifyInstance) {
       radiusKm: q.lat !== undefined && q.lng !== undefined ? q.radius_km : undefined,
     });
 
-    return { data, error: null };
+    return { data: result.venues, dropped: result.dropped, error: null };
   });
 
   // GET /venues/:id — single venue with active fields nested.

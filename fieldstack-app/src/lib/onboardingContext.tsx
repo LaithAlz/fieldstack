@@ -12,15 +12,20 @@ import { setOnboardingComplete } from "./storage";
 type OnboardingContextValue = {
   isOnboarded: boolean;
   completeOnboarding: () => Promise<void>;
+  /** True once the onboarding state has been resolved from storage. */
+  hydrated: boolean;
 };
 
 const OnboardingContext = createContext<OnboardingContextValue | null>(null);
 
 export function OnboardingProvider({
   initialIsOnboarded,
+  onboardingResolved,
   children,
 }: {
   initialIsOnboarded: boolean;
+  /** Passed in from App.tsx — true once the storage read for onboarding state has settled. */
+  onboardingResolved: boolean;
   children: ReactNode;
 }) {
   const [isOnboarded, setIsOnboarded] = useState(initialIsOnboarded);
@@ -35,7 +40,9 @@ export function OnboardingProvider({
   }, []);
 
   return (
-    <OnboardingContext.Provider value={{ isOnboarded, completeOnboarding }}>
+    <OnboardingContext.Provider
+      value={{ isOnboarded, completeOnboarding, hydrated: onboardingResolved }}
+    >
       {children}
     </OnboardingContext.Provider>
   );
