@@ -160,7 +160,7 @@ export function SignInScreen() {
 
   return (
     <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
       style={[styles.root, { backgroundColor: colors.surface }]}
     >
       <View style={[styles.topBar, { paddingTop: insets.top + spacing.sm }]}>
