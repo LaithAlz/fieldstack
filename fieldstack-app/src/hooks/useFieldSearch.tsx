@@ -256,14 +256,12 @@ function useFieldSearchState(): UseFieldSearchResult {
       }
       setIsLoading(false);
 
-      track(EVENT_SEARCH_FILTERED, {
-        surface: filters.surface,
-        size: filters.size,
-        venue_type: filters.venueType,
-        price_max: filters.priceMax,
-        sort: filters.sort,
-        has_location: location.lat !== null && location.lng !== null,
-      });
+      if (params) {
+        track(EVENT_SEARCH_FILTERED, {
+          ...params,
+          has_location: params.lat !== undefined,
+        });
+      }
     }, FILTER_DEBOUNCE_MS);
 
     return () => clearTimeout(timer);

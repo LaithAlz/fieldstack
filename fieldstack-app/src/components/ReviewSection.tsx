@@ -1,7 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { CommonActions, useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Alert, Pressable, StyleSheet, TextInput, View } from "react-native";
 
 import { useAuth } from "../lib/auth";
@@ -248,6 +248,9 @@ function ReviewForm({
   const [rating, setRating] = useState<number>(existing?.rating ?? 0);
   const [body, setBody] = useState<string>(existing?.body ?? "");
   const [busy, setBusy] = useState(false);
+  const mountedRef = useRef(true);
+
+  useEffect(() => () => { mountedRef.current = false; }, []);
 
   useEffect(() => {
     setRating(existing?.rating ?? 0);
@@ -270,6 +273,7 @@ function ReviewForm({
       rating,
       body: trimmed.length > 0 ? trimmed : null,
     });
+    if (!mountedRef.current) return;
     setBusy(false);
     if (err) {
       setError(err.message);

@@ -12,6 +12,10 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+// Tab bar (~49pt) + sheet drag handle (~10pt) + breathing room = ~88pt. Round
+// up to 96 so the last card doesn't sit flush against the floating button.
+const LIST_BOTTOM_PAD = 96;
+
 import { EmptyState } from "../../components/EmptyState";
 import { FieldSearchCard } from "../../components/FieldSearchCard";
 import { FieldSearchCardSkeleton } from "../../components/FieldSearchCardSkeleton";
@@ -217,7 +221,7 @@ export function FieldSearchScreen() {
           accessibilityLiveRegion="polite"
           contentContainerStyle={[
             styles.listContent,
-            { paddingBottom: insets.bottom + 96, gap: spacing.md },
+            { paddingBottom: insets.bottom + LIST_BOTTOM_PAD, gap: spacing.md },
           ]}
         >
           {Array.from({ length: SKELETON_COUNT }).map((_, i) => (
@@ -334,7 +338,7 @@ export function FieldSearchScreen() {
           ItemSeparatorComponent={() => <View style={{ height: spacing.md }} />}
           contentContainerStyle={[
             styles.listContent,
-            { paddingBottom: insets.bottom + 96 },
+            { paddingBottom: insets.bottom + LIST_BOTTOM_PAD },
           ]}
         />
       )}
