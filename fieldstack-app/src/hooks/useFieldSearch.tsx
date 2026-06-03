@@ -178,7 +178,9 @@ function useFieldSearchState(): UseFieldSearchResult {
     (async () => {
       const stored = await getLastFilters();
       if (cancelled) return;
-      if (stored) setFilters(stored);
+      if (!restoredRef.current) {
+        if (stored) setFilters(stored);
+      }
       restoredRef.current = true;
     })();
     return () => {
