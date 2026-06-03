@@ -1,12 +1,13 @@
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useMemo } from "react";
-import { FlatList, StyleSheet, View } from "react-native";
+import { FlatList, ScrollView, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { EmptyState } from "../../components/EmptyState";
 import { Text } from "../../components/Text";
 import { VenueCard } from "../../components/VenueCard";
+import { VenueCardSkeleton } from "../../components/VenueCardSkeleton";
 import { useLocation } from "../../hooks/useLocation";
 import { useVenues } from "../../hooks/useVenues";
 import { useBookingHistory } from "../../lib/bookingHistory";
@@ -31,7 +32,7 @@ export function SavedScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<Nav>();
   const { coords } = useLocation();
-  const { venues } = useVenues({ coords });
+  const { venues, loading, error, refresh } = useVenues({ coords });
   const { saved: savedIds } = useSavedVenues();
   const { venueWasRecentlyAttempted } = useBookingHistory();
 
@@ -55,41 +56,61 @@ export function SavedScreen() {
         </Text>
       </View>
 
-      <FlatList<VenueWithFields>
-        data={savedVenues}
-        keyExtractor={(v) => v.id}
-        initialNumToRender={6}
-        windowSize={5}
-        maxToRenderPerBatch={8}
-        removeClippedSubviews
-        contentContainerStyle={[
-          styles.list,
-          { paddingBottom: insets.bottom + spacing.xl },
-          savedVenues.length === 0 && styles.listEmpty,
-        ]}
-        renderItem={({ item }) => (
-          <VenueCard
-            venue={item}
-            userCoords={coords}
-            isSaved
-            recentlyAttempted={venueWasRecentlyAttempted(item.id)}
-            onPress={() => navigation.navigate("VenueDetail", { venueId: item.id })}
-          />
-        )}
-        ItemSeparatorComponent={() => <View style={{ height: spacing.md }} />}
-        ListEmptyComponent={
-          <EmptyState
-            icon="heart-outline"
-            title={savedIds.size > 0 ? "Saved venues aren't in this area" : "No saved venues yet"}
-            description={
-              savedIds.size > 0
-                ? "Try a different location or check back when you're nearby."
-                : "Tap the heart on any venue to save it for later."
-            }
-          />
-        }
-        showsVerticalScrollIndicator={false}
-      />
+      {loading ? (
+        <ScrollView
+          accessibilityLabel="Loading saved venues"
+          accessibilityLiveRegion="polite"
+          contentContainerStyle={[styles.list, { paddingTop: spacing.md, gap: spacing.md }]}
+        >
+          {Array.from({ length: 4 }, (_, i) => (
+            <VenueCardSkeleton key={i} />
+          ))}
+        </ScrollView>
+      ) : error && savedVenues.length === 0 ? (
+        <EmptyState
+          icon="cloud-offline-outline"
+          title="Couldn't load venues"
+          description="Check your connection."
+          actionLabel="Try again"
+          onAction={() => void refresh()}
+        />
+      ) : (
+        <FlatList<VenueWithFields>
+          data={savedVenues}
+          keyExtractor={(v) => v.id}
+          initialNumToRender={6}
+          windowSize={5}
+          maxToRenderPerBatch={8}
+          removeClippedSubviews
+          contentContainerStyle={[
+            styles.list,
+            { paddingBottom: insets.bottom + spacing.xl },
+            savedVenues.length === 0 && styles.listEmpty,
+          ]}
+          renderItem={({ item }) => (
+            <VenueCard
+              venue={item}
+              userCoords={coords}
+              isSaved
+              recentlyAttempted={venueWasRecentlyAttempted(item.id)}
+              onPress={() => navigation.navigate("VenueDetail", { venueId: item.id })}
+            />
+          )}
+          ItemSeparatorComponent={() => <View style={{ height: spacing.md }} />}
+          ListEmptyComponent={
+            <EmptyState
+              icon="heart-outline"
+              title={savedIds.size > 0 ? "Saved venues aren't in this area" : "No saved venues yet"}
+              description={
+                savedIds.size > 0
+                  ? "Try a different location or check back when you're nearby."
+                  : "Tap the heart on any venue to save it for later."
+              }
+            />
+          }
+          showsVerticalScrollIndicator={false}
+        />
+      )}
     </View>
   );
 }
