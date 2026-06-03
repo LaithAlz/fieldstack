@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
-import { useState } from "react";
+import { memo, useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 
 import type { Coords } from "../lib/location";
@@ -31,7 +31,7 @@ type Props = {
   onPress: () => void;
 };
 
-export function VenueCard({
+export const VenueCard = memo(function VenueCard({
   venue,
   userCoords,
   isSaved = false,
@@ -167,7 +167,7 @@ export function VenueCard({
       </View>
     </Pressable>
   );
-}
+});
 
 function buildFieldSummary(fields: Field[]): string {
   const surfaces = Array.from(new Set(fields.map((f) => f.surface)));
