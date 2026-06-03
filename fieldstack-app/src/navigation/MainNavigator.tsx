@@ -80,6 +80,8 @@ function tabBarStyleFor(
   if (
     focused === "VenueDetail" ||
     focused === "FieldDetail" ||
+    focused === "FieldSearch" ||
+    focused === "MapView" ||
     focused === "Settings" ||
     focused === "SignIn" ||
     focused === "SetNewPassword"
