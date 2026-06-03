@@ -28,7 +28,7 @@ export async function venuesRoutes(app: FastifyInstance) {
   app.get("/venues", async (req) => {
     const q = ListVenuesQuery.parse(req.query);
 
-    const data = await listVenues({
+    const result = await listVenues({
       lat: q.lat,
       lng: q.lng,
       // Only pass radiusKm when both coords are present; the query layer treats
@@ -36,7 +36,7 @@ export async function venuesRoutes(app: FastifyInstance) {
       radiusKm: q.lat !== undefined && q.lng !== undefined ? q.radius_km : undefined,
     });
 
-    return { data, error: null };
+    return { data: result.venues, dropped: result.dropped, error: null };
   });
 
   // GET /venues/:id — single venue with active fields nested.

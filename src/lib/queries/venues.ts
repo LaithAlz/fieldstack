@@ -24,9 +24,11 @@ export type ListVenuesOptions = {
  * `venues_within` RPC ordered by distance, then we hydrate fields in a
  * follow-up query and re-apply that ordering.
  */
+export type ListVenuesResult = { venues: VenueWithFields[]; dropped: number };
+
 export async function listVenues(
   opts: ListVenuesOptions = {}
-): Promise<VenueWithFields[]> {
+): Promise<ListVenuesResult> {
   const { lat, lng, radiusKm } = opts;
 
   if (lat !== undefined && lng !== undefined && radiusKm !== undefined) {
@@ -43,14 +45,15 @@ export async function listVenues(
     .order("name");
 
   if (error) throw error;
-  return (data ?? []) as unknown as VenueWithFields[];
+  const venues = (data ?? []) as unknown as VenueWithFields[];
+  return { venues, dropped: 0 };
 }
 
 async function proximitySearch(
   lat: number,
   lng: number,
   radiusKm: number
-): Promise<VenueWithFields[]> {
+): Promise<ListVenuesResult> {
   // Step 1: ask the RPC for venues ordered by distance.
   const { data: ordered, error: rpcErr } = await supabase.rpc("venues_within", {
     p_lat: lat,
@@ -58,7 +61,7 @@ async function proximitySearch(
     p_radius_meters: radiusKm * 1000,
   });
   if (rpcErr) throw rpcErr;
-  if (!ordered || ordered.length === 0) return [];
+  if (!ordered || ordered.length === 0) return { venues: [], dropped: 0 };
 
   // Step 2: fetch the same venues with active fields embedded.
   const ids = ordered.map((v) => v.id);
@@ -68,15 +71,26 @@ async function proximitySearch(
     .in("id", ids)
     .eq("fields.is_active", true);
   if (selErr) throw selErr;
-  if (!hydrated) return [];
+  if (!hydrated) return { venues: [], dropped: ids.length };
 
   // Step 3: re-apply the RPC's distance ordering.
   const byId = new Map(
     (hydrated as unknown as VenueWithFields[]).map((v) => [v.id, v])
   );
-  return ids
+  const venues = ids
     .map((id) => byId.get(id))
     .filter((v): v is VenueWithFields => Boolean(v));
+
+  // Identify any ids the RPC returned that the hydration SELECT didn't find.
+  const missing = ids.filter((id) => !byId.has(id));
+  if (missing.length > 0) {
+    // eslint-disable-next-line no-console
+    console.warn(
+      `[proximity] dropped ${missing.length} venue(s) not found in hydration: ${missing.join(", ")}`
+    );
+  }
+
+  return { venues, dropped: missing.length };
 }
 
 function proximityKey(lat: number, lng: number, radiusKm: number): string {
