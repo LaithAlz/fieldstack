@@ -5,7 +5,7 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import * as Linking from "expo-linking";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Animated, Pressable, StyleSheet, View } from "react-native";
-import MapView, { Marker, type Region } from "react-native-maps";
+import MapView, { Circle, Marker, type Region } from "react-native-maps";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { EmptyState } from "../../components/EmptyState";
@@ -361,11 +361,19 @@ export function MapViewScreen() {
   // Translate range: 0 = card visible, +320 = card hidden well below screen.
   // 320 generously over-hides — the Google-Maps card is taller than the old
   // carousel card and the insets.bottom safe area adds another ~34pt.
+  //
+  // useNativeDriver MUST be false here. true routes through Reanimated's
+  // ReanimatedModuleProxy::commitUpdates on every display frame, which commits
+  // to the Fabric shadow tree from a native thread. That commit races with
+  // AIRMap's pending subview insertions under RCTLegacyViewManagerInteropComponentView,
+  // causing the -[AIRMap insertReactSubview:atIndex:] out-of-bounds crash.
+  // JS-thread animation (useNativeDriver: false) goes through requestAnimationFrame
+  // and React's normal reconciliation — no independent shadow-tree commits.
   const cardOffset = useRef(new Animated.Value(320)).current;
   useEffect(() => {
     Animated.spring(cardOffset, {
       toValue: selectedMarker ? 0 : 320,
-      useNativeDriver: true,
+      useNativeDriver: false,
       friction: 9,
       tension: 90,
     }).start();
@@ -397,6 +405,24 @@ export function MapViewScreen() {
             />
           );
         })}
+
+        {/* Selection ring — Circle is a native MKOverlay, not a React
+            subview of AIRMap, so it is safe to mount/unmount without
+            triggering the insertReactSubview:atIndex: crash. */}
+        {selectedMarker &&
+        selectedMarker.venue.lat !== null &&
+        selectedMarker.venue.lng !== null ? (
+          <Circle
+            center={{
+              latitude: selectedMarker.venue.lat,
+              longitude: selectedMarker.venue.lng,
+            }}
+            radius={28}
+            fillColor={colors.brand + "22"}
+            strokeColor={colors.brand}
+            strokeWidth={2.5}
+          />
+        ) : null}
       </MapView>
 
       {/* Top overlay: search bar (with list-view icon) + filter chips */}
