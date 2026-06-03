@@ -25,7 +25,7 @@ const FieldFiltersQuery = z.object({
 
 export async function venuesRoutes(app: FastifyInstance) {
   // GET /venues — list active venues, optional proximity sort.
-  app.get("/venues", async (req) => {
+  app.get("/venues", async (req, reply) => {
     const q = ListVenuesQuery.parse(req.query);
 
     const result = await listVenues({
@@ -36,25 +36,28 @@ export async function venuesRoutes(app: FastifyInstance) {
       radiusKm: q.lat !== undefined && q.lng !== undefined ? q.radius_km : undefined,
     });
 
+    reply.header("Cache-Control", "public, max-age=30, stale-while-revalidate=60");
     return { data: result.venues, dropped: result.dropped, error: null };
   });
 
   // GET /venues/:id — single venue with active fields nested.
-  app.get("/venues/:id", async (req) => {
+  app.get("/venues/:id", async (req, reply) => {
     const { id } = VenueIdParams.parse(req.params);
 
     const venue = await getVenueWithFields(id);
     if (!venue) throw new ApiError(404, "venue not found", "VENUE_NOT_FOUND");
 
+    reply.header("Cache-Control", "public, max-age=60");
     return { data: venue, error: null };
   });
 
   // GET /venues/:id/fields — fields for a venue with optional filters.
-  app.get("/venues/:id/fields", async (req) => {
+  app.get("/venues/:id/fields", async (req, reply) => {
     const { id } = VenueIdParams.parse(req.params);
     const filters = FieldFiltersQuery.parse(req.query);
 
     const data = await listFieldsByVenue(id, filters);
+    reply.header("Cache-Control", "public, max-age=60");
     return { data, error: null };
   });
 }

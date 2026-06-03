@@ -42,7 +42,8 @@ export async function listVenues(
     .select("*, fields(*)")
     .eq("is_active", true)
     .eq("fields.is_active", true)
-    .order("name");
+    .order("name")
+    .limit(200);
 
   if (error) throw error;
   const venues = (data ?? []) as unknown as VenueWithFields[];
@@ -94,7 +95,7 @@ async function proximitySearch(
 }
 
 function proximityKey(lat: number, lng: number, radiusKm: number): string {
-  return `venues:${lat.toFixed(4)}:${lng.toFixed(4)}:${radiusKm}`;
+  return `venues:${lat.toFixed(4)}:${lng.toFixed(4)}:${radiusKm.toFixed(1)}`;
 }
 
 /**
