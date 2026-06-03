@@ -39,6 +39,8 @@ const SearchFieldsQuery = z
     venue_type: venueTypeList,
     price_max: z.coerce.number().positive().optional(),
     sort: z.enum(["distance", "price_asc", "price_desc"]).default("distance"),
+    limit: z.coerce.number().int().min(1).max(200).default(50),
+    offset: z.coerce.number().int().min(0).default(0),
   })
   .refine(
     (q) => (q.lat === undefined) === (q.lng === undefined),
@@ -62,6 +64,8 @@ export async function searchRoutes(app: FastifyInstance) {
       venueTypes: q.venue_type,
       priceMax: q.price_max,
       sort: q.sort,
+      limit: q.limit,
+      offset: q.offset,
     });
 
     reply.header("Cache-Control", "public, max-age=30, stale-while-revalidate=60");

@@ -58,9 +58,12 @@ export function VenueListScreen() {
     venues,
     loading,
     refreshing,
+    loadingMore,
     error,
+    hasMore,
     staleFromCache,
     refresh: refetchVenues,
+    loadMore,
   } = useVenues({ coords });
 
   // Tactile feedback when the user triggers a refresh — matches standard
@@ -345,6 +348,8 @@ export function VenueListScreen() {
               />
             )
           }
+          onEndReached={hasMore ? loadMore : undefined}
+          onEndReachedThreshold={0.3}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}

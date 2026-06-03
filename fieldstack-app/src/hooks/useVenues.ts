@@ -17,6 +17,8 @@ import type { Coords } from "../lib/location";
 import { getCachedVenues, setCachedVenues } from "../lib/venueCache";
 import type { VenueWithFields } from "../types/api";
 
+const PAGE_SIZE = 50;
+
 type UseVenuesOptions = {
   coords?: Coords;
   radiusKm?: number;
@@ -26,43 +28,50 @@ type UseVenuesResult = {
   venues: VenueWithFields[];
   loading: boolean;
   refreshing: boolean;
+  loadingMore: boolean;
   error: Error | null;
+  hasMore: boolean;
   /** True when the visible list came from the offline cache, not the server. */
   staleFromCache: boolean;
   /** When `staleFromCache` is true, the wall-clock time the cache was written. */
   cachedAt: number | null;
   refresh: () => Promise<void>;
+  loadMore: () => Promise<void>;
 };
 
 export function useVenues({ coords, radiusKm = 25 }: UseVenuesOptions): UseVenuesResult {
   const [venues, setVenues] = useState<VenueWithFields[]>([]);
+  const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<Error | null>(null);
   const [staleFromCache, setStaleFromCache] = useState(false);
   const [cachedAt, setCachedAt] = useState<number | null>(null);
   const requestId = useRef(0);
+  const offsetRef = useRef(0);
 
   const fetchVenues = useCallback(
-    async (mode: "initial" | "refresh") => {
+    async (mode: "initial" | "refresh" | "more") => {
       const id = ++requestId.current;
+      const offset = mode === "more" ? offsetRef.current : 0;
+
       if (mode === "initial") setLoading(true);
-      else setRefreshing(true);
+      else if (mode === "refresh") setRefreshing(true);
+      else setLoadingMore(true);
 
       try {
-        const params = coords
-          ? { lat: coords.lat, lng: coords.lng, radius_km: radiusKm }
-          : undefined;
+        const params = {
+          ...(coords ? { lat: coords.lat, lng: coords.lng, radius_km: radiusKm } : {}),
+          limit: PAGE_SIZE,
+          offset,
+        };
         const result = await getVenues(params);
 
-        // Drop stale responses if a newer request started while this one was in flight.
         if (id !== requestId.current) return;
 
         if (result.error) {
           setError(result.error);
-          // Network/server error — try the offline cache as a fallback. Only
-          // applies on initial load; pull-to-refresh failures leave the
-          // existing in-memory list alone.
           if (mode === "initial") {
             const cached = await getCachedVenues();
             if (id !== requestId.current) return;
@@ -73,18 +82,24 @@ export function useVenues({ coords, radiusKm = 25 }: UseVenuesOptions): UseVenue
             }
           }
         } else if (result.data) {
-          setVenues(result.data);
+          const page = result.data;
+          if (mode === "more") {
+            setVenues((prev) => [...prev, ...page]);
+          } else {
+            setVenues(page);
+            setStaleFromCache(false);
+            setCachedAt(null);
+            void setCachedVenues(page);
+          }
+          setTotal(result.total);
           setError(null);
-          setStaleFromCache(false);
-          setCachedAt(null);
-          void setCachedVenues(result.data);
+          offsetRef.current = offset + page.length;
         }
       } finally {
-        // Only clear the flag for the request that is still current; stale
-        // requests have already been superseded and should not touch state.
         if (id === requestId.current) {
           if (mode === "initial") setLoading(false);
-          else setRefreshing(false);
+          else if (mode === "refresh") setRefreshing(false);
+          else setLoadingMore(false);
         }
       }
     },
@@ -92,10 +107,30 @@ export function useVenues({ coords, radiusKm = 25 }: UseVenuesOptions): UseVenue
   );
 
   useEffect(() => {
+    offsetRef.current = 0;
     void fetchVenues("initial");
   }, [fetchVenues]);
 
-  const refresh = useCallback(() => fetchVenues("refresh"), [fetchVenues]);
+  const refresh = useCallback(async () => {
+    offsetRef.current = 0;
+    await fetchVenues("refresh");
+  }, [fetchVenues]);
 
-  return { venues, loading, refreshing, error, staleFromCache, cachedAt, refresh };
+  const loadMore = useCallback(async () => {
+    if (loadingMore || venues.length >= total) return;
+    await fetchVenues("more");
+  }, [fetchVenues, loadingMore, venues.length, total]);
+
+  return {
+    venues,
+    loading,
+    refreshing,
+    loadingMore,
+    error,
+    hasMore: venues.length < total,
+    staleFromCache,
+    cachedAt,
+    refresh,
+    loadMore,
+  };
 }
