@@ -1351,32 +1351,8 @@ export type Database = {
       venues_within: {
         Args: { p_lat: number; p_lng: number; p_radius_meters: number }
         Returns: {
-          address: string
-          amenities: string[]
-          booking_notes: string | null
-          cancellation_policy: string | null
-          created_at: string
-          data_source: string | null
-          external_id: string | null
-          hours: Json | null
           id: string
-          is_active: boolean
-          last_scraped_at: string | null
-          lat: number | null
-          lng: number | null
-          location: unknown
-          name: string
-          operator_id: string
-          photos: string[]
-          venue_type: Database["public"]["Enums"]["venue_type"] | null
-          website: string | null
         }[]
-        SetofOptions: {
-          from: "*"
-          to: "venues"
-          isOneToOne: false
-          isSetofReturn: true
-        }
       }
     }
     Enums: {
