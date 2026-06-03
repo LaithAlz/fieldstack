@@ -19,6 +19,7 @@ import { FilterToolbar } from "../../components/FilterToolbar";
 import { LocationPickerSheet } from "../../components/LocationPickerSheet";
 import { LocationPill } from "../../components/LocationPill";
 import { Text } from "../../components/Text";
+import { useToast } from "../../components/Toast";
 import { useFieldSearch } from "../../hooks/useFieldSearch";
 import { useFilterControls } from "../../hooks/useFilterControls";
 import { useLocation } from "../../hooks/useLocation";
@@ -49,6 +50,7 @@ export function FieldSearchScreen() {
   const colors = useTheme();
   const insets = useSafeAreaInsets();
   const nav = useNavigation<Nav>();
+  const toast = useToast();
 
   const { coords: userCoords, permissionStatus, coordsFetchFailed } = useLocation();
   if (coordsFetchFailed) {
@@ -60,6 +62,7 @@ export function FieldSearchScreen() {
     results,
     total,
     isLoading,
+    error,
     filters,
     location,
     setFilter,
@@ -84,8 +87,11 @@ export function FieldSearchScreen() {
     if (fresh) {
       setLocation("Near you", fresh);
       closePicker();
+    } else {
+      toast.show("Couldn't read your location.", { type: "error" });
+      closePicker();
     }
-  }, [closePicker, setLocation]);
+  }, [closePicker, setLocation, toast]);
 
   const handleRequestPermission = useCallback(async () => {
     const status = await requestPermission();
@@ -207,6 +213,16 @@ export function FieldSearchScreen() {
             <FieldSearchCardSkeleton key={i} />
           ))}
         </ScrollView>
+      ) : error && results.length === 0 ? (
+        <View style={styles.emptyWrap}>
+          <EmptyState
+            icon="cloud-offline-outline"
+            title="Couldn't load fields"
+            description="Check your connection and try again."
+            actionLabel="Try again"
+            onAction={() => setLocation(location.text, location.lat !== null && location.lng !== null ? { lat: location.lat, lng: location.lng } : undefined)}
+          />
+        </View>
       ) : results.length === 0 ? (
         <View style={styles.emptyWrap}>
           <EmptyState
