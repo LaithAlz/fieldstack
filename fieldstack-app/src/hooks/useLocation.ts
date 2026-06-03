@@ -29,6 +29,8 @@ export type LocationState = {
   permissionStatus: PermissionStatus;
   /** True until the initial async resolution completes. */
   loading: boolean;
+  /** True when permission was granted but GPS returned null coordinates. */
+  coordsFetchFailed: boolean;
 };
 
 const LABEL_DOWNTOWN = "Downtown Toronto";
@@ -40,6 +42,7 @@ export function useLocation() {
     label: LABEL_DOWNTOWN,
     permissionStatus: "undetermined",
     loading: true,
+    coordsFetchFailed: false,
   });
 
   useEffect(() => {
@@ -48,6 +51,7 @@ export function useLocation() {
       const status = await getPermissionStatus();
       if (cancelled) return;
 
+      let gpsFailed = false;
       if (status === "granted") {
         const fresh = await getCurrentCoords();
         if (cancelled) return;
@@ -58,9 +62,12 @@ export function useLocation() {
             label: LABEL_NEARBY,
             permissionStatus: status,
             loading: false,
+            coordsFetchFailed: false,
           });
           return;
         }
+        // Permission granted but GPS returned null.
+        gpsFailed = true;
       }
 
       // Permission not granted, or we couldn't fetch — try last known, else
@@ -72,6 +79,7 @@ export function useLocation() {
         label: last ? LABEL_NEARBY : LABEL_DOWNTOWN,
         permissionStatus: status,
         loading: false,
+        coordsFetchFailed: gpsFailed,
       });
     })();
     return () => {

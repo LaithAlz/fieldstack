@@ -50,7 +50,11 @@ export function FieldSearchScreen() {
   const insets = useSafeAreaInsets();
   const nav = useNavigation<Nav>();
 
-  const { coords: userCoords, permissionStatus } = useLocation();
+  const { coords: userCoords, permissionStatus, coordsFetchFailed } = useLocation();
+  if (coordsFetchFailed) {
+    // eslint-disable-next-line no-console
+    console.warn("coordsFetchFailed: GPS returned null with permission granted");
+  }
 
   const {
     results,
