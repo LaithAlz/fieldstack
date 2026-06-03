@@ -1,6 +1,7 @@
 import "dotenv/config";
 import Fastify from "fastify";
 import cors from "@fastify/cors";
+import helmet from "@fastify/helmet";
 import rateLimit from "@fastify/rate-limit";
 import { ZodError } from "zod";
 import { ApiError } from "./lib/errors.js";
@@ -22,6 +23,10 @@ const app = Fastify({
       : { target: "pino-pretty", options: { colorize: true } },
   },
 });
+
+// Security headers before CORS so they apply to preflight responses too.
+// CSP disabled: API-only server with no HTML responses.
+await app.register(helmet, { contentSecurityPolicy: false });
 
 const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(",").map((s) => s.trim());
 await app.register(cors, {
