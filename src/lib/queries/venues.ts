@@ -13,6 +13,8 @@ export type ListVenuesOptions = {
   lat?: number;
   lng?: number;
   radiusKm?: number;
+  limit?: number;
+  offset?: number;
 };
 
 /**
@@ -24,66 +26,72 @@ export type ListVenuesOptions = {
  * `venues_within` RPC ordered by distance, then we hydrate fields in a
  * follow-up query and re-apply that ordering.
  */
-export type ListVenuesResult = { venues: VenueWithFields[]; dropped: number };
+export type ListVenuesResult = { venues: VenueWithFields[]; total: number; dropped: number };
 
 export async function listVenues(
   opts: ListVenuesOptions = {}
 ): Promise<ListVenuesResult> {
-  const { lat, lng, radiusKm } = opts;
+  const { lat, lng, radiusKm, limit = 50, offset = 0 } = opts;
 
   if (lat !== undefined && lng !== undefined && radiusKm !== undefined) {
-    return cached(proximityKey(lat, lng, radiusKm), PROXIMITY_TTL_SECONDS, () =>
-      proximitySearch(lat, lng, radiusKm)
+    return cached(proximityKey(lat, lng, radiusKm, limit, offset), PROXIMITY_TTL_SECONDS, () =>
+      proximitySearch(lat, lng, radiusKm, limit, offset)
     );
   }
 
-  const { data, error } = await supabase
+  const { data, error, count } = await supabase
     .from("venues")
-    .select("*, fields(*)")
+    .select("*, fields(*)", { count: "exact" })
     .eq("is_active", true)
     .eq("fields.is_active", true)
     .order("name")
-    .limit(200);
+    .range(offset, offset + limit - 1);
 
   if (error) throw error;
   const venues = (data ?? []) as unknown as VenueWithFields[];
-  return { venues, dropped: 0 };
+  return { venues, total: count ?? venues.length, dropped: 0 };
 }
 
 async function proximitySearch(
   lat: number,
   lng: number,
-  radiusKm: number
+  radiusKm: number,
+  limit: number,
+  offset: number
 ): Promise<ListVenuesResult> {
-  // Step 1: ask the RPC for venues ordered by distance.
+  // Step 1: ask the RPC for all venues ordered by distance (no limit here;
+  // we need the full ordered list to apply offset/limit correctly after
+  // hydration which may drop some ids).
   const { data: ordered, error: rpcErr } = await supabase.rpc("venues_within", {
     p_lat: lat,
     p_lng: lng,
     p_radius_meters: radiusKm * 1000,
   });
   if (rpcErr) throw rpcErr;
-  if (!ordered || ordered.length === 0) return { venues: [], dropped: 0 };
+  if (!ordered || ordered.length === 0) return { venues: [], total: 0, dropped: 0 };
 
-  // Step 2: fetch the same venues with active fields embedded.
-  const ids = ordered.map((v) => v.id);
+  const total = ordered.length;
+  const pageIds = ordered.slice(offset, offset + limit).map((v) => v.id);
+  if (pageIds.length === 0) return { venues: [], total, dropped: 0 };
+
+  // Step 2: hydrate this page's worth of venues with active fields.
   const { data: hydrated, error: selErr } = await supabase
     .from("venues")
     .select("*, fields(*)")
-    .in("id", ids)
+    .in("id", pageIds)
     .eq("fields.is_active", true);
   if (selErr) throw selErr;
-  if (!hydrated) return { venues: [], dropped: ids.length };
+  if (!hydrated) return { venues: [], total, dropped: pageIds.length };
 
   // Step 3: re-apply the RPC's distance ordering.
   const byId = new Map(
     (hydrated as unknown as VenueWithFields[]).map((v) => [v.id, v])
   );
-  const venues = ids
+  const venues = pageIds
     .map((id) => byId.get(id))
     .filter((v): v is VenueWithFields => Boolean(v));
 
-  // Identify any ids the RPC returned that the hydration SELECT didn't find.
-  const missing = ids.filter((id) => !byId.has(id));
+  const missing = pageIds.filter((id) => !byId.has(id));
   if (missing.length > 0) {
     // eslint-disable-next-line no-console
     console.warn(
@@ -91,11 +99,11 @@ async function proximitySearch(
     );
   }
 
-  return { venues, dropped: missing.length };
+  return { venues, total, dropped: missing.length };
 }
 
-function proximityKey(lat: number, lng: number, radiusKm: number): string {
-  return `venues:${lat.toFixed(4)}:${lng.toFixed(4)}:${radiusKm.toFixed(1)}`;
+function proximityKey(lat: number, lng: number, radiusKm: number, limit: number, offset: number): string {
+  return `venues:${lat.toFixed(4)}:${lng.toFixed(4)}:${radiusKm.toFixed(1)}:${limit}:${offset}`;
 }
 
 /**

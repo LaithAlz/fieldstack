@@ -20,6 +20,8 @@ export type SearchFieldsParams = {
   venueTypes?: VenueType[];
   priceMax?: number;
   sort: SearchSort; // required at the query layer; the route fills the default
+  limit?: number;
+  offset?: number;
 };
 
 export type SearchVenue = Pick<
@@ -69,6 +71,8 @@ async function runSearch(params: SearchFieldsParams): Promise<SearchFieldsResult
     p_venue_types: venueTypes ?? undefined,
     p_price_max: params.priceMax,
     p_sort: params.sort,
+    p_limit: params.limit ?? 50,
+    p_offset: params.offset ?? 0,
   });
 
   if (error) throw error;
@@ -97,6 +101,8 @@ function searchKey(p: SearchFieldsParams): string {
     venueTypes: [...(p.venueTypes ?? [])].sort(),
     priceMax: p.priceMax ?? null,
     sort: p.sort,
+    limit: p.limit ?? 50,
+    offset: p.offset ?? 0,
   };
   const hash = createHash("sha256")
     .update(JSON.stringify(normalized))

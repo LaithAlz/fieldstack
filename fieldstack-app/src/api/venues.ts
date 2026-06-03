@@ -1,15 +1,30 @@
-import { get, type ApiResult } from "./client";
+import { get, request, type ApiResult } from "./client";
 import type { Field, VenueWithFields } from "../types/api";
 
 type GetVenuesParams = {
   lat?: number;
   lng?: number;
   radius_km?: number;
+  limit?: number;
+  offset?: number;
 };
 
 type GetVenueFieldsParams = {
   surface?: string;
   size?: string;
+};
+
+type GetVenuesEnvelope = {
+  data: VenueWithFields[] | null;
+  total: number;
+  dropped: number;
+  error: { message: string } | null;
+};
+
+export type GetVenuesResult = {
+  data: VenueWithFields[] | null;
+  total: number;
+  error: Error | null;
 };
 
 /**
@@ -27,12 +42,18 @@ function compactParams<T extends Record<string, string | number | undefined>>(
   return out;
 }
 
-export function getVenues(
+export async function getVenues(
   params: GetVenuesParams = {}
-): Promise<ApiResult<VenueWithFields[]>> {
-  // Backend embeds active fields on the list endpoint so the venue card can
-  // show field count, surface mix, and price range without a per-venue fetch.
-  return get<VenueWithFields[]>("/venues", compactParams(params));
+): Promise<GetVenuesResult> {
+  // Use request (not get) to capture the total alongside data.
+  const { body, error } = await request<GetVenuesEnvelope>(
+    "/venues",
+    compactParams(params)
+  );
+  if (error) return { data: null, total: 0, error };
+  if (!body) return { data: null, total: 0, error: new Error("Empty response body") };
+  if (body.error) return { data: null, total: 0, error: new Error(body.error.message) };
+  return { data: body.data, total: body.total, error: null };
 }
 
 export function getVenue(id: string): Promise<ApiResult<VenueWithFields>> {

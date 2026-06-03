@@ -62,6 +62,8 @@ export function FieldSearchScreen() {
     results,
     total,
     isLoading,
+    hasMore,
+    loadMore,
     error,
     filters,
     location,
@@ -340,6 +342,8 @@ export function FieldSearchScreen() {
             styles.listContent,
             { paddingBottom: insets.bottom + LIST_BOTTOM_PAD },
           ]}
+          onEndReached={hasMore ? loadMore : undefined}
+          onEndReachedThreshold={0.3}
         />
       )}
 

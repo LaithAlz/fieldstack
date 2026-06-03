@@ -81,6 +81,8 @@ export type UseFieldSearchResult = {
   results: SearchResult[];
   total: number;
   isLoading: boolean;
+  isLoadingMore: boolean;
+  hasMore: boolean;
   error: Error | null;
   filters: FieldSearchFilters;
   location: FieldSearchLocation;
@@ -88,6 +90,7 @@ export type UseFieldSearchResult = {
   locationError: Error | null;
   setFilter: SetFilter;
   clearFilters: () => void;
+  loadMore: () => void;
   /**
    * Update the location text. The 500ms geocode runs unless explicit `coords`
    * are passed — used by the screen to seed an initial location from
@@ -157,8 +160,10 @@ function useFieldSearchState(): UseFieldSearchResult {
   const [results, setResults] = useState<SearchResult[]>([]);
   const [total, setTotal] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [error, setError] = useState<Error | null>(null);
   const [locationError, setLocationError] = useState<Error | null>(null);
+  const offsetRef = useRef(0);
 
   // True until persisted filters have been read on mount. Suppresses
   // `search_filtered` analytics during restoration so we don't log a "user
@@ -234,25 +239,28 @@ function useFieldSearchState(): UseFieldSearchResult {
   }, [location.text]);
 
   // ---- Debounced fetch on filter / coord changes -------------------------
+  // Filter/coord changes always reset to page 1.
   useEffect(() => {
     if (!restoredRef.current) return;
 
     const timer = setTimeout(async () => {
       const id = ++requestId.current;
       setIsLoading(true);
+      offsetRef.current = 0;
 
-      const params = buildSearchParams(filters, location);
+      const params = buildSearchParams(filters, location, 0);
       const result: SearchFieldsResult = await searchFields(params);
 
-      // Drop stale responses if a newer request started while in flight.
       if (id !== requestId.current) return;
 
       if (result.error) {
         setError(result.error);
       } else {
-        setResults(result.data ?? []);
+        const page = result.data ?? [];
+        setResults(page);
         setTotal(result.total);
         setError(null);
+        offsetRef.current = page.length;
       }
       setIsLoading(false);
 
@@ -298,34 +306,55 @@ function useFieldSearchState(): UseFieldSearchResult {
       setLocationState({ text, lat: coords.lat, lng: coords.lng });
       return;
     }
-    // Reset coords until geocode resolves so the fetch effect doesn't fire
-    // against the previous location while the user is still typing.
     setLocationState((prev) => ({ ...prev, text, lat: null, lng: null }));
   }, []);
+
+  const loadMore = useCallback(() => {
+    if (isLoadingMore || isLoading) return;
+    const offset = offsetRef.current;
+    const id = ++requestId.current;
+    setIsLoadingMore(true);
+    const params = buildSearchParams(filters, location, offset);
+    searchFields(params ?? {}).then((result) => {
+      if (id !== requestId.current) return;
+      if (!result.error && result.data) {
+        const page = result.data;
+        setResults((prev) => [...prev, ...page]);
+        setTotal(result.total);
+        offsetRef.current = offset + page.length;
+      }
+      setIsLoadingMore(false);
+    });
+  }, [isLoadingMore, isLoading, filters, location]);
 
   return useMemo(
     () => ({
       results,
       total,
       isLoading,
+      isLoadingMore,
+      hasMore: results.length < total,
       error,
       filters,
       location,
       locationError,
       setFilter,
       clearFilters,
+      loadMore,
       setLocation,
     }),
     [
       results,
       total,
       isLoading,
+      isLoadingMore,
       error,
       filters,
       location,
       locationError,
       setFilter,
       clearFilters,
+      loadMore,
       setLocation,
     ]
   );
@@ -338,10 +367,12 @@ function useFieldSearchState(): UseFieldSearchResult {
  */
 function buildSearchParams(
   filters: FieldSearchFilters,
-  location: FieldSearchLocation
+  location: FieldSearchLocation,
+  offset = 0
 ): Parameters<typeof searchFields>[0] {
   const params: Parameters<typeof searchFields>[0] = {
     sort: filters.sort,
+    offset,
   };
   if (location.lat !== null && location.lng !== null) {
     params.lat = location.lat;

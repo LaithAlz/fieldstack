@@ -10,6 +10,8 @@ const ListVenuesQuery = z
     lat: z.coerce.number().min(-90).max(90).optional(),
     lng: z.coerce.number().min(-180).max(180).optional(),
     radius_km: z.coerce.number().positive().max(500).default(10),
+    limit: z.coerce.number().int().min(1).max(200).default(50),
+    offset: z.coerce.number().int().min(0).default(0),
   })
   .refine(
     (q) => (q.lat === undefined) === (q.lng === undefined),
@@ -34,10 +36,12 @@ export async function venuesRoutes(app: FastifyInstance) {
       // Only pass radiusKm when both coords are present; the query layer treats
       // (undefined, undefined, n) as "no proximity sort".
       radiusKm: q.lat !== undefined && q.lng !== undefined ? q.radius_km : undefined,
+      limit: q.limit,
+      offset: q.offset,
     });
 
     reply.header("Cache-Control", "public, max-age=30, stale-while-revalidate=60");
-    return { data: result.venues, dropped: result.dropped, error: null };
+    return { data: result.venues, total: result.total, dropped: result.dropped, error: null };
   });
 
   // GET /venues/:id — single venue with active fields nested.

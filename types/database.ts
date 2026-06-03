@@ -753,6 +753,8 @@ export type Database = {
           p_sort?: string
           p_surfaces?: Database["public"]["Enums"]["field_surface"][]
           p_venue_types?: Database["public"]["Enums"]["venue_type"][]
+          p_limit?: number
+          p_offset?: number
         }
         Returns: Json
       }

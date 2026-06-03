@@ -13,6 +13,8 @@ export type SearchFieldsParams = {
   venue_type?: VenueType[];
   price_max?: number;
   sort?: SearchSort;
+  limit?: number;
+  offset?: number;
 };
 
 export type SearchFieldsResult = {
