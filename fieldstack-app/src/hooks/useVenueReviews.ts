@@ -30,17 +30,31 @@ export function useVenueReviews(venueId: string): UseVenueReviews {
   // the resolution window of the trailing fetch would otherwise overwrite
   // newer state with stale data.
   const requestedVenueIdRef = useRef(venueId);
+  // Prevents setState calls after the component unmounts.
+  const mountedRef = useRef(true);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
 
   const load = useCallback(async () => {
-    requestedVenueIdRef.current = venueId;
+    // Capture the id we're loading for BEFORE updating the ref so the stale
+    // guard below compares against a later change rather than itself.
+    const thisVenueId = venueId;
+    requestedVenueIdRef.current = thisVenueId;
     setIsLoading(true);
     setError(null);
     const [reviewsResult, summaryResult] = await Promise.all([
       listVenueReviews(venueId),
       getVenueReviewSummary(venueId),
     ]);
-    // Drop the result if the caller has since moved on to a different venue.
-    if (requestedVenueIdRef.current !== venueId) return;
+    // Drop the result if the caller has since moved on to a different venue,
+    // or if the component unmounted while the fetch was in flight.
+    if (requestedVenueIdRef.current !== thisVenueId) return;
+    if (!mountedRef.current) return;
 
     if (reviewsResult.error) {
       setError(reviewsResult.error);
