@@ -34,6 +34,12 @@ import type { SearchResult } from "../../types/api";
 type Nav = NativeStackNavigationProp<MainStackParamList, "MapView">;
 
 const DEFAULT_DELTA = 0.15; // ~16km — comfortable starting zoom for a city
+// Fixed pool size: Marker children of MapView must NEVER mount/unmount under
+// Expo Go 54 Fabric interop — insertReactSubview:atIndex: crashes when the
+// native _subviews array goes out of sync with React's shadow tree.
+// Inactive slots stay at null-island (0,0) with opacity=0 so they're
+// invisible and non-interactive; only their props change as results update.
+const MAX_MARKERS = 50;
 const DEFAULT_TORONTO: Region = {
   latitude: 43.6709,
   longitude: -79.3863,
@@ -91,12 +97,12 @@ function isInRegion(venue: SearchResult["venue"], region: Region): boolean {
   );
 }
 
-// Marker key is always `venue.id` — stable for the lifetime of the search
-// results. tracksViewChanges is permanently false: any flip (even true→false)
-// triggers a shadow-tree commit that races with Reanimated's animation commits
-// and corrupts AIRMap's subview index under the Fabric interop layer.
+// tracksViewChanges is permanently false — any flip triggers a shadow-tree
+// commit that corrupts AIRMap's subview index under the Fabric interop layer.
+// marker=null means the slot is inactive: rendered at null-island with opacity
+// 0 so it is invisible and non-interactive, but still MOUNTED (never removed).
 type VenueMarkerProps = {
-  marker: VenueMarker;
+  marker: VenueMarker | null;
   onPress: (venueId: string) => void;
 };
 
@@ -105,24 +111,35 @@ const VenueMarker = memo(function VenueMarker({
   onPress,
 }: VenueMarkerProps) {
   const coordinate = useMemo(
-    () => ({ latitude: marker.venue.lat ?? 0, longitude: marker.venue.lng ?? 0 }),
-    [marker.venue.lat, marker.venue.lng]
+    () =>
+      marker
+        ? { latitude: marker.venue.lat!, longitude: marker.venue.lng! }
+        : { latitude: 0, longitude: 0 },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [marker?.venue.lat, marker?.venue.lng]
   );
 
-  if (marker.venue.lat === null || marker.venue.lng === null) return null;
-
-  const hasPositivePrice = marker.minPrice !== null && marker.minPrice > 0;
+  // Always the same JSX shape — both branches render <VenuePin> so React
+  // reconciles this as a prop update, not a mount/unmount. Keeping the child
+  // count of every Marker stable means AIRMapMarker's insertReactSubview is
+  // never called on a live slot transition.
+  const hasPositivePrice = marker !== null && marker.minPrice !== null && marker.minPrice > 0;
 
   return (
     <Marker
       coordinate={coordinate}
-      onPress={(e) => {
-        e.stopPropagation();
-        onPress(marker.venue.id);
-      }}
+      opacity={marker ? 1 : 0}
+      onPress={
+        marker
+          ? (e) => {
+              e.stopPropagation();
+              onPress(marker.venue.id);
+            }
+          : undefined
+      }
       tracksViewChanges={false}
     >
-      {hasPositivePrice && marker.minPrice !== null ? (
+      {hasPositivePrice && marker !== null && marker.minPrice !== null ? (
         <VenuePin
           mode="price"
           price={marker.minPrice}
@@ -132,8 +149,8 @@ const VenueMarker = memo(function VenueMarker({
       ) : (
         <VenuePin
           mode="count"
-          fieldCount={marker.fieldCount}
-          venueName={marker.venue.name}
+          fieldCount={marker?.fieldCount ?? 0}
+          venueName={marker?.venue.name ?? ""}
         />
       )}
     </Marker>
@@ -236,6 +253,22 @@ export function MapViewScreen() {
   locationTextRef.current = location.text;
 
   const markers = useMemo(() => groupByVenue(results), [results]);
+
+  // Fixed-size slot array — length is always MAX_MARKERS regardless of how
+  // many results are loaded. Index-stable keys (slot-0, slot-1, …) ensure
+  // React reuses each Marker component across result changes rather than
+  // unmounting the old one and mounting a new one, which would call
+  // insertReactSubview:atIndex: on AIRMap and crash under Fabric interop.
+  const markerSlots = useMemo((): (VenueMarker | null)[] => {
+    const valid = markers.filter(
+      (m) => m.venue.lat !== null && m.venue.lng !== null
+    );
+    const pool: (VenueMarker | null)[] = new Array(MAX_MARKERS).fill(null);
+    for (let i = 0; i < Math.min(valid.length, MAX_MARKERS); i++) {
+      pool[i] = valid[i]!;
+    }
+    return pool;
+  }, [markers]);
 
   // Markers within the current camera bounds. Drives the ResultCountPill so
   // "X venues" reflects the visible region rather than the full result set.
@@ -395,16 +428,13 @@ export function MapViewScreen() {
         showsUserLocation
         showsMyLocationButton={false}
       >
-        {markers.map((m) => {
-          if (m.venue.lat === null || m.venue.lng === null) return null;
-          return (
-            <VenueMarker
-              key={m.venue.id}
-              marker={m}
-              onPress={handleMarkerPress}
-            />
-          );
-        })}
+        {markerSlots.map((m, i) => (
+          <VenueMarker
+            key={`slot-${i}`}
+            marker={m}
+            onPress={handleMarkerPress}
+          />
+        ))}
 
         {/* Selection halo — MUST be permanently mounted. Conditionally
             rendering ANY child of MapView calls insertReactSubview:atIndex:
