@@ -12,7 +12,7 @@
  * coords + label without touching permissions.
  */
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import {
   DEFAULT_COORDS,
@@ -92,5 +92,16 @@ export function useLocation() {
     setLastLocation(coords).catch(() => undefined);
   }, []);
 
-  return { ...state, setManualLocation };
+  // Memoize the coords object so callers only get a new reference when the
+  // actual lat/lng values change. Without this, every setState (e.g. updating
+  // loading → false) produces a new coords object and causes hooks like
+  // useVenues to re-run their fetchVenues even though the coordinates haven't
+  // moved.
+  const coords = useMemo(
+    () => state.coords,
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [state.coords.lat, state.coords.lng]
+  );
+
+  return { ...state, coords, setManualLocation };
 }
