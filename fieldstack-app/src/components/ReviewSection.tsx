@@ -1,7 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { CommonActions, useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Alert, Pressable, StyleSheet, TextInput, View } from "react-native";
 
 import { useAuth } from "../lib/auth";
@@ -248,6 +248,11 @@ function ReviewForm({
   const [rating, setRating] = useState<number>(existing?.rating ?? 0);
   const [body, setBody] = useState<string>(existing?.body ?? "");
   const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    setRating(existing?.rating ?? 0);
+    setBody(existing?.body ?? "");
+  }, [existing?.rating, existing?.body]);
   const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = async () => {
