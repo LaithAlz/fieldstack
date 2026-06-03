@@ -4,7 +4,7 @@ import BottomSheet, {
   type BottomSheetBackdropProps,
   BottomSheetScrollView,
 } from "@gorhom/bottom-sheet";
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 
 import { selection as selectionHaptic } from "../lib/haptics";
@@ -58,16 +58,10 @@ export function FilterBottomSheet<T extends string>({ config, onClose }: Props<T
     config?.mode === "multi" ? config.selected : []
   );
 
-  // Re-seed staged whenever a new multi config arrives. useEffect would also
-  // work, but a memo-style derivation avoids an extra render pass.
-  const lastConfigRef = useRef<typeof config>(null);
-  if (config !== lastConfigRef.current) {
-    lastConfigRef.current = config;
-    if (config?.mode === "multi") {
-      // Defer to avoid setState during render — schedule for next tick.
-      queueMicrotask(() => setStaged(config.selected));
-    }
-  }
+  // Re-seed staged whenever a new multi config arrives.
+  useEffect(() => {
+    if (config?.mode === "multi") setStaged(config.selected);
+  }, [config]);
 
   const handleSheetChange = useCallback(
     (index: number) => {
