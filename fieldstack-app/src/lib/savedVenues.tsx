@@ -26,8 +26,29 @@ import {
   type ReactNode,
 } from "react";
 
+import { useToast } from "../components/Toast";
 import { useAuth } from "./auth";
 import { supabase } from "./supabase";
+
+/**
+ * Retry a cloud write up to `maxAttempts` times with exponential backoff.
+ * Returns true if any attempt succeeds, false if all fail.
+ */
+async function retryCloudWrite(fn: () => Promise<void>, maxAttempts = 3): Promise<boolean> {
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    try {
+      await fn();
+      return true;
+    } catch {
+      if (attempt < maxAttempts - 1) {
+        await new Promise<void>((resolve) =>
+          setTimeout(resolve, 500 * Math.pow(2, attempt))
+        );
+      }
+    }
+  }
+  return false;
+}
 
 const KEY = "@fieldstack/saved_venues";
 
@@ -38,6 +59,8 @@ type ContextValue = {
   toggle: (venueId: string) => Promise<void>;
   /** Wipe in-memory + persisted set. Used by Settings → Clear data. */
   clear: () => Promise<void>;
+  /** IDs currently awaiting a cloud write confirmation. */
+  pendingSync: Set<string>;
 };
 
 const SavedVenuesContext = createContext<ContextValue | null>(null);
@@ -45,7 +68,9 @@ const SavedVenuesContext = createContext<ContextValue | null>(null);
 export function SavedVenuesProvider({ children }: { children: ReactNode }) {
   const [saved, setSaved] = useState<ReadonlySet<string>>(() => new Set());
   const [hydrated, setHydrated] = useState(false);
+  const [pendingSync, setPendingSync] = useState<Set<string>>(() => new Set());
   const { user } = useAuth();
+  const toast = useToast();
   // Tracks which user we've already merged for, so we don't re-pull cloud
   // on every render. Cleared on sign-out.
   const mergedForUserId = useRef<string | null>(null);
@@ -158,67 +183,77 @@ export function SavedVenuesProvider({ children }: { children: ReactNode }) {
 
   const isSaved = useCallback((id: string) => saved.has(id), [saved]);
 
-  // Functional setter pattern — rapid taps must not race on a stale snapshot.
-  // Persist locally inside the updater; cloud write fires when signed in.
   const toggle = useCallback(
     async (id: string) => {
-      setSaved((prev) => {
-        const next = new Set(prev);
-        const wasSaved = next.has(id);
-        if (wasSaved) next.delete(id);
-        else next.add(id);
+      // --- Optimistic update ---
+      const wasSaved = saved.has(id);
+      const optimisticNext = new Set(saved);
+      if (wasSaved) optimisticNext.delete(id);
+      else optimisticNext.add(id);
+      setSaved(optimisticNext);
+      void AsyncStorage.setItem(KEY, JSON.stringify(Array.from(optimisticNext))).catch(
+        () => undefined
+      );
 
-        void AsyncStorage.setItem(KEY, JSON.stringify(Array.from(next))).catch(
-          () => undefined
-        );
+      if (!user) return;
 
-        // Write-through to cloud if signed in. Failures don't block local
-        // state — eventual consistency is acceptable for "is this saved."
-        // TODO: retry/queue cloud failures rather than relying on the next
-        // sign-in merge to repair drift.
-        if (user) {
-          // Chain this write onto any pending write for the same venue so a
-          // rapid double-tap can't have DELETE land before the prior INSERT.
-          const previous = writeChains.current.get(id) ?? Promise.resolve();
-          const next$ = previous.then(async () => {
-            if (wasSaved) {
-              const { error } = await supabase
-                .from("user_saved_venues")
-                .delete()
-                .eq("user_id", user.id)
-                .eq("venue_id", id);
-              if (error) {
-                // eslint-disable-next-line no-console
-                console.warn("[savedVenues] cloud delete failed", error.message);
-              }
-            } else {
-              const { error } = await supabase
-                .from("user_saved_venues")
-                .upsert(
-                  { user_id: user.id, venue_id: id },
-                  { onConflict: "user_id,venue_id", ignoreDuplicates: true }
-                );
-              if (error) {
-                // eslint-disable-next-line no-console
-                console.warn("[savedVenues] cloud insert failed", error.message);
-              }
-            }
+      // --- Cloud write with retry ---
+      setPendingSync((prev) => new Set([...prev, id]));
+
+      const previous = writeChains.current.get(id) ?? Promise.resolve();
+      const next$ = previous.then(async () => {
+        const cloudWrite = async () => {
+          if (wasSaved) {
+            const { error } = await supabase
+              .from("user_saved_venues")
+              .delete()
+              .eq("user_id", user.id)
+              .eq("venue_id", id);
+            if (error) throw error;
+          } else {
+            const { error } = await supabase
+              .from("user_saved_venues")
+              .upsert(
+                { user_id: user.id, venue_id: id },
+                { onConflict: "user_id,venue_id", ignoreDuplicates: true }
+              );
+            if (error) throw error;
+          }
+        };
+
+        const succeeded = await retryCloudWrite(cloudWrite);
+        setPendingSync((prev) => {
+          const next = new Set(prev);
+          next.delete(id);
+          return next;
+        });
+
+        if (!succeeded) {
+          // Roll back optimistic update — both in-memory and AsyncStorage.
+          setSaved((current) => {
+            const rolled = new Set(current);
+            if (wasSaved) rolled.add(id);
+            else rolled.delete(id);
+            void AsyncStorage.setItem(KEY, JSON.stringify(Array.from(rolled))).catch(
+              () => undefined
+            );
+            return rolled;
           });
-          writeChains.current.set(id, next$);
-          // Reap the chain once it resolves so the Map doesn't grow without
-          // bound. Only clear if we're still the latest pending write for
-          // this id — a newer toggle may have already replaced us.
-          void next$.finally(() => {
-            if (writeChains.current.get(id) === next$) {
-              writeChains.current.delete(id);
-            }
-          });
+          toast.show("Could not save venue — check your connection", { type: "error" });
         }
+      });
 
-        return next;
+      writeChains.current.set(id, next$);
+      // Reap the chain once it resolves so the Map doesn't grow without
+      // bound. Only clear if we're still the latest pending write for
+      // this id — a newer toggle may have already replaced us.
+      void next$.finally(() => {
+        if (writeChains.current.get(id) === next$) {
+          writeChains.current.delete(id);
+        }
       });
     },
-    [user]
+    [saved, user, toast]
   );
 
   const clear = useCallback(async () => {
@@ -234,8 +269,8 @@ export function SavedVenuesProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const value = useMemo<ContextValue>(
-    () => ({ saved, hydrated, isSaved, toggle, clear }),
-    [saved, hydrated, isSaved, toggle, clear]
+    () => ({ saved, hydrated, isSaved, toggle, clear, pendingSync }),
+    [saved, hydrated, isSaved, toggle, clear, pendingSync]
   );
 
   return (
