@@ -103,8 +103,13 @@ export const WhenPickerSheet = forwardRef<BottomSheetModal>((_props, ref) => {
   const [time, setTime] = useState<string>(slot?.startTime ?? defaults.startTime);
   const [duration, setDuration] = useState<number>(slot?.duration ?? defaults.duration);
 
+  // Track whether the user has started interacting with the form so an
+  // external slot change doesn't clobber in-progress edits.
+  const isEditing = useRef(false);
+
   // Resync local state if context slot changes while the sheet is closed.
   useEffect(() => {
+    if (isEditing.current) return;
     if (slot) {
       setDate(preferredSlotDate(slot));
       setTime(slot.startTime);
@@ -133,6 +138,7 @@ export const WhenPickerSheet = forwardRef<BottomSheetModal>((_props, ref) => {
       duration,
     };
     await setSlot(next);
+    isEditing.current = false;
     // Support both forwarded ref shapes. Function refs are called with the
     // current instance; object refs we read off .current.
     if (typeof ref === "function") {
@@ -164,9 +170,9 @@ export const WhenPickerSheet = forwardRef<BottomSheetModal>((_props, ref) => {
           selectedDate={date}
           selectedStartTime={time}
           selectedDuration={duration}
-          onDateChange={setDate}
-          onStartTimeChange={setTime}
-          onDurationChange={setDuration}
+          onDateChange={(d) => { isEditing.current = true; setDate(d); }}
+          onStartTimeChange={(t) => { isEditing.current = true; setTime(t); }}
+          onDurationChange={(dur) => { isEditing.current = true; setDuration(dur); }}
         />
 
         <View style={styles.cta}>
