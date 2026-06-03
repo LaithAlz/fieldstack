@@ -131,7 +131,7 @@ export function FieldDetailScreen({ route }: Props) {
   return (
     <View style={[styles.root, { backgroundColor: colors.surface }]}>
       <ScrollView
-        contentContainerStyle={[styles.scroll, { paddingBottom: spacing.xl }]}
+        contentContainerStyle={[styles.scroll, { paddingBottom: spacing.xl + 80 + insets.bottom }]}
         showsVerticalScrollIndicator={false}
       >
         <View>
