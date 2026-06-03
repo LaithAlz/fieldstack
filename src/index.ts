@@ -58,6 +58,18 @@ app.setErrorHandler((err, _req, reply) => {
     });
   }
 
+  // Supabase/PostgREST errors carry `details` and `hint` fields that may
+  // contain PostgreSQL constraint names, column references, or FK paths. Log
+  // only the safe `code` field so we get a searchable signal without leaking
+  // schema info to the log sink.
+  if (err && typeof err === "object" && "details" in err) {
+    app.log.warn({ pgCode: (err as Record<string, unknown>).code }, "supabase query failed");
+    return reply.code(500).send({
+      data: null,
+      error: { message: "internal server error" },
+    });
+  }
+
   app.log.error(err);
   return reply.code(500).send({
     data: null,
