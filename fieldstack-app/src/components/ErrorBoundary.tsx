@@ -23,7 +23,7 @@ type State = {
   feedback: string | null;
 };
 
-const DEFAULT_CONTACT = "support@fieldstack.app";
+const DEFAULT_CONTACT = "support@onside.app";
 // After this many failed reloads we stop offering a plain reload and route
 // the user to a wipe path — the underlying state is almost certainly broken.
 const STUCK_THRESHOLD = 2;

@@ -33,7 +33,7 @@ const PHONE_COUNTRY_CODE = "+1"; // GTA-focused — North American numbers only 
 
 /**
  * Combined sign-in / sign-up screen. Defaults to sign-in; the user switches
- * modes via a text link in the footer ("New to FieldStack? Sign up"). Inside
+ * modes via a text link in the footer ("New to Onside? Sign up"). Inside
  * the form, an Email/Phone segmented control picks contact method, and
  * sign-up additionally collects a name + a confirm-password field.
  *
@@ -71,7 +71,7 @@ export function SignInScreen() {
    */
   const leaveSignIn = () => {
     if (nav.canGoBack()) {
-      leaveSignIn();
+      nav.goBack();
       return;
     }
     nav.dispatch(

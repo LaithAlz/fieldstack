@@ -18,9 +18,9 @@ import { useTheme } from "../../theme/useTheme";
 type Nav = NativeStackNavigationProp<MeStackParamList, "Settings">;
 
 // Hosted destinations. Swap to real URLs once the marketing site exists.
-const PRIVACY_URL = "https://fieldstack.app/privacy";
-const TERMS_URL = "https://fieldstack.app/terms";
-const SUPPORT_EMAIL = "support@fieldstack.app";
+const PRIVACY_URL = "https://onside.app/privacy";
+const TERMS_URL = "https://onside.app/terms";
+const SUPPORT_EMAIL = "support@onside.app";
 
 export function SettingsScreen() {
   const colors = useTheme();
@@ -50,7 +50,7 @@ export function SettingsScreen() {
     );
   };
 
-  // Deep-link to the OS notification settings for FieldStack. Lets the user
+  // Deep-link to the OS notification settings for Onside. Lets the user
   // toggle booking reminders without us needing in-app notification toggles
   // (we'd just be reflecting OS state anyway).
   const openNotificationSettings = async () => {
