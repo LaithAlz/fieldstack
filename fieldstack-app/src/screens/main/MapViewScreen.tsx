@@ -246,6 +246,14 @@ export function MapViewScreen() {
   const [currentRegion, setCurrentRegion] = useState<Region>(
     () => getLastRegion() ?? initialRegion
   );
+  // Ref mirror of currentRegion so panToVenue can read the latest value without
+  // being listed as a dep of the useCallback. Without this, every pan event
+  // would update currentRegion → recreate panToVenue → recreate handleMarkerPress
+  // → force all 50 VenueMarker slots to re-render.
+  const currentRegionRef = useRef(currentRegion);
+  useEffect(() => {
+    currentRegionRef.current = currentRegion;
+  }, [currentRegion]);
   const mapRef = useRef<MapView>(null);
   const { isSaved, toggle: toggleSaved } = useSavedVenues();
   // Set true right before a programmatic animateToRegion; cleared by the
@@ -356,7 +364,7 @@ export function MapViewScreen() {
     ) {
       return;
     }
-    if (isInRegion(marker.venue, currentRegion)) return;
+    if (isInRegion(marker.venue, currentRegionRef.current)) return;
 
     const cached = getLastRegion();
     const latDelta = cached?.latitudeDelta ?? DEFAULT_DELTA;
@@ -371,7 +379,7 @@ export function MapViewScreen() {
       },
       300
     );
-  }, [markers, currentRegion]);
+  }, [markers]);
 
   // Stable callback — VenueMarker is memoized on prop equality, so a fresh
   // function identity on every render would force every marker to re-render
