@@ -4,7 +4,7 @@ import {
   Inter_500Medium,
   Inter_600SemiBold,
 } from "@expo-google-fonts/inter";
-import { NavigationContainer, DefaultTheme, DarkTheme } from "@react-navigation/native";
+import { NavigationContainer, DefaultTheme, DarkTheme, type LinkingOptions } from "@react-navigation/native";
 import { useFonts } from "expo-font";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
@@ -60,6 +60,28 @@ const posthogProvider = createPosthogProvider();
 if (posthogProvider) setAnalyticsProvider(posthogProvider);
 
 const SPLASH_CAP_MS = 2000;
+
+// Deep-link / universal-link routing table. The scheme comes from app.json
+// (`"scheme": "onside"`). Each path maps onto the registered screen names
+// in MainNavigator.tsx — `ExploreTab` and `MeTab` are the bottom-tab names.
+const linking: LinkingOptions<ReactNavigation.RootParamList> = {
+  prefixes: ["onside://"],
+  config: {
+    screens: {
+      ExploreTab: {
+        screens: {
+          VenueDetail: "venue/:venueId",
+          FieldDetail: "venue/:venueId/field/:fieldId",
+        },
+      },
+      MeTab: {
+        screens: {
+          SetNewPassword: "set-new-password",
+        },
+      },
+    },
+  },
+};
 
 function withTimeout<T>(promise: Promise<T>, ms: number, fallback: T): Promise<T> {
   return Promise.race([
@@ -165,7 +187,7 @@ export default function App() {
                             {/* Hold render until persisted state has hydrated,
                                 so deep links don't see empty defaults. */}
                             <PersistenceGate>
-                              <NavigationContainer theme={navTheme}>
+                              <NavigationContainer theme={navTheme} linking={linking}>
                                 <RootNavigator />
                               </NavigationContainer>
                               <StatusBar style="auto" />
