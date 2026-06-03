@@ -28,7 +28,7 @@ export function SettingsScreen() {
   const nav = useNavigation<Nav>();
   const toast = useToast();
   const resetApp = useAppReset();
-  const { user, signOut } = useAuth();
+  const { user, signOut, deleteAccount } = useAuth();
 
   const version = Constants.expoConfig?.version ?? "1.0.0";
 
@@ -44,6 +44,40 @@ export function SettingsScreen() {
           onPress: async () => {
             await signOut();
             toast.show("Signed out.", { type: "success" });
+          },
+        },
+      ]
+    );
+  };
+
+  const confirmDeleteAccount = () => {
+    Alert.alert(
+      "Delete account?",
+      "This permanently deletes your account and all your data. This cannot be undone.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete account",
+          style: "destructive",
+          onPress: () => {
+            // Second confirmation — App Store requires two-step deletion flow.
+            Alert.alert(
+              "Are you sure?",
+              "All your saves, reviews, and history will be permanently deleted.",
+              [
+                { text: "Cancel", style: "cancel" },
+                {
+                  text: "Yes, delete",
+                  style: "destructive",
+                  onPress: async () => {
+                    const result = await deleteAccount();
+                    if (!result.ok) {
+                      toast.show(result.error ?? "Couldn't delete account.", { type: "error" });
+                    }
+                  },
+                },
+              ]
+            );
           },
         },
       ]
@@ -153,6 +187,12 @@ export function SettingsScreen() {
               label="Sign out"
               destructive
               onPress={confirmSignOut}
+            />
+            <Row
+              icon="person-remove-outline"
+              label="Delete account"
+              destructive
+              onPress={confirmDeleteAccount}
             />
           </>
         ) : (
