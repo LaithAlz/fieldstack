@@ -75,8 +75,10 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     return () => {
       if (hideTimeout.current) clearTimeout(hideTimeout.current);
+      translateY.stopAnimation();
+      opacity.stopAnimation();
     };
-  }, []);
+  }, [opacity, translateY]);
 
   return (
     <ToastContext.Provider value={{ show }}>
