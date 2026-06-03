@@ -165,10 +165,11 @@ function useFieldSearchState(): UseFieldSearchResult {
   const [locationError, setLocationError] = useState<Error | null>(null);
   const offsetRef = useRef(0);
 
-  // True until persisted filters have been read on mount. Suppresses
-  // `search_filtered` analytics during restoration so we don't log a "user
-  // applied filters" event on cold start.
-  const restoredRef = useRef(false);
+  // Becomes true once persisted filters have been read on mount. Stored as
+  // state (not a ref) so the fetch effect re-runs when restoration completes —
+  // a plain ref isn't reactive, so a location seeded before getLastFilters()
+  // resolves would fire the fetch guard early, be blocked, and never retry.
+  const [isRestored, setIsRestored] = useState(false);
   const requestId = useRef(0);
   /**
    * When `setLocation` is called with explicit coords, the next geocode
@@ -183,17 +184,8 @@ function useFieldSearchState(): UseFieldSearchResult {
     (async () => {
       const stored = await getLastFilters();
       if (cancelled) return;
-      if (!restoredRef.current) {
-        if (stored) setFilters(stored);
-      }
-      restoredRef.current = true;
-      // The fetch effect guards on restoredRef.current, but refs aren't
-      // reactive so the effect won't re-run here. If the stored filters
-      // equal the current state (no setFilters call above) the fetch effect
-      // deps haven't changed either, so isLoading would stay true forever.
-      // Clear it now; the fetch effect will set it back to true when a real
-      // fetch is triggered.
-      if (requestId.current === 0) setIsLoading(false);
+      if (stored) setFilters(stored);
+      setIsRestored(true);
     })();
     return () => {
       cancelled = true;
@@ -202,9 +194,9 @@ function useFieldSearchState(): UseFieldSearchResult {
 
   // ---- Persist filters on every change (after initial restore) -----------
   useEffect(() => {
-    if (!restoredRef.current) return;
+    if (!isRestored) return;
     void setLastFilters(filters);
-  }, [filters]);
+  }, [isRestored, filters]);
 
   // ---- Debounced geocode for location text -------------------------------
   useEffect(() => {
@@ -241,7 +233,7 @@ function useFieldSearchState(): UseFieldSearchResult {
   // ---- Debounced fetch on filter / coord changes -------------------------
   // Filter/coord changes always reset to page 1.
   useEffect(() => {
-    if (!restoredRef.current) return;
+    if (!isRestored) return;
 
     const timer = setTimeout(async () => {
       const id = ++requestId.current;
@@ -275,6 +267,7 @@ function useFieldSearchState(): UseFieldSearchResult {
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
+    isRestored,
     filters.surface,
     filters.size,
     filters.venueType,
@@ -282,8 +275,6 @@ function useFieldSearchState(): UseFieldSearchResult {
     filters.sort,
     location.lat,
     location.lng,
-    // restoredRef.current isn't reactive — the outer guard re-runs naturally
-    // when state changes after restoration completes.
   ]);
 
   // ---- Mutators ----------------------------------------------------------
