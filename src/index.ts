@@ -1,6 +1,7 @@
 import "dotenv/config";
 import Fastify from "fastify";
 import cors from "@fastify/cors";
+import rateLimit from "@fastify/rate-limit";
 import { ZodError } from "zod";
 import { ApiError } from "./lib/errors.js";
 import { redis } from "./lib/redis.js";
@@ -25,6 +26,21 @@ const app = Fastify({
 const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(",").map((s) => s.trim());
 await app.register(cors, {
   origin: allowedOrigins && allowedOrigins.length > 0 ? allowedOrigins : false,
+});
+
+// Global rate limit: 60 req/min per IP. The search endpoint has a tighter
+// per-route limit set in searchRoutes (20 req/min) because it hits PostGIS.
+await app.register(rateLimit, {
+  global: true,
+  max: 60,
+  timeWindow: "1 minute",
+  errorResponseBuilder: (_req, context) => ({
+    data: null,
+    error: {
+      message: `Too many requests — slow down (limit: ${context.max} per ${context.after}).`,
+      code: "RATE_LIMITED",
+    },
+  }),
 });
 
 // Global JWT preHandler. Permissive: attaches `req.user` when the
