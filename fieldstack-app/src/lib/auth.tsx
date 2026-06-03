@@ -66,6 +66,12 @@ type ContextValue = {
   hydrated: boolean;
   /** True only while a sign-in / sign-up / sign-out request is in flight. */
   busy: boolean;
+  /**
+   * Set to true when a `type=recovery` deep link is opened. Consumers should
+   * navigate to `SetNewPasswordScreen` and then call `clearPendingRecovery`.
+   */
+  pendingRecovery: boolean;
+  clearPendingRecovery: () => void;
   signIn: (contact: AuthContact, password: string) => Promise<AuthResult>;
   signUp: (
     contact: AuthContact,
@@ -81,6 +87,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [hydrated, setHydrated] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [pendingRecovery, setPendingRecovery] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -113,6 +120,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!parsed) return;
       try {
         await supabase.auth.setSession(parsed);
+        // Recovery links must route to SetNewPasswordScreen instead of
+        // silently logging the user in.
+        if (!cancelled && parsed.type === "recovery") {
+          setPendingRecovery(true);
+        }
       } catch (err) {
         if (__DEV__) {
           // Message only — supabase-js error objects can echo back the
@@ -181,17 +193,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  const clearPendingRecovery = useCallback(() => {
+    setPendingRecovery(false);
+  }, []);
+
   const value = useMemo<ContextValue>(
     () => ({
       user: session?.user ?? null,
       session,
       hydrated,
       busy,
+      pendingRecovery,
+      clearPendingRecovery,
       signIn,
       signUp,
       signOut,
     }),
-    [session, hydrated, busy, signIn, signUp, signOut]
+    [session, hydrated, busy, pendingRecovery, clearPendingRecovery, signIn, signUp, signOut]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
@@ -206,24 +224,20 @@ export function useAuth(): ContextValue {
 }
 
 /**
- * Pull `access_token` + `refresh_token` out of a Supabase auth redirect URL.
- * Supabase puts them in the URL fragment (`#access_token=…&refresh_token=…`)
- * for email verification, magic links, and password recovery. Returns null
- * for anything else (regular deep links, error redirects, etc.) so callers
- * can no-op safely.
- *
- * TODO(recovery): `type=recovery` URLs also carry tokens, so the caller
- * currently signs the user straight in. Once a "set new password" screen
- * exists, branch on the `type` fragment param and route to it instead.
+ * Pull `access_token`, `refresh_token`, and `type` out of a Supabase auth
+ * redirect URL. Supabase puts them in the URL fragment
+ * (`#access_token=…&refresh_token=…&type=recovery`) for email verification,
+ * magic links, and password recovery. Returns null for anything else (regular
+ * deep links, error redirects, etc.) so callers can no-op safely.
  */
 function parseSupabaseAuthUrl(
   url: string
-): { access_token: string; refresh_token: string } | null {
+): { access_token: string; refresh_token: string; type: string | null } | null {
   const hashIndex = url.indexOf("#");
   if (hashIndex === -1) return null;
   const params = new URLSearchParams(url.slice(hashIndex + 1));
   const access_token = params.get("access_token");
   const refresh_token = params.get("refresh_token");
   if (!access_token || !refresh_token) return null;
-  return { access_token, refresh_token };
+  return { access_token, refresh_token, type: params.get("type") };
 }

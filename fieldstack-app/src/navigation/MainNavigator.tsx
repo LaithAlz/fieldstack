@@ -12,6 +12,7 @@ import { FieldSearchScreen } from "../screens/main/FieldSearchScreen";
 import { MapViewScreen } from "../screens/main/MapViewScreen";
 import { ProfileScreen } from "../screens/main/ProfileScreen";
 import { SavedScreen } from "../screens/main/SavedScreen";
+import { SetNewPasswordScreen } from "../screens/main/SetNewPasswordScreen";
 import { SettingsScreen } from "../screens/main/SettingsScreen";
 import { SignInScreen } from "../screens/main/SignInScreen";
 import { VenueDetailScreen } from "../screens/main/VenueDetailScreen";
@@ -47,6 +48,7 @@ export type MeStackParamList = {
   Profile: undefined;
   Settings: undefined;
   SignIn: undefined;
+  SetNewPassword: undefined;
   VenueDetail: { venueId: string };
   FieldDetail: { fieldId: string };
 };
@@ -79,7 +81,8 @@ function tabBarStyleFor(
     focused === "VenueDetail" ||
     focused === "FieldDetail" ||
     focused === "Settings" ||
-    focused === "SignIn"
+    focused === "SignIn" ||
+    focused === "SetNewPassword"
   ) {
     return { display: "none" as const };
   }
@@ -121,6 +124,7 @@ function MeStackNavigator() {
       <MeStack.Screen name="Profile" component={ProfileScreen} />
       <MeStack.Screen name="Settings" component={SettingsScreen} />
       <MeStack.Screen name="SignIn" component={SignInScreen} />
+      <MeStack.Screen name="SetNewPassword" component={SetNewPasswordScreen} />
       <MeStack.Screen name="VenueDetail" component={VenueDetailScreen} />
       <MeStack.Screen name="FieldDetail" component={FieldDetailScreen} />
     </MeStack.Navigator>
@@ -132,6 +136,7 @@ function MeStackNavigator() {
 // ---------------------------------------------------------------------------
 
 const Tabs = createBottomTabNavigator<RootTabsParamList>();
+
 
 export function MainNavigator() {
   const colors = useTheme();

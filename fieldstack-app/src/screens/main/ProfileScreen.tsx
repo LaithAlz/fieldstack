@@ -3,7 +3,7 @@ import type { BottomSheetModal } from "@gorhom/bottom-sheet";
 import type { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -50,7 +50,17 @@ export function ProfileScreen() {
   const { saved: savedIds } = useSavedVenues();
   const { recent: recentIds } = useRecentlyViewed();
   const { attempts } = useBookingHistory();
-  const { user } = useAuth();
+  const { user, pendingRecovery, clearPendingRecovery } = useAuth();
+
+  // Route recovery deep-links to SetNewPasswordScreen. The recovery session is
+  // already hydrated by the time pendingRecovery flips, so we can navigate
+  // immediately. ProfileScreen is always the root of the MeStack, so this
+  // effect runs even on cold launch if the app opened via a recovery link.
+  useEffect(() => {
+    if (!pendingRecovery) return;
+    clearPendingRecovery();
+    navigation.navigate("SetNewPassword");
+  }, [pendingRecovery, clearPendingRecovery, navigation]);
 
   // Greeting picks the first thing useful — display name from auth metadata,
   // local-part of the email, or a generic fallback for guests.
