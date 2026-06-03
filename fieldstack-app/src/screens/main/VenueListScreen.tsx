@@ -34,6 +34,12 @@ import type { VenueWithFields } from "../../types/api";
 
 type Nav = NativeStackNavigationProp<MainStackParamList, "VenueList">;
 
+// Hoisted outside the component so FlatList gets a stable reference and never
+// re-creates the separator view on every render.
+function ItemSeparator() {
+  return <View style={styles.separator} />;
+}
+
 export function VenueListScreen() {
   const navigation = useNavigation<Nav>();
   const insets = useSafeAreaInsets();
@@ -64,9 +70,21 @@ export function VenueListScreen() {
     await refetchVenues();
   }, [refetchVenues]);
   const { saved: savedIds } = useSavedVenues();
-  const { venueWasRecentlyAttempted } = useBookingHistory();
+  const { attempts } = useBookingHistory();
   const { recent: recentIds } = useRecentlyViewed();
   const [nameQuery, setNameQuery] = useState("");
+
+  // Pre-compute the set of venue IDs that had a booking attempt in the last
+  // 30 days. Deriving this once per `attempts` change is cheaper than calling
+  // venueWasRecentlyAttempted (which scans the array) for every rendered card.
+  const attemptedIds = useMemo(() => {
+    const cutoff = Date.now() - 30 * 24 * 60 * 60 * 1000;
+    return new Set(
+      attempts
+        .filter((a) => a.attemptedAt >= cutoff)
+        .map((a) => a.venueId)
+    );
+  }, [attempts]);
 
   const filteredVenues = useMemo(() => {
     const q = nameQuery.trim().toLowerCase();
@@ -88,6 +106,21 @@ export function VenueListScreen() {
   const handleCardPress = useCallback(
     (venue: VenueWithFields) => navigation.navigate("VenueDetail", { venueId: venue.id }),
     [navigation]
+  );
+
+  // Stable renderItem — avoids recreating a new closure on every render, which
+  // would defeat VenueCard's memo wrapper by always providing a new onPress ref.
+  const renderVenueCard = useCallback(
+    ({ item }: { item: VenueWithFields }) => (
+      <VenueCard
+        venue={item}
+        userCoords={coords}
+        isSaved={savedIds.has(item.id)}
+        recentlyAttempted={attemptedIds.has(item.id)}
+        onPress={() => handleCardPress(item)}
+      />
+    ),
+    [coords, savedIds, attemptedIds, handleCardPress]
   );
 
   const openPicker = useCallback(() => sheetRef.current?.present(), []);
@@ -261,16 +294,8 @@ export function VenueListScreen() {
               />
             ) : null
           }
-          renderItem={({ item }) => (
-            <VenueCard
-              venue={item}
-              userCoords={coords}
-              isSaved={savedIds.has(item.id)}
-              recentlyAttempted={venueWasRecentlyAttempted(item.id)}
-              onPress={() => handleCardPress(item)}
-            />
-          )}
-          ItemSeparatorComponent={() => <View style={{ height: spacing.md }} />}
+          renderItem={renderVenueCard}
+          ItemSeparatorComponent={ItemSeparator}
           ListEmptyComponent={
             nameQuery.trim().length > 0 ? (
               <EmptyState
@@ -397,6 +422,9 @@ const styles = StyleSheet.create({
   },
   listEmpty: {
     flexGrow: 1,
+  },
+  separator: {
+    height: spacing.md,
   },
   offlineBanner: {
     flexDirection: "row",
