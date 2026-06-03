@@ -182,6 +182,13 @@ function useFieldSearchState(): UseFieldSearchResult {
         if (stored) setFilters(stored);
       }
       restoredRef.current = true;
+      // The fetch effect guards on restoredRef.current, but refs aren't
+      // reactive so the effect won't re-run here. If the stored filters
+      // equal the current state (no setFilters call above) the fetch effect
+      // deps haven't changed either, so isLoading would stay true forever.
+      // Clear it now; the fetch effect will set it back to true when a real
+      // fetch is triggered.
+      if (requestId.current === 0) setIsLoading(false);
     })();
     return () => {
       cancelled = true;
