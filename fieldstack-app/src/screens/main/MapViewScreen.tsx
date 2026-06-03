@@ -412,14 +412,18 @@ export function MapViewScreen() {
   // JS-thread animation (useNativeDriver: false) goes through requestAnimationFrame
   // and React's normal reconciliation — no independent shadow-tree commits.
   const cardOffset = useRef(new Animated.Value(320)).current;
+  // Keyed on the raw string id rather than the derived `selectedMarker` object.
+  // `selectedMarker` is re-derived from `markers.find()` on every results update,
+  // so a new object reference would re-fire the spring even when the same venue
+  // stays selected — causing a redundant animation on every pan/refetch.
   useEffect(() => {
     Animated.spring(cardOffset, {
-      toValue: selectedMarker ? 0 : 320,
+      toValue: selectedVenueId ? 0 : 320,
       useNativeDriver: false,
       friction: 9,
       tension: 90,
     }).start();
-  }, [selectedMarker, cardOffset]);
+  }, [selectedVenueId, cardOffset]);
 
   return (
     <View style={styles.root}>
