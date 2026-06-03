@@ -22,7 +22,10 @@ const app = Fastify({
   },
 });
 
-await app.register(cors, { origin: true });
+const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(",").map((s) => s.trim());
+await app.register(cors, {
+  origin: allowedOrigins && allowedOrigins.length > 0 ? allowedOrigins : false,
+});
 
 // Global JWT preHandler. Permissive: attaches `req.user` when the
 // Authorization bearer token validates, leaves it null otherwise. Public
