@@ -52,10 +52,11 @@ export function ProfileScreen() {
   const { attempts } = useBookingHistory();
   const { user, pendingRecovery, clearPendingRecovery } = useAuth();
 
-  // Route recovery deep-links to SetNewPasswordScreen. The recovery session is
-  // already hydrated by the time pendingRecovery flips, so we can navigate
-  // immediately. ProfileScreen is always the root of the MeStack, so this
-  // effect runs even on cold launch if the app opened via a recovery link.
+  // Fallback redirect for recovery deep-links in case the app-level
+  // RecoveryRedirectHandler in App.tsx fires before the nav container is fully
+  // ready. If the handler already cleared pendingRecovery this effect is a
+  // no-op. If the handler couldn't run yet (navRef not ready), this catches it
+  // the moment the Me tab is focused and ProfileScreen mounts.
   useEffect(() => {
     if (!pendingRecovery) return;
     clearPendingRecovery();
