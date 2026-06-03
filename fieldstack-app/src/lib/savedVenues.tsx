@@ -185,6 +185,8 @@ export function SavedVenuesProvider({ children }: { children: ReactNode }) {
 
   const toggle = useCallback(
     async (id: string) => {
+      const currentUser = user; // snapshot at call time, not at updater execution time
+
       // --- Optimistic update ---
       const wasSaved = saved.has(id);
       const optimisticNext = new Set(saved);
@@ -195,7 +197,7 @@ export function SavedVenuesProvider({ children }: { children: ReactNode }) {
         () => undefined
       );
 
-      if (!user) return;
+      if (!currentUser) return;
 
       // --- Cloud write with retry ---
       setPendingSync((prev) => new Set([...prev, id]));
@@ -207,14 +209,14 @@ export function SavedVenuesProvider({ children }: { children: ReactNode }) {
             const { error } = await supabase
               .from("user_saved_venues")
               .delete()
-              .eq("user_id", user.id)
+              .eq("user_id", currentUser.id)
               .eq("venue_id", id);
             if (error) throw error;
           } else {
             const { error } = await supabase
               .from("user_saved_venues")
               .upsert(
-                { user_id: user.id, venue_id: id },
+                { user_id: currentUser.id, venue_id: id },
                 { onConflict: "user_id,venue_id", ignoreDuplicates: true }
               );
             if (error) throw error;
