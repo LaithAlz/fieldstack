@@ -14,6 +14,7 @@ import { LocationPickerSheet } from "../../components/LocationPickerSheet";
 import { LocationPill } from "../../components/LocationPill";
 import { ResultCountPill } from "../../components/ResultCountPill";
 import { Text } from "../../components/Text";
+import { useToast } from "../../components/Toast";
 import { VenueMapCard } from "../../components/VenueMapCard";
 import { VenuePin } from "../../components/VenuePin";
 import { useFieldSearch } from "../../hooks/useFieldSearch";
@@ -161,6 +162,7 @@ export function MapViewScreen() {
   const colors = useTheme();
   const insets = useSafeAreaInsets();
   const nav = useNavigation<Nav>();
+  const toast = useToast();
 
   const { coords: userCoords, permissionStatus, coordsFetchFailed } = useLocation();
   if (coordsFetchFailed) {
@@ -202,8 +204,11 @@ export function MapViewScreen() {
     if (fresh) {
       setLocation("Near you", fresh);
       closePicker();
+    } else {
+      toast.show("Couldn't read your location.", { type: "error" });
+      closePicker();
     }
-  }, [closePicker, setLocation]);
+  }, [closePicker, setLocation, toast]);
 
   const handleRequestPermission = useCallback(async () => {
     const status = await requestPermission();
