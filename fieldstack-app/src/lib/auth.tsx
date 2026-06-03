@@ -79,7 +79,6 @@ type ContextValue = {
     fullName: string
   ) => Promise<AuthResult>;
   signOut: () => Promise<void>;
-  deleteAccount: () => Promise<AuthResult>;
 };
 
 const AuthContext = createContext<ContextValue | null>(null);
@@ -194,22 +193,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const deleteAccount = useCallback(async (): Promise<AuthResult> => {
-    setBusy(true);
-    try {
-      const { error } = await supabase.rpc("delete_user");
-      if (error) {
-        return { ok: false, error: "Couldn't delete account. Please try again." };
-      }
-      await supabase.auth.signOut();
-      return { ok: true, error: null };
-    } catch {
-      return { ok: false, error: "Couldn't delete account. Please try again." };
-    } finally {
-      setBusy(false);
-    }
-  }, []);
-
   const clearPendingRecovery = useCallback(() => {
     setPendingRecovery(false);
   }, []);
@@ -225,9 +208,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       signIn,
       signUp,
       signOut,
-      deleteAccount,
     }),
-    [session, hydrated, busy, pendingRecovery, clearPendingRecovery, signIn, signUp, signOut, deleteAccount]
+    [session, hydrated, busy, pendingRecovery, clearPendingRecovery, signIn, signUp, signOut]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

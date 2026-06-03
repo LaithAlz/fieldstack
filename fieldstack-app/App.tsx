@@ -4,7 +4,7 @@ import {
   Inter_500Medium,
   Inter_600SemiBold,
 } from "@expo-google-fonts/inter";
-import { createNavigationContainerRef, NavigationContainer, DefaultTheme, DarkTheme } from "@react-navigation/native";
+import { NavigationContainer, DefaultTheme, DarkTheme } from "@react-navigation/native";
 import { useFonts } from "expo-font";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
@@ -58,10 +58,6 @@ SplashScreen.preventAutoHideAsync().catch(() => {
 initSentry();
 const posthogProvider = createPosthogProvider();
 if (posthogProvider) setAnalyticsProvider(posthogProvider);
-
-// Navigation ref used outside the component tree (e.g. RecoveryRedirectHandler)
-// to imperatively navigate as soon as the container is ready.
-const navRef = createNavigationContainerRef();
 
 const SPLASH_CAP_MS = 2000;
 
@@ -169,14 +165,8 @@ export default function App() {
                             {/* Hold render until persisted state has hydrated,
                                 so deep links don't see empty defaults. */}
                             <PersistenceGate>
-                              <NavigationContainer ref={navRef} theme={navTheme}>
+                              <NavigationContainer theme={navTheme}>
                                 <RootNavigator />
-                                {/* Fires as soon as the nav container is ready
-                                    so a cold-start from a recovery deep link
-                                    redirects to SetNewPassword immediately,
-                                    even if the user lands on the Explore tab
-                                    rather than the Me tab. */}
-                                <RecoveryRedirectHandler />
                               </NavigationContainer>
                               <StatusBar style="auto" />
                             </PersistenceGate>
@@ -193,30 +183,6 @@ export default function App() {
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );
-}
-
-/**
- * Eagerly redirects to SetNewPassword when a password-recovery deep link
- * opens the app. Mounting this inside NavigationContainer (but outside
- * RootNavigator) gives it both auth context access (via useAuth, which
- * resolves through the AuthProvider higher in the tree) and a ready nav
- * container. This fixes the latency bug where ProfileScreen's useEffect
- * would only fire after the user manually tapped the Me tab.
- */
-function RecoveryRedirectHandler() {
-  const { pendingRecovery, clearPendingRecovery } = useAuth();
-
-  useEffect(() => {
-    if (!pendingRecovery) return;
-    if (!navRef.isReady()) return;
-    clearPendingRecovery();
-    // Type-cast needed because navRef is untyped (no RootParamList generic);
-    // the runtime route is correct — MeTab > SetNewPassword exists in the tree.
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (navRef as any).navigate("MeTab", { screen: "SetNewPassword" });
-  }, [pendingRecovery, clearPendingRecovery]);
-
-  return null;
 }
 
 function PersistenceGate({ children }: { children: React.ReactNode }) {
