@@ -406,23 +406,23 @@ export function MapViewScreen() {
           );
         })}
 
-        {/* Selection ring — Circle is a native MKOverlay, not a React
-            subview of AIRMap, so it is safe to mount/unmount without
-            triggering the insertReactSubview:atIndex: crash. */}
-        {selectedMarker &&
-        selectedMarker.venue.lat !== null &&
-        selectedMarker.venue.lng !== null ? (
-          <Circle
-            center={{
-              latitude: selectedMarker.venue.lat,
-              longitude: selectedMarker.venue.lng,
-            }}
-            radius={28}
-            fillColor={colors.brand + "22"}
-            strokeColor={colors.brand}
-            strokeWidth={2.5}
-          />
-        ) : null}
+        {/* Selection halo — MUST be permanently mounted. Conditionally
+            rendering ANY child of MapView calls insertReactSubview:atIndex:
+            on mount/unmount, which crashes under the Fabric interop layer
+            even for native overlays like Circle. Only prop changes are safe.
+            When nothing is selected, the circle sits at null-island (0,0)
+            with radius 0 and transparent colors — effectively invisible. */}
+        <Circle
+          center={
+            selectedMarker?.venue.lat !== null && selectedMarker?.venue.lng !== null && selectedMarker
+              ? { latitude: selectedMarker.venue.lat!, longitude: selectedMarker.venue.lng! }
+              : { latitude: 0, longitude: 0 }
+          }
+          radius={selectedMarker ? 36 : 0.1}
+          fillColor={selectedMarker ? colors.brand + "28" : "transparent"}
+          strokeColor={selectedMarker ? colors.brand : "transparent"}
+          strokeWidth={selectedMarker ? 3 : 0}
+        />
       </MapView>
 
       {/* Top overlay: search bar (with list-view icon) + filter chips */}
