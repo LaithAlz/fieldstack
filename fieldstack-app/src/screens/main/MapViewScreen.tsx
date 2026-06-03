@@ -165,10 +165,6 @@ export function MapViewScreen() {
   const toast = useToast();
 
   const { coords: userCoords, permissionStatus, coordsFetchFailed } = useLocation();
-  if (coordsFetchFailed) {
-    // eslint-disable-next-line no-console
-    console.warn("coordsFetchFailed: GPS returned null with permission granted");
-  }
   const {
     results,
     total,
@@ -513,6 +509,27 @@ export function MapViewScreen() {
           />
         </View>
 
+        {/* GPS fetch-failed banner — non-blocking, shown only when location
+            permission is granted but coords couldn't be read. */}
+        {permissionStatus === "granted" && coordsFetchFailed ? (
+          <View
+            pointerEvents="none"
+            style={styles.gpsBannerRow}
+            accessibilityLiveRegion="polite"
+          >
+            <View
+              style={[
+                styles.gpsBanner,
+                { backgroundColor: colors.surface, borderColor: colors.border },
+              ]}
+            >
+              <Text size="sm" variant="secondary">
+                Couldn&apos;t read your location — showing results near downtown Toronto.
+              </Text>
+            </View>
+          </View>
+        ) : null}
+
       </View>
 
       {/* No results — descriptive only; auto-refetch on pan handles the
@@ -666,6 +683,22 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
+  },
+  gpsBannerRow: {
+    alignItems: "center",
+    marginTop: spacing.sm,
+    paddingHorizontal: spacing.lg,
+  },
+  gpsBanner: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: borderRadius.md,
+    borderWidth: StyleSheet.hairlineWidth,
+    shadowColor: "#000",
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 1 },
+    elevation: 2,
   },
   attribution: {
     position: "absolute",
