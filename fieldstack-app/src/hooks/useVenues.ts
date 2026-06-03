@@ -49,37 +49,44 @@ export function useVenues({ coords, radiusKm = 25 }: UseVenuesOptions): UseVenue
       if (mode === "initial") setLoading(true);
       else setRefreshing(true);
 
-      const params = coords
-        ? { lat: coords.lat, lng: coords.lng, radius_km: radiusKm }
-        : undefined;
-      const result = await getVenues(params);
+      try {
+        const params = coords
+          ? { lat: coords.lat, lng: coords.lng, radius_km: radiusKm }
+          : undefined;
+        const result = await getVenues(params);
 
-      // Drop stale responses if a newer request started while this one was in flight.
-      if (id !== requestId.current) return;
+        // Drop stale responses if a newer request started while this one was in flight.
+        if (id !== requestId.current) return;
 
-      if (result.error) {
-        setError(result.error);
-        // Network/server error — try the offline cache as a fallback. Only
-        // applies on initial load; pull-to-refresh failures leave the
-        // existing in-memory list alone.
-        if (mode === "initial") {
-          const cached = await getCachedVenues();
-          if (id !== requestId.current) return;
-          if (cached) {
-            setVenues(cached.venues);
-            setStaleFromCache(true);
-            setCachedAt(cached.fetchedAt);
+        if (result.error) {
+          setError(result.error);
+          // Network/server error — try the offline cache as a fallback. Only
+          // applies on initial load; pull-to-refresh failures leave the
+          // existing in-memory list alone.
+          if (mode === "initial") {
+            const cached = await getCachedVenues();
+            if (id !== requestId.current) return;
+            if (cached) {
+              setVenues(cached.venues);
+              setStaleFromCache(true);
+              setCachedAt(cached.fetchedAt);
+            }
           }
+        } else if (result.data) {
+          setVenues(result.data);
+          setError(null);
+          setStaleFromCache(false);
+          setCachedAt(null);
+          void setCachedVenues(result.data);
         }
-      } else if (result.data) {
-        setVenues(result.data);
-        setError(null);
-        setStaleFromCache(false);
-        setCachedAt(null);
-        void setCachedVenues(result.data);
+      } finally {
+        // Only clear the flag for the request that is still current; stale
+        // requests have already been superseded and should not touch state.
+        if (id === requestId.current) {
+          if (mode === "initial") setLoading(false);
+          else setRefreshing(false);
+        }
       }
-      if (mode === "initial") setLoading(false);
-      else setRefreshing(false);
     },
     [coords, radiusKm]
   );
