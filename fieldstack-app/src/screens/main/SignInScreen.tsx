@@ -4,6 +4,7 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useState } from "react";
 import {
   KeyboardAvoidingView,
+  Linking,
   Platform,
   Pressable,
   ScrollView,
@@ -30,6 +31,9 @@ type ContactMethod = "email" | "phone";
 const MIN_PASSWORD = 6;
 const PHONE_DIGITS_REQUIRED = 10;
 const PHONE_COUNTRY_CODE = "+1"; // GTA-focused — North American numbers only for v1
+
+const TERMS_URL = "https://onside.app/terms";
+const PRIVACY_URL = "https://onside.app/privacy";
 
 /**
  * Combined sign-in / sign-up screen. Defaults to sign-in; the user switches
@@ -413,7 +417,27 @@ export function SignInScreen() {
 
         <Text size="xs" variant="tertiary" style={styles.legal}>
           By {mode === "signin" ? "signing in" : "creating an account"} you agree to
-          our Terms and Privacy Policy.
+          our{" "}
+          <Text
+            size="xs"
+            variant="tertiary"
+            style={styles.legalLink}
+            onPress={() => void Linking.openURL(TERMS_URL)}
+            accessibilityRole="link"
+          >
+            Terms
+          </Text>
+          {" "}and{" "}
+          <Text
+            size="xs"
+            variant="tertiary"
+            style={styles.legalLink}
+            onPress={() => void Linking.openURL(PRIVACY_URL)}
+            accessibilityRole="link"
+          >
+            Privacy Policy
+          </Text>
+          .
         </Text>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -622,5 +646,8 @@ const styles = StyleSheet.create({
     textAlign: "center",
     marginTop: spacing.md,
     paddingHorizontal: spacing.md,
+  },
+  legalLink: {
+    textDecorationLine: "underline",
   },
 });
