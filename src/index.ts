@@ -22,6 +22,13 @@ const app = Fastify({
       ? undefined
       : { target: "pino-pretty", options: { colorize: true } },
   },
+  // Behind a load balancer / reverse proxy every request arrives from the
+  // proxy's IP, which would collapse the per-IP rate limit into one shared
+  // bucket for all users. TRUST_PROXY=true makes Fastify honour
+  // X-Forwarded-For so req.ip is the real client. Leave unset for direct
+  // exposure (local dev) — trusting the header without a proxy lets clients
+  // spoof their IP to dodge rate limits.
+  trustProxy: process.env.TRUST_PROXY === "true",
 });
 
 // Security headers before CORS so they apply to preflight responses too.
