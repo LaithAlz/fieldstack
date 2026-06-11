@@ -53,6 +53,14 @@ export type FontFamily = typeof fontFamily;
 export type ThemeColors = {
   brand: string;
   brandDark: string;
+  /**
+   * Text/icon color for filled accent surfaces (brand / success / danger
+   * backgrounds). White works on the light palette's deeper fills, but the
+   * dark palette brightens those fills for contrast against the near-black
+   * surface — white-on-bright-green lands around 1.9:1, so dark mode flips
+   * to a near-black ink instead.
+   */
+  onBrand: string;
   surface: string;
   surfaceSecondary: string;
   textPrimary: string;
@@ -71,6 +79,7 @@ export type ThemeColors = {
 const lightColors: ThemeColors = {
   brand: "#15803D",            // green-700
   brandDark: "#166534",        // green-800, for pressed states
+  onBrand: "#FFFFFF",
   surface: "#FFFFFF",
   surfaceSecondary: "#F4F4F5", // zinc-100, for cards / grouped sections
   textPrimary: "#18181B",      // zinc-900
@@ -85,6 +94,7 @@ const lightColors: ThemeColors = {
 const darkColors: ThemeColors = {
   brand: "#22C55E",            // green-500, brighter for contrast on dark
   brandDark: "#16A34A",        // green-600
+  onBrand: "#052E16",          // green-950 — dark ink on the bright fill
   surface: "#09090B",          // zinc-950
   surfaceSecondary: "#18181B", // zinc-900
   textPrimary: "#FAFAFA",      // zinc-50

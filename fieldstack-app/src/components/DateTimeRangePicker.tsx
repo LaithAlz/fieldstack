@@ -359,7 +359,7 @@ function PillBase({
         <Ionicons
           name="checkmark"
           size={14}
-          color="#FFFFFF"
+          color={colors.onBrand}
           style={styles.checkmark}
           accessibilityElementsHidden
           importantForAccessibility="no-hide-descendants"
@@ -375,7 +375,7 @@ function PillBase({
       <Text
         weight={selected ? "bold" : "medium"}
         style={{
-          color: selected ? "#FFFFFF" : colors.textPrimary,
+          color: selected ? colors.onBrand : colors.textPrimary,
           fontSize: fontSize.sm,
         }}
         numberOfLines={1}
@@ -534,7 +534,7 @@ function CalendarGrid({
               size="xs"
               weight="medium"
               style={{
-                color: isSelected ? "#FFFFFF" : colors.textSecondary,
+                color: isSelected ? colors.onBrand : colors.textSecondary,
               }}
             >
               {weekday}
@@ -543,7 +543,7 @@ function CalendarGrid({
               size="lg"
               weight="bold"
               style={{
-                color: isSelected ? "#FFFFFF" : colors.textPrimary,
+                color: isSelected ? colors.onBrand : colors.textPrimary,
                 letterSpacing: -0.3,
               }}
             >

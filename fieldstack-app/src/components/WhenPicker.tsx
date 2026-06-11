@@ -57,12 +57,12 @@ export function WhenPill() {
         <Ionicons
           name="time-outline"
           size={16}
-          color={slot ? "#FFFFFF" : colors.textPrimary}
+          color={slot ? colors.onBrand : colors.textPrimary}
         />
         <Text
           size="sm"
           weight="medium"
-          style={{ color: slot ? "#FFFFFF" : colors.textPrimary }}
+          style={{ color: slot ? colors.onBrand : colors.textPrimary }}
           numberOfLines={1}
         >
           {label}
@@ -78,7 +78,7 @@ export function WhenPill() {
             hitSlop={spacing.xs}
             style={styles.clear}
           >
-            <Ionicons name="close" size={14} color="#FFFFFF" />
+            <Ionicons name="close" size={14} color={colors.onBrand} />
           </Pressable>
         ) : null}
       </Pressable>

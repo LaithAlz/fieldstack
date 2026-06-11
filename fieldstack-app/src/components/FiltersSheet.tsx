@@ -141,11 +141,11 @@ export function FiltersSheet({
           activeOpacity={0.85}
           style={[styles.applyBtn, { backgroundColor: colors.brand }]}
         >
-          <Text style={styles.applyLabel}>{label}</Text>
+          <Text style={[styles.applyLabel, { color: colors.onBrand }]}>{label}</Text>
         </TouchableOpacity>
       </BottomSheetFooter>
     ),
-    [colors.border, colors.surface, colors.brand, label, handleShow]
+    [colors.border, colors.surface, colors.brand, colors.onBrand, label, handleShow]
   );
 
   return (
@@ -312,7 +312,7 @@ function ChipGroup<T extends string>({
           >
             <Text
               style={{
-                color: active ? "#FFFFFF" : colors.textPrimary,
+                color: active ? colors.onBrand : colors.textPrimary,
                 fontSize: fontSize.md,
                 fontWeight: fontWeight.medium,
               }}
@@ -389,7 +389,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   applyLabel: {
-    color: "#FFFFFF",
     fontSize: fontSize.lg,
     fontWeight: fontWeight.bold,
   },

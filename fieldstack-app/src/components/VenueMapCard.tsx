@@ -145,11 +145,11 @@ export function VenueMapCard({
           accessibilityLabel={`Open ${venue.name} details`}
           style={({ pressed }) => [
             styles.primaryBtn,
-            { backgroundColor: colors.brand, opacity: pressed ? 0.85 : 1 },
+            { backgroundColor: pressed ? colors.brandDark : colors.brand },
           ]}
         >
-          <Ionicons name="arrow-forward" size={16} color="#FFFFFF" />
-          <Text style={styles.primaryLabel}>Details</Text>
+          <Ionicons name="arrow-forward" size={16} color={colors.onBrand} />
+          <Text style={[styles.primaryLabel, { color: colors.onBrand }]}>Details</Text>
         </Pressable>
 
         <View style={styles.iconActions}>
@@ -259,7 +259,6 @@ const styles = StyleSheet.create({
     minHeight: 40,
   },
   primaryLabel: {
-    color: "#FFFFFF",
     fontSize: fontSize.md,
     fontWeight: fontWeight.bold,
   },

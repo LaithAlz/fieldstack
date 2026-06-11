@@ -110,7 +110,7 @@ function Tile({
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
-      style={({ pressed }) => [styles.tile, { opacity: pressed ? 0.7 : 1 }]}
+      style={({ pressed }) => [styles.tile, { opacity: pressed ? 0.92 : 1, transform: [{ scale: pressed ? 0.98 : 1 }] }]}
     >
       <View
         style={[

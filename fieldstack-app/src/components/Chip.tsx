@@ -38,7 +38,7 @@ export function Chip({ label, selected, onPress, accessibilityLabel }: Props) {
         style={[
           styles.label,
           {
-            color: selected ? "#FFFFFF" : colors.textPrimary,
+            color: selected ? colors.onBrand : colors.textPrimary,
           },
         ]}
         numberOfLines={1}
