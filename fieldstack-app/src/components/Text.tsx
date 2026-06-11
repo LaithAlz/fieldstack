@@ -16,6 +16,12 @@ type Props = RNTextProps & {
   size?: TextSize;
   weight?: TextWeight;
   variant?: TextVariant;
+  /**
+   * "display" switches to the condensed athletic face (Barlow Condensed) —
+   * screen titles, prices, kit-number moments. Body copy stays on the
+   * default face. weight maps regular/medium -> SemiBold, bold -> Bold.
+   */
+  font?: "body" | "display";
 };
 
 // REQ-F0.5: ≥1.5 line-height on body text. Headings tighten slightly so big
@@ -27,6 +33,7 @@ const LINE_HEIGHT_RATIO: Record<TextSize, number> = {
   lg: 1.5,
   xl: 1.3,
   xxl: 1.25,
+  xxxl: 1.1,
 };
 
 /**
@@ -38,6 +45,7 @@ export function Text({
   size = "md",
   weight = "regular",
   variant = "primary",
+  font = "body",
   style,
   ...rest
 }: Props) {
@@ -49,18 +57,24 @@ export function Text({
     danger: colors.danger,
     success: colors.success,
   };
+  const family =
+    font === "display"
+      ? weight === "bold"
+        ? fontFamily.displayBold
+        : fontFamily.display
+      : fontFamily[weight];
   return (
     <RNText
       {...rest}
       style={[
         {
-          fontFamily: fontFamily[weight],
+          fontFamily: family,
           fontSize: fontSize[size],
           lineHeight: Math.round(fontSize[size] * LINE_HEIGHT_RATIO[size]),
-          // fontWeight kept for fallback when Inter hasn't loaded yet or on
-          // platforms where the family doesn't exist. RN ignores conflicting
-          // weight when fontFamily resolves.
-          fontWeight: fontWeight[weight],
+          // fontWeight kept for fallback when the custom face hasn't loaded
+          // yet or on platforms where the family doesn't exist. RN ignores
+          // conflicting weight when fontFamily resolves.
+          fontWeight: font === "display" ? fontWeight.displayBold : fontWeight[weight],
           color: colorByVariant[variant],
         },
         style,

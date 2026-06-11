@@ -142,7 +142,7 @@ export function FieldSearchCard({ result, userCoords, isBestPrice, onPress }: Pr
               </View>
             ) : null}
             {priceText ? (
-              <Text size="md" weight="medium" style={{ color: colors.brand }}>
+              <Text font="display" size="lg" style={{ color: colors.brand, letterSpacing: 0.3 }}>
                 {priceText}
               </Text>
             ) : null}

@@ -24,6 +24,9 @@ export const fontSize = {
   lg: 17,
   xl: 22,
   xxl: 28,
+  // Hero size for the condensed display face — screen titles and big
+  // numerals. Condensed type reads narrower, so it earns the extra points.
+  xxxl: 34,
 } as const;
 export type FontSize = typeof fontSize;
 
@@ -33,16 +36,26 @@ export const fontWeight = {
   regular: "400",
   medium: "500",
   bold: "600",
+  display: "600",
+  displayBold: "700",
 } as const;
 export type FontWeight = typeof fontWeight;
 
-// Inter family names map to the variants loaded in App.tsx via expo-font.
-// Each weight is a distinct font file because RN can't synthesize bold from
-// a single regular .ttf reliably across platforms.
+// Family names map to the variants loaded in App.tsx via expo-font. Each
+// weight is a distinct font file because RN can't synthesize bold from a
+// single regular .ttf reliably across platforms.
+//
+// Two voices ("Floodlit Pitch" type system):
+//   - Figtree — warm geometric sans for body copy and UI labels.
+//   - Barlow Condensed — the display face. Condensed, athletic, the
+//     typography of kit numbers and stadium scoreboards. Used for screen
+//     titles, prices, and map-pin numerals via <Text font="display">.
 export const fontFamily = {
-  regular: "Inter_400Regular",
-  medium: "Inter_500Medium",
-  bold: "Inter_600SemiBold",
+  regular: "Figtree_400Regular",
+  medium: "Figtree_500Medium",
+  bold: "Figtree_600SemiBold",
+  display: "BarlowCondensed_600SemiBold",
+  displayBold: "BarlowCondensed_700Bold",
 } as const;
 export type FontFamily = typeof fontFamily;
 
@@ -61,6 +74,13 @@ export type ThemeColors = {
    * to a near-black ink instead.
    */
   onBrand: string;
+  /**
+   * High-energy highlight — floodlight lime. Reserved for small moments
+   * (activity pills, eyebrow ticks, live indicators), never large fills.
+   * Pair with `onAccent` ink when used as a background.
+   */
+  accent: string;
+  onAccent: string;
   surface: string;
   surfaceSecondary: string;
   textPrimary: string;
@@ -72,38 +92,45 @@ export type ThemeColors = {
   overlay: string;
 };
 
-// Brand shifted from emerald-600 to green-700/500 — emerald reads as generic
-// SaaS; green has a touch more warmth that pairs with a pitch/grass mental
-// model without going full neon. Success stays in the emerald family so the
-// brand vs "completed" semantics remain visually distinct.
+// "Floodlit Pitch" palettes. The old zinc neutrals read as generic SaaS;
+// every neutral here carries a faint green cast so the whole app feels like
+// it lives pitch-side without shouting about it.
+//
+// Light = match day: chalk-white surfaces, grass-tinted grouped sections,
+// deep pitch-green brand. Dark = floodlit night game: green-black surfaces,
+// a brighter floodlit brand green, lime accent glowing against it.
 const lightColors: ThemeColors = {
-  brand: "#15803D",            // green-700
-  brandDark: "#166534",        // green-800, for pressed states
+  brand: "#15803D",            // deep pitch green
+  brandDark: "#14532D",        // pressed states
   onBrand: "#FFFFFF",
-  surface: "#FFFFFF",
-  surfaceSecondary: "#F4F4F5", // zinc-100, for cards / grouped sections
-  textPrimary: "#18181B",      // zinc-900
-  textSecondary: "#52525B",    // zinc-600
-  textTertiary: "#A1A1AA",     // zinc-400
-  border: "#E4E4E7",           // zinc-200
-  success: "#10B981",          // emerald-500
-  danger: "#EF4444",           // red-500
-  overlay: "rgba(0, 0, 0, 0.5)",
+  accent: "#65A30D",           // lime-600 — readable on chalk
+  onAccent: "#FFFFFF",
+  surface: "#FBFBF7",          // chalk white, warm not clinical
+  surfaceSecondary: "#F0F3EA", // grass-tinted grouped sections / cards
+  textPrimary: "#171D18",      // green-cast near-black
+  textSecondary: "#566055",    // green-cast slate
+  textTertiary: "#98A296",
+  border: "#E2E6DB",           // chalk-line
+  success: "#10B981",          // emerald — distinct from brand green
+  danger: "#DC2626",
+  overlay: "rgba(13, 20, 14, 0.5)",
 };
 
 const darkColors: ThemeColors = {
-  brand: "#22C55E",            // green-500, brighter for contrast on dark
-  brandDark: "#16A34A",        // green-600
-  onBrand: "#052E16",          // green-950 — dark ink on the bright fill
-  surface: "#09090B",          // zinc-950
-  surfaceSecondary: "#18181B", // zinc-900
-  textPrimary: "#FAFAFA",      // zinc-50
-  textSecondary: "#A1A1AA",    // zinc-400
-  textTertiary: "#71717A",     // zinc-500
-  border: "#27272A",           // zinc-800
-  success: "#34D399",          // emerald-400
-  danger: "#F87171",           // red-400, softer on dark
-  overlay: "rgba(0, 0, 0, 0.7)",
+  brand: "#4ADE80",            // floodlit green — bright against the night
+  brandDark: "#22C55E",
+  onBrand: "#06230F",          // near-black green ink on the bright fill
+  accent: "#A3E635",           // lime-400 — the floodlight glow
+  onAccent: "#1A2E05",
+  surface: "#0B120D",          // pitch at night, not pure black
+  surfaceSecondary: "#151E17",
+  textPrimary: "#F2F6F0",
+  textSecondary: "#9DAB9E",
+  textTertiary: "#67746A",
+  border: "#26312A",
+  success: "#34D399",
+  danger: "#F87171",
+  overlay: "rgba(4, 9, 5, 0.72)",
 };
 
 export const colors: { light: ThemeColors; dark: ThemeColors } = {

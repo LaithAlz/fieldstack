@@ -17,6 +17,7 @@ import { SettingsScreen } from "../screens/main/SettingsScreen";
 import { SignInScreen } from "../screens/main/SignInScreen";
 import { VenueDetailScreen } from "../screens/main/VenueDetailScreen";
 import { VenueListScreen } from "../screens/main/VenueListScreen";
+import { fontFamily, fontSize } from "../theme/tokens";
 import { useTheme } from "../theme/useTheme";
 
 // ---------------------------------------------------------------------------
@@ -149,6 +150,10 @@ export function MainNavigator() {
           headerShown: false,
           tabBarActiveTintColor: colors.brand,
           tabBarInactiveTintColor: colors.textTertiary,
+          tabBarLabelStyle: {
+            fontFamily: fontFamily.medium,
+            fontSize: fontSize.xs,
+          },
         }}
       >
         <Tabs.Screen

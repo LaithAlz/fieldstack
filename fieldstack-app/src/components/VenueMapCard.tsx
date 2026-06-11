@@ -125,9 +125,9 @@ export function VenueMapCard({
 
         {priceLabel ? (
           <Text
-            size="sm"
-            weight="medium"
-            style={{ color: colors.brand, marginTop: spacing.xs }}
+            font="display"
+            size="md"
+            style={{ color: colors.brand, marginTop: spacing.xs, letterSpacing: 0.3 }}
           >
             {priceLabel}
           </Text>

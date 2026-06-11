@@ -2,7 +2,7 @@ import { StyleSheet, View } from "react-native";
 
 import { Ionicons } from "@expo/vector-icons";
 
-import { fontSize, fontWeight, spacing } from "../theme/tokens";
+import { fontSize, spacing } from "../theme/tokens";
 import { useTheme } from "../theme/useTheme";
 
 import { Text } from "./Text";
@@ -66,10 +66,11 @@ export function VenuePin(props: Props) {
         ]}
       >
         <Text
+          font="display"
           style={{
             color: colors.textPrimary,
-            fontSize: fontSize.sm,
-            fontWeight: fontWeight.bold,
+            fontSize: fontSize.md,
+            letterSpacing: 0.3,
           }}
           numberOfLines={1}
         >

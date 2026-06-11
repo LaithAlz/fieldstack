@@ -132,7 +132,7 @@ export function ProfileScreen() {
       >
         <View style={styles.header}>
           <View style={styles.headerRow}>
-            <Text size="xxl" weight="bold" accessibilityRole="header" style={styles.title}>
+            <Text size="xxxl" weight="bold" font="display" accessibilityRole="header" style={styles.title}>
               {greeting}
             </Text>
             <Pressable
@@ -490,7 +490,8 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
   },
   title: {
-    letterSpacing: -0.5,
+    letterSpacing: 1,
+    textTransform: "uppercase",
     flexShrink: 1,
   },
   gearBtn: {

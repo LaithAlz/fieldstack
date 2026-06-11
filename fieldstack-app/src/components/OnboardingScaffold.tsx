@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { fontFamily, fontSize, fontWeight, spacing } from "../theme/tokens";
 import { useTheme } from "../theme/useTheme";
 
+import { PitchStripes } from "./PitchStripes";
 import { StepDots } from "./StepDots";
 
 type Props = {
@@ -43,6 +44,8 @@ export function OnboardingScaffold({
 
   return (
     <View style={[styles.root, { backgroundColor: colors.surface, paddingTop: insets.top }]}>
+      {/* Mowed-pitch backdrop — sets the scene before a single word is read. */}
+      <PitchStripes bands={10} intensity={0.04} />
       {/* Top bar — step dots left, optional Skip right. */}
       <View style={[styles.topBar, { paddingHorizontal: spacing.lg }]}>
         {totalSteps > 1 ? (
@@ -109,12 +112,13 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xl,
   },
   title: {
-    fontFamily: fontFamily.bold,
-    fontSize: fontSize.xxl,
-    fontWeight: fontWeight.bold,
+    fontFamily: fontFamily.displayBold,
+    fontSize: fontSize.xxxl,
+    fontWeight: fontWeight.displayBold,
     textAlign: "center",
     marginBottom: spacing.md,
-    letterSpacing: -0.5,
+    letterSpacing: 0.5,
+    textTransform: "uppercase",
   },
   body: {
     fontFamily: fontFamily.regular,

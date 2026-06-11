@@ -113,10 +113,11 @@ const styles = StyleSheet.create({
     gap: spacing.lg,
   },
   wordmark: {
-    fontFamily: fontFamily.bold,
-    fontSize: fontSize.xl,
-    fontWeight: fontWeight.bold,
-    letterSpacing: -0.5,
+    fontFamily: fontFamily.displayBold,
+    fontSize: fontSize.xxxl,
+    fontWeight: fontWeight.displayBold,
+    letterSpacing: 4,
+    textTransform: "uppercase",
   },
   featureList: {
     marginTop: spacing.lg,
