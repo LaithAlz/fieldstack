@@ -18,6 +18,7 @@ import { useToast } from "../../components/Toast";
 import { VenueMapCard } from "../../components/VenueMapCard";
 import { VenuePin } from "../../components/VenuePin";
 import { useFieldSearch } from "../../hooks/useFieldSearch";
+import { haversineKm } from "../../lib/distance";
 import { useFilterControls } from "../../hooks/useFilterControls";
 import { useLocation } from "../../hooks/useLocation";
 import {
@@ -41,6 +42,12 @@ const DEFAULT_DELTA = 0.15; // ~16km — comfortable starting zoom for a city
 // Inactive slots stay at null-island (0,0) with opacity=0 so they're
 // invisible and non-interactive; only their props change as results update.
 const MAX_MARKERS = 50;
+// Minimum camera-center movement before a settled pan triggers a refetch.
+// The search radius is 75km (useFieldSearch.DEFAULT_RADIUS_KM), so a pan of
+// a few hundred metres can't change the result set — refetching on every
+// micro-adjustment just burns the API rate limit (#291). 1.5km still
+// refetches on any neighbourhood-scale move.
+const REFETCH_PAN_THRESHOLD_KM = 1.5;
 const DEFAULT_TORONTO: Region = {
   latitude: 43.6709,
   longitude: -79.3863,
@@ -303,8 +310,13 @@ export function MapViewScreen() {
   // search bar would update location state but the camera would sit still,
   // which feels broken (typing "Mississauga" should pan the map there).
   // Mark the pan as programmatic so it doesn't trip the auto-refetch.
+  // Camera center of the most recent search-triggering location. Pans that
+  // settle within REFETCH_PAN_THRESHOLD_KM of this point skip the refetch.
+  const lastFetchCenterRef = useRef<{ lat: number; lng: number } | null>(null);
+
   useEffect(() => {
     if (location.lat === null || location.lng === null) return;
+    lastFetchCenterRef.current = { lat: location.lat, lng: location.lng };
     if (!mapRef.current) return;
     const cached = getLastRegion();
     const latDelta = cached?.latitudeDelta ?? DEFAULT_DELTA;
@@ -340,7 +352,12 @@ export function MapViewScreen() {
         isProgrammaticPanRef.current = false;
         return;
       }
-      setLocation(locationTextRef.current, { lat: region.latitude, lng: region.longitude });
+      // Micro-pans can't change the result set (75km search radius) — skip
+      // the refetch so map fidgeting doesn't burn the API rate limit.
+      const center = { lat: region.latitude, lng: region.longitude };
+      const last = lastFetchCenterRef.current;
+      if (last && haversineKm(last, center) < REFETCH_PAN_THRESHOLD_KM) return;
+      setLocation(locationTextRef.current, center);
     },
     [setLocation]
   );
