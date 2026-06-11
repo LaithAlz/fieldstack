@@ -14,6 +14,10 @@ export const EVENT_FIELD_VIEWED = "field_viewed";
 export const EVENT_BOOKING_CTA_TAPPED = "booking_cta_tapped";
 export const EVENT_BOOKING_REDIRECT_CONFIRMED = "booking_redirect_confirmed";
 export const EVENT_SEARCH_FILTERED = "search_filtered";
+// Churn / exit instrumentation — where and when users leave (#307).
+export const EVENT_SCREEN_VIEWED = "screen_viewed";
+export const EVENT_APP_BACKGROUNDED = "app_backgrounded";
+export const EVENT_APP_FOREGROUNDED = "app_foregrounded";
 
 export type AnalyticsEvent =
   | typeof EVENT_APP_OPENED
@@ -21,7 +25,10 @@ export type AnalyticsEvent =
   | typeof EVENT_FIELD_VIEWED
   | typeof EVENT_BOOKING_CTA_TAPPED
   | typeof EVENT_BOOKING_REDIRECT_CONFIRMED
-  | typeof EVENT_SEARCH_FILTERED;
+  | typeof EVENT_SEARCH_FILTERED
+  | typeof EVENT_SCREEN_VIEWED
+  | typeof EVENT_APP_BACKGROUNDED
+  | typeof EVENT_APP_FOREGROUNDED;
 
 export type AnalyticsProperties = Record<string, unknown>;
 
