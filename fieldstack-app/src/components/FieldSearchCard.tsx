@@ -79,7 +79,8 @@ export function FieldSearchCard({ result, userCoords, isBestPrice, onPress }: Pr
         {
           backgroundColor: colors.surface,
           borderColor: colors.border,
-          opacity: pressed ? 0.7 : 1,
+          opacity: pressed ? 0.92 : 1,
+          transform: [{ scale: pressed ? 0.98 : 1 }],
         },
       ]}
     >

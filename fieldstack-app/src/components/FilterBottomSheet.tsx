@@ -217,7 +217,7 @@ function Checkmark({ active }: { active: boolean }) {
       accessibilityElementsHidden
       importantForAccessibility="no-hide-descendants"
     >
-      {active ? <Ionicons name="checkmark" size={14} color="#FFFFFF" /> : null}
+      {active ? <Ionicons name="checkmark" size={14} color={colors.onBrand} /> : null}
     </View>
   );
 }

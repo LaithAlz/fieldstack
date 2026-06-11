@@ -33,15 +33,17 @@ export function Button({
   const colors = useTheme();
   const isDisabled = disabled || loading;
 
-  const backgroundFor = (): string => {
-    if (variant === "primary") return colors.brand;
+  // Primary presses shift to the dedicated darker fill (brandDark) instead
+  // of dimming — opacity washes the label out against busy backgrounds.
+  const backgroundFor = (pressed: boolean): string => {
+    if (variant === "primary") return pressed ? colors.brandDark : colors.brand;
     if (variant === "secondary") return colors.surfaceSecondary;
     return "transparent";
   };
 
   const textColor =
     variant === "primary"
-      ? "#FFFFFF"
+      ? colors.onBrand
       : variant === "secondary"
         ? colors.textPrimary
         : colors.textSecondary;
@@ -57,8 +59,12 @@ export function Button({
       style={({ pressed }) => [
         styles.base,
         {
-          backgroundColor: backgroundFor(),
-          opacity: isDisabled ? 0.4 : pressed ? 0.7 : 1,
+          backgroundColor: backgroundFor(pressed),
+          opacity: isDisabled
+            ? 0.4
+            : pressed && variant !== "primary"
+              ? 0.7
+              : 1,
         },
         variant === "secondary" && { borderWidth: 1, borderColor: colors.border },
         style,

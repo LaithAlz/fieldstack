@@ -103,8 +103,8 @@ function ToastView({
   const insets = useSafeAreaInsets();
 
   const palette = {
-    error: { bg: colors.danger, fg: "#FFFFFF", icon: "alert-circle" as const },
-    success: { bg: colors.success, fg: "#FFFFFF", icon: "checkmark-circle" as const },
+    error: { bg: colors.danger, fg: colors.onBrand, icon: "alert-circle" as const },
+    success: { bg: colors.success, fg: colors.onBrand, icon: "checkmark-circle" as const },
     info: { bg: colors.textPrimary, fg: colors.surface, icon: "information-circle" as const },
   }[type];
 
