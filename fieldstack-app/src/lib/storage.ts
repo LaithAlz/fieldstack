@@ -71,7 +71,7 @@ export async function setLastLocation(value: StoredCoords): Promise<void> {
 // ---------- last applied search filters ----------
 
 const VALID_SURFACES: FieldSurface[] = ["turf", "grass", "concrete", "indoor"];
-const VALID_SIZES: FieldSize[] = ["5v5", "7v7", "11v11"];
+const VALID_SIZES: FieldSize[] = ["5v5", "7v7", "11v11", "futsal", "3v3"];
 const VALID_VENUE_TYPES: VenueType[] = ["public_park", "private", "community_centre"];
 const VALID_SORTS = ["distance", "price_asc", "price_desc"] as const;
 
