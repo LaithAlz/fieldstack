@@ -45,7 +45,7 @@ export type FontWeight = typeof fontWeight;
 // weight is a distinct font file because RN can't synthesize bold from a
 // single regular .ttf reliably across platforms.
 //
-// Two voices ("Floodlit Pitch" type system):
+// Two voices ("Night Kickoff" type system):
 //   - Figtree — warm geometric sans for body copy and UI labels.
 //   - Barlow Condensed — the display face. Condensed, athletic, the
 //     typography of kit numbers and stadium scoreboards. Used for screen
@@ -70,21 +70,21 @@ export type ThemeColors = {
    * Text/icon color for filled accent surfaces (brand / success / danger
    * backgrounds). White works on the light palette's deeper fills, but the
    * dark palette brightens those fills for contrast against the near-black
-   * surface — white-on-bright-green lands around 1.9:1, so dark mode flips
-   * to a near-black ink instead.
+   * surface, so dark mode flips to a near-black ink instead.
    */
   onBrand: string;
   /**
-   * High-energy highlight — floodlight lime. Reserved for small moments
-   * (activity pills, eyebrow ticks, live indicators), never large fills.
-   * Pair with `onAccent` ink when used as a background.
+   * High-energy highlight — electric sky blue, the flash of a broadcast
+   * graphic. Reserved for small moments (activity pills, live indicators),
+   * never large fills. Pair with `onAccent` ink when used as a background.
    */
   accent: string;
   onAccent: string;
   /**
-   * The brand-saturated hero block (Explore header, marquee moments).
-   * Deep pitch green in both schemes; `onHero` is always chalk so hero
-   * content reads like chalk lines on grass.
+   * The marquee block (Explore header, hero moments). Night-sky ink navy in
+   * BOTH schemes — in light mode it's the dramatic counterweight to the
+   * paper surfaces; in dark mode it's a half-step lighter than the page.
+   * `onHero` is always paper.
    */
   heroSurface: string;
   onHero: string;
@@ -100,51 +100,50 @@ export type ThemeColors = {
   overlay: string;
 };
 
-// "Floodlit Pitch" palettes. The old zinc neutrals read as generic SaaS;
-// every neutral here carries a faint green cast so the whole app feels like
-// it lives pitch-side without shouting about it.
+// "Night Kickoff" palettes. Paper, ink, and the orange winter match ball.
 //
-// Light = match day: chalk-white surfaces, grass-tinted grouped sections,
-// deep pitch-green brand. Dark = floodlit night game: green-black surfaces,
-// a brighter floodlit brand green, lime accent glowing against it.
+// Light = warm paper surfaces with blue-black ink type and a vivid
+// tangerine brand — editorial, like a printed match programme. Dark = the
+// night game: deep ink-navy sky, the ball-orange brand glowing against it.
+// Green appears nowhere except the semantic `success`.
 const lightColors: ThemeColors = {
-  brand: "#15803D",            // deep pitch green
-  brandDark: "#14532D",        // pressed states
+  brand: "#C2410C",            // tangerine — the match ball
+  brandDark: "#9A3412",        // pressed states
   onBrand: "#FFFFFF",
-  accent: "#65A30D",           // lime-600 — readable on chalk
+  accent: "#0284C7",           // electric sky — broadcast flash
   onAccent: "#FFFFFF",
-  heroSurface: "#14532D",      // deep pitch green
-  onHero: "#F6F8F3",           // chalk
-  onHeroMuted: "rgba(246, 248, 243, 0.72)",
-  surface: "#FBFBF7",          // chalk white, warm not clinical
-  surfaceSecondary: "#F0F3EA", // grass-tinted grouped sections / cards
-  textPrimary: "#171D18",      // green-cast near-black
-  textSecondary: "#566055",    // green-cast slate
-  textTertiary: "#98A296",
-  border: "#E2E6DB",           // chalk-line
-  success: "#10B981",          // emerald — distinct from brand green
+  heroSurface: "#1A1D2B",      // night-sky ink navy
+  onHero: "#F6F2EA",           // paper
+  onHeroMuted: "rgba(246, 242, 234, 0.72)",
+  surface: "#FAF7F2",          // warm paper, not clinical white
+  surfaceSecondary: "#F1ECE2", // sand — grouped sections / cards
+  textPrimary: "#1A1D2B",      // ink navy
+  textSecondary: "#565B6E",
+  textTertiary: "#9CA1B2",
+  border: "#E6E0D4",
+  success: "#10B981",          // emerald, semantic only
   danger: "#DC2626",
-  overlay: "rgba(13, 20, 14, 0.5)",
+  overlay: "rgba(16, 18, 28, 0.5)",
 };
 
 const darkColors: ThemeColors = {
-  brand: "#4ADE80",            // floodlit green — bright against the night
-  brandDark: "#22C55E",
-  onBrand: "#06230F",          // near-black green ink on the bright fill
-  accent: "#A3E635",           // lime-400 — the floodlight glow
-  onAccent: "#1A2E05",
-  heroSurface: "#11301C",      // night pitch under floodlights
-  onHero: "#F2F6F0",
-  onHeroMuted: "rgba(242, 246, 240, 0.7)",
-  surface: "#0B120D",          // pitch at night, not pure black
-  surfaceSecondary: "#151E17",
-  textPrimary: "#F2F6F0",
-  textSecondary: "#9DAB9E",
-  textTertiary: "#67746A",
-  border: "#26312A",
+  brand: "#FF6B2C",            // ball orange, bright against the night
+  brandDark: "#E8551A",
+  onBrand: "#2A1205",          // near-black ember ink on the bright fill
+  accent: "#38BDF8",           // sky-400 — the floodlight flash
+  onAccent: "#082F49",
+  heroSurface: "#171C2C",      // a half-step above the page
+  onHero: "#F4F1EA",
+  onHeroMuted: "rgba(244, 241, 234, 0.7)",
+  surface: "#0E131F",          // night sky, not pure black
+  surfaceSecondary: "#181E2E",
+  textPrimary: "#F4F1EA",      // paper
+  textSecondary: "#A8ADBF",
+  textTertiary: "#6E7488",
+  border: "#2A3145",
   success: "#34D399",
   danger: "#F87171",
-  overlay: "rgba(4, 9, 5, 0.72)",
+  overlay: "rgba(6, 8, 14, 0.72)",
 };
 
 export const colors: { light: ThemeColors; dark: ThemeColors } = {

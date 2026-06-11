@@ -5,7 +5,7 @@ import { spacing } from "../theme/tokens";
 import { useTheme } from "../theme/useTheme";
 
 import { Button } from "./Button";
-import { PitchStripes } from "./PitchStripes";
+import { GoalNet } from "./GoalNet";
 import { Text } from "./Text";
 
 type Props = {
@@ -34,7 +34,7 @@ export function EmptyState({ icon, title, description, actionLabel, onAction }: 
             { backgroundColor: colors.surfaceSecondary },
           ]}
         >
-          <PitchStripes bands={5} intensity={0.08} />
+          <GoalNet cols={7} rows={5} intensity={0.12} color={colors.brand} />
           <Ionicons name={icon} size={32} color={colors.brand} />
         </View>
       ) : null}

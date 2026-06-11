@@ -176,7 +176,7 @@ function FallbackButton({
       <RNText
         style={[
           styles.btnLabel,
-          { color: primary ? "#FFFFFF" : "#18181B" },
+          { color: primary ? "#FFFFFF" : "#1A1D2B" },
         ]}
       >
         {label}
@@ -188,7 +188,7 @@ function FallbackButton({
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: "#FAF7F2",
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: spacing.xl,
@@ -202,21 +202,21 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.bold,
     fontSize: fontSize.xl,
     fontWeight: fontWeight.bold,
-    color: "#18181B",
+    color: "#1A1D2B",
     letterSpacing: -0.3,
   },
   body: {
     fontFamily: fontFamily.regular,
     fontSize: fontSize.md,
-    color: "#52525B",
+    color: "#565B6E",
     lineHeight: fontSize.md * 1.5,
   },
   errorDev: {
     fontFamily: fontFamily.regular,
     fontSize: fontSize.sm,
-    color: "#A1A1AA",
+    color: "#9CA1B2",
     padding: spacing.md,
-    backgroundColor: "#F4F4F5",
+    backgroundColor: "#F1ECE2",
     borderRadius: borderRadius.md,
   },
   actions: {
@@ -231,10 +231,10 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   btnPrimary: {
-    backgroundColor: "#15803D", // green-700, matches brand light
+    backgroundColor: "#C2410C", // tangerine, matches brand light
   },
   btnSecondary: {
-    backgroundColor: "#F4F4F5", // zinc-100
+    backgroundColor: "#F1ECE2", // sand
   },
   btnLabel: {
     fontFamily: fontFamily.medium,
