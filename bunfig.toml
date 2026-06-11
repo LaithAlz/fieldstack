@@ -1,0 +1,5 @@
+# Scope `bun test` to the backend suite. Without this the positional filter
+# in `bun test tests` also matches fieldstack-app/**/__tests__/** (jest tests
+# that need the RN preset and fail under bun).
+[test]
+root = "tests"

@@ -88,7 +88,8 @@ function normalizeArrayParam<T>(arr: T[] | undefined): T[] | null {
   return arr;
 }
 
-function searchKey(p: SearchFieldsParams): string {
+/** Exported for tests — cache-key stability is load-bearing for hit rate. */
+export function searchKey(p: SearchFieldsParams): string {
   // Round coords/radius so jitter doesn't fragment cache. Sort arrays so
   // [turf,grass] and [grass,turf] hit the same cache entry. JSON.stringify
   // is stable for fixed property order.

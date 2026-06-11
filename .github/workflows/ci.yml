@@ -23,6 +23,8 @@ jobs:
         run: bun install --frozen-lockfile
       - name: Typecheck
         run: bun run typecheck
+      - name: Tests
+        run: bun run test
 
   mobile:
     name: Mobile (typecheck + lint + test)
