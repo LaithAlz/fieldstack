@@ -66,6 +66,18 @@ export function Button({
               ? 0.7
               : 1,
         },
+        // Stud shadow: a hard chalk-free drop in the pressed-state color.
+        // Pressing sinks the button into it — tactile, like studs in turf.
+        // (iOS only; Android elevation can't do hard offsets, so it gets a
+        // regular soft elevation instead.)
+        variant === "primary" && !isDisabled && {
+          shadowColor: colors.brandDark,
+          shadowOpacity: 0.55,
+          shadowRadius: 0,
+          shadowOffset: { width: 0, height: pressed ? 0 : 3 },
+          elevation: pressed ? 1 : 4,
+          transform: [{ translateY: pressed ? 2 : 0 }],
+        },
         variant === "secondary" && { borderWidth: 1, borderColor: colors.border },
         style,
       ]}

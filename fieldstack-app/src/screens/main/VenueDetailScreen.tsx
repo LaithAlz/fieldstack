@@ -220,7 +220,7 @@ export function VenueDetailScreen({ route }: Props) {
             </View>
           ) : null}
 
-          <Text size="lg" weight="bold" accessibilityRole="header" style={styles.section}>
+          <Text size="lg" weight="bold" font="display" accessibilityRole="header" style={styles.section}>
             Fields
           </Text>
           {fields.length === 0 ? (
@@ -248,7 +248,7 @@ export function VenueDetailScreen({ route }: Props) {
               surprised later. */}
           {venue.booking_notes || venue.cancellation_policy ? (
             <>
-              <Text size="lg" weight="bold" accessibilityRole="header" style={styles.section}>
+              <Text size="lg" weight="bold" font="display" accessibilityRole="header" style={styles.section}>
                 Booking notes
               </Text>
               <View style={[styles.notesCard, { borderColor: colors.border }]}>
@@ -286,7 +286,7 @@ export function VenueDetailScreen({ route }: Props) {
             </>
           ) : null}
 
-          <Text size="lg" weight="bold" accessibilityRole="header" style={styles.section}>
+          <Text size="lg" weight="bold" font="display" accessibilityRole="header" style={styles.section}>
             Reviews
           </Text>
           <ReviewSection
@@ -562,6 +562,8 @@ const styles = StyleSheet.create({
   section: {
     marginTop: spacing.xl,
     marginBottom: spacing.sm,
+    textTransform: "uppercase",
+    letterSpacing: 1,
   },
   fieldList: {
     gap: spacing.sm,

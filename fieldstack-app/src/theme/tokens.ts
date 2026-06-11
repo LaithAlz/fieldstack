@@ -81,6 +81,14 @@ export type ThemeColors = {
    */
   accent: string;
   onAccent: string;
+  /**
+   * The brand-saturated hero block (Explore header, marquee moments).
+   * Deep pitch green in both schemes; `onHero` is always chalk so hero
+   * content reads like chalk lines on grass.
+   */
+  heroSurface: string;
+  onHero: string;
+  onHeroMuted: string;
   surface: string;
   surfaceSecondary: string;
   textPrimary: string;
@@ -105,6 +113,9 @@ const lightColors: ThemeColors = {
   onBrand: "#FFFFFF",
   accent: "#65A30D",           // lime-600 — readable on chalk
   onAccent: "#FFFFFF",
+  heroSurface: "#14532D",      // deep pitch green
+  onHero: "#F6F8F3",           // chalk
+  onHeroMuted: "rgba(246, 248, 243, 0.72)",
   surface: "#FBFBF7",          // chalk white, warm not clinical
   surfaceSecondary: "#F0F3EA", // grass-tinted grouped sections / cards
   textPrimary: "#171D18",      // green-cast near-black
@@ -122,6 +133,9 @@ const darkColors: ThemeColors = {
   onBrand: "#06230F",          // near-black green ink on the bright fill
   accent: "#A3E635",           // lime-400 — the floodlight glow
   onAccent: "#1A2E05",
+  heroSurface: "#11301C",      // night pitch under floodlights
+  onHero: "#F2F6F0",
+  onHeroMuted: "rgba(242, 246, 240, 0.7)",
   surface: "#0B120D",          // pitch at night, not pure black
   surfaceSecondary: "#151E17",
   textPrimary: "#F2F6F0",

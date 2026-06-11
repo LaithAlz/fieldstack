@@ -5,6 +5,7 @@ import { spacing } from "../theme/tokens";
 import { useTheme } from "../theme/useTheme";
 
 import { Button } from "./Button";
+import { PitchStripes } from "./PitchStripes";
 import { Text } from "./Text";
 
 type Props = {
@@ -33,7 +34,8 @@ export function EmptyState({ icon, title, description, actionLabel, onAction }: 
             { backgroundColor: colors.surfaceSecondary },
           ]}
         >
-          <Ionicons name={icon} size={32} color={colors.textTertiary} />
+          <PitchStripes bands={5} intensity={0.08} />
+          <Ionicons name={icon} size={32} color={colors.brand} />
         </View>
       ) : null}
       <Text size="xl" weight="bold" accessibilityRole="header" style={styles.title}>
@@ -61,12 +63,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xl,
   },
   iconWrap: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
+    width: 72,
+    height: 72,
+    borderRadius: 36,
     alignItems: "center",
     justifyContent: "center",
     marginBottom: spacing.lg,
+    overflow: "hidden",
   },
   title: {
     textAlign: "center",

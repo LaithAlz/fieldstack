@@ -1,18 +1,20 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
+import { LinearGradient } from "expo-linear-gradient";
 import { memo, useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 
 import type { Coords } from "../lib/location";
 import { formatDistance, haversineKm } from "../lib/distance";
-import { borderRadius, fontSize, fontWeight, spacing } from "../theme/tokens";
+import { borderRadius, spacing } from "../theme/tokens";
 import { useTheme } from "../theme/useTheme";
 import type { Field, FieldSurface, Venue } from "../types/api";
 
 import { Badge } from "./Badge";
+import { PitchStripes } from "./PitchStripes";
 import { Text } from "./Text";
 
-const PHOTO_SIZE = 96;
+const PHOTO_HEIGHT = 148;
 
 const SURFACE_LABEL: Record<FieldSurface, string> = {
   turf: "turf",
@@ -31,6 +33,12 @@ type Props = {
   onPress: () => void;
 };
 
+/**
+ * Magazine-style venue card: full-bleed photo on top with the price as a
+ * chalk pill anchored to its corner, name + meta below. The photo fallback
+ * keeps the same geometry (striped pitch texture + ball mark) so cards with
+ * and without photos sit comfortably in the same list.
+ */
 export const VenueCard = memo(function VenueCard({
   venue,
   userCoords,
@@ -62,8 +70,7 @@ export const VenueCard = memo(function VenueCard({
 
   // Single combined a11y label so screen readers announce the card as a unit
   // rather than reading every nested element separately (REQ-F2.4).
-  // Identity first; state qualifiers and meta follow. Screen-reader users
-  // want to hear which venue this is before "saved" / "booked recently".
+  // Identity first; state qualifiers and meta follow.
   const a11yLabel = [
     venue.name,
     isSaved ? "Saved" : null,
@@ -90,23 +97,19 @@ export const VenueCard = memo(function VenueCard({
         },
       ]}
     >
-      <View style={styles.photoBlock}>
-        <View
-          style={[
-            styles.photoWrap,
-            { backgroundColor: colors.surfaceSecondary },
-          ]}
-        >
-          {showFallback ? (
-            <View
-              // Decorative — the venue name in the card already covers the meaning.
-              accessibilityElementsHidden
-              importantForAccessibility="no-hide-descendants"
-              style={[styles.fallback, { backgroundColor: colors.brand + "14" }]}
-            >
-              <Ionicons name="football" size={36} color={colors.brand} />
-            </View>
-          ) : (
+      <View style={[styles.photoBlock, { backgroundColor: colors.surfaceSecondary }]}>
+        {showFallback ? (
+          <View
+            // Decorative — the venue name in the card already covers the meaning.
+            accessibilityElementsHidden
+            importantForAccessibility="no-hide-descendants"
+            style={[styles.fallback, { backgroundColor: colors.brand + "10" }]}
+          >
+            <PitchStripes bands={5} intensity={0.07} />
+            <Ionicons name="football" size={40} color={colors.brand} />
+          </View>
+        ) : (
+          <>
             <Image
               source={photoSrc}
               style={styles.photo}
@@ -115,49 +118,58 @@ export const VenueCard = memo(function VenueCard({
               cachePolicy="memory-disk"
               onError={() => setPhotoFailed(true)}
             />
-          )}
-        </View>
-        {/* Badge lives outside photoWrap so its shadow / elevation isn't
-            clipped by the photo's overflow: hidden. */}
+            {/* Bottom scrim keeps the overlaid pills legible on busy photos. */}
+            <LinearGradient
+              colors={["transparent", "rgba(8, 14, 9, 0.42)"]}
+              style={styles.scrim}
+              pointerEvents="none"
+            />
+          </>
+        )}
+
+        {priceRange ? (
+          <View
+            accessibilityElementsHidden
+            importantForAccessibility="no-hide-descendants"
+            style={[styles.pricePill, { backgroundColor: colors.surface }]}
+          >
+            <Text font="display" size="md" style={{ color: colors.brand, letterSpacing: 0.3 }}>
+              {priceRange}
+            </Text>
+          </View>
+        ) : null}
+
+        {recentlyAttempted ? (
+          <View
+            accessibilityElementsHidden
+            importantForAccessibility="no-hide-descendants"
+            style={[styles.recentPill, { backgroundColor: colors.accent }]}
+          >
+            <Ionicons name="time-outline" size={10} color={colors.onAccent} />
+            <Text size="xs" weight="bold" style={{ color: colors.onAccent, letterSpacing: 0.6 }}>
+              BOOKED RECENTLY
+            </Text>
+          </View>
+        ) : null}
+
         {isSaved ? (
           <View
             accessibilityElementsHidden
             importantForAccessibility="no-hide-descendants"
             style={[styles.savedBadge, { backgroundColor: colors.surface }]}
           >
-            <Ionicons name="heart" size={12} color={colors.danger} />
+            <Ionicons name="heart" size={13} color={colors.danger} />
           </View>
         ) : null}
       </View>
 
       <View style={styles.body}>
-        {recentlyAttempted ? (
-          <View
-            accessibilityElementsHidden
-            importantForAccessibility="no-hide-descendants"
-            style={[styles.recentPill, { backgroundColor: colors.accent + "24" }]}
-          >
-            <Ionicons name="time-outline" size={10} color={colors.accent} />
-            <Text size="xs" weight="bold" style={{ color: colors.accent, letterSpacing: 0.6 }}>
-              BOOKED RECENTLY
-            </Text>
-          </View>
-        ) : null}
-        <View style={styles.titleRow}>
-          <Text size="lg" weight="bold" numberOfLines={1} style={styles.title}>
-            {venue.name}
-          </Text>
-          {priceRange ? (
-            <Text font="display" size="md" style={{ color: colors.brand, letterSpacing: 0.3 }}>
-              {priceRange}
-            </Text>
-          ) : null}
-        </View>
-
+        <Text size="lg" weight="bold" numberOfLines={1} style={styles.title}>
+          {venue.name}
+        </Text>
         <Text size="sm" variant="secondary" numberOfLines={1} style={styles.subline}>
           {[distance, summary].filter(Boolean).join(" · ") || venue.address}
         </Text>
-
         {uniqueSurfaces.length > 0 ? (
           <View style={styles.badges}>
             {uniqueSurfaces.map((s) => (
@@ -188,29 +200,62 @@ function buildPriceRange(fields: Field[]): string | null {
 
 const styles = StyleSheet.create({
   card: {
-    flexDirection: "row",
-    padding: spacing.md,
-    borderRadius: borderRadius.lg,
+    borderRadius: borderRadius.xl,
     borderWidth: StyleSheet.hairlineWidth,
-    gap: spacing.md,
+    overflow: "hidden",
   },
   photoBlock: {
-    width: PHOTO_SIZE,
-    height: PHOTO_SIZE,
+    height: PHOTO_HEIGHT,
+    width: "100%",
   },
-  photoWrap: {
-    width: PHOTO_SIZE,
-    height: PHOTO_SIZE,
-    borderRadius: borderRadius.md,
+  photo: {
+    width: "100%",
+    height: "100%",
+  },
+  scrim: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: 64,
+  },
+  fallback: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
     overflow: "hidden",
+  },
+  pricePill: {
+    position: "absolute",
+    bottom: spacing.sm,
+    right: spacing.sm,
+    paddingHorizontal: spacing.sm + 2,
+    paddingVertical: 3,
+    borderRadius: borderRadius.md,
+    shadowColor: "#000",
+    shadowOpacity: 0.18,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 1 },
+    elevation: 3,
+  },
+  recentPill: {
+    position: "absolute",
+    top: spacing.sm,
+    left: spacing.sm,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: spacing.xs + 2,
+    paddingVertical: 3,
+    borderRadius: borderRadius.sm,
   },
   savedBadge: {
     position: "absolute",
-    top: -spacing.xs / 2,
-    right: -spacing.xs / 2,
-    width: 22,
-    height: 22,
-    borderRadius: 11,
+    top: spacing.sm,
+    right: spacing.sm,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
     alignItems: "center",
     justifyContent: "center",
     shadowColor: "#000",
@@ -219,29 +264,10 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 1 },
     elevation: 2,
   },
-  photo: {
-    width: "100%",
-    height: "100%",
-  },
-  fallback: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-  },
   body: {
-    flex: 1,
-    justifyContent: "center",
-  },
-  titleRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: spacing.sm,
+    padding: spacing.md,
   },
   title: {
-    flexShrink: 1,
-    fontSize: fontSize.lg,
-    fontWeight: fontWeight.bold,
     letterSpacing: -0.2,
   },
   subline: {
@@ -251,15 +277,5 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: spacing.xs,
     marginTop: spacing.sm,
-  },
-  recentPill: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    alignSelf: "flex-start",
-    paddingHorizontal: spacing.xs + 2,
-    paddingVertical: 2,
-    borderRadius: borderRadius.sm,
-    marginBottom: spacing.xs,
   },
 });
