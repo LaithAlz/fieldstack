@@ -12,10 +12,6 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-// Tab bar (~49pt) + sheet drag handle (~10pt) + breathing room = ~88pt. Round
-// up to 96 so the last card doesn't sit flush against the floating button.
-const LIST_BOTTOM_PAD = 96;
-
 import { EmptyState } from "../../components/EmptyState";
 import { FieldSearchCard } from "../../components/FieldSearchCard";
 import { FieldSearchCardSkeleton } from "../../components/FieldSearchCardSkeleton";
@@ -43,6 +39,10 @@ import type { MainStackParamList } from "../../navigation/MainNavigator";
 import { borderRadius, spacing } from "../../theme/tokens";
 import { useTheme } from "../../theme/useTheme";
 import type { SearchResult } from "../../types/api";
+
+// Tab bar (~49pt) + sheet drag handle (~10pt) + breathing room = ~88pt. Round
+// up to 96 so the last card doesn't sit flush against the floating button.
+const LIST_BOTTOM_PAD = 96;
 
 type Nav = NativeStackNavigationProp<MainStackParamList, "FieldSearch">;
 

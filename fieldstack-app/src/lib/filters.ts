@@ -8,6 +8,8 @@
 import type { FilterOption } from "../components/FilterBottomSheet";
 import type { FieldSize, FieldSurface, VenueType } from "../types/api";
 
+import type { SearchSort } from "../api/search";
+
 export const SURFACE_OPTIONS: FilterOption<FieldSurface>[] = [
   { id: "turf", label: "Turf" },
   { id: "grass", label: "Grass" },
@@ -32,8 +34,6 @@ export const VENUE_TYPE_OPTIONS: FilterOption<VenueType>[] = [
 export function venueTypeLabel(t: VenueType): string {
   return VENUE_TYPE_OPTIONS.find((o) => o.id === t)?.label ?? t;
 }
-
-import type { SearchSort } from "../api/search";
 
 export const SORT_OPTIONS: FilterOption<SearchSort>[] = [
   { id: "distance", label: "Distance" },

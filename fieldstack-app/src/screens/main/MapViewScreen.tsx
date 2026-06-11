@@ -109,15 +109,17 @@ function isInRegion(venue: SearchResult["venue"], region: Region): boolean {
 // commit that corrupts AIRMap's subview index under the Fabric interop layer.
 // marker=null means the slot is inactive: rendered at null-island with opacity
 // 0 so it is invisible and non-interactive, but still MOUNTED (never removed).
-type VenueMarkerProps = {
+type VenueMarkerSlotProps = {
   marker: VenueMarker | null;
   onPress: (venueId: string) => void;
 };
 
-const VenueMarker = memo(function VenueMarker({
+// Named "Slot" (vs the VenueMarker data type) — one fixed pool slot that may
+// or may not hold a marker this render.
+const VenueMarkerSlot = memo(function VenueMarkerSlot({
   marker,
   onPress,
-}: VenueMarkerProps) {
+}: VenueMarkerSlotProps) {
   const coordinate = useMemo(
     () =>
       marker
@@ -398,7 +400,7 @@ export function MapViewScreen() {
     );
   }, [markers]);
 
-  // Stable callback — VenueMarker is memoized on prop equality, so a fresh
+  // Stable callback — VenueMarkerSlot is memoized on prop equality, so a fresh
   // function identity on every render would force every marker to re-render
   // and undo the memo. `panToVenue` is already useCallback'd.
   const handleMarkerPress = useCallback(
@@ -463,7 +465,7 @@ export function MapViewScreen() {
         showsMyLocationButton={false}
       >
         {markerSlots.map((m, i) => (
-          <VenueMarker
+          <VenueMarkerSlot
             key={`slot-${i}`}
             marker={m}
             onPress={handleMarkerPress}

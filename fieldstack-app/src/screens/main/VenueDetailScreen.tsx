@@ -83,7 +83,7 @@ export function VenueDetailScreen({ route }: Props) {
           });
         } catch (err) {
           if (__DEV__) {
-            // eslint-disable-next-line no-console
+             
             console.warn("[share] failed", err);
           }
         }

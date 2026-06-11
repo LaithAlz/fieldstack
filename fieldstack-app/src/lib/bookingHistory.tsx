@@ -124,7 +124,7 @@ export function BookingHistoryProvider({ children }: { children: ReactNode }) {
           .limit(MAX_ENTRIES);
         if (cancelled) return;
         if (error) {
-          // eslint-disable-next-line no-console
+           
           console.warn("[bookingHistory] pull failed", error.message);
           return;
         }
@@ -174,7 +174,7 @@ export function BookingHistoryProvider({ children }: { children: ReactNode }) {
               )
               .then(({ error: upErr }) => {
                 if (upErr) {
-                  // eslint-disable-next-line no-console
+                   
                   console.warn(
                     "[bookingHistory] upload failed",
                     upErr.message
@@ -185,7 +185,7 @@ export function BookingHistoryProvider({ children }: { children: ReactNode }) {
           return merged;
         });
       } catch (err) {
-        // eslint-disable-next-line no-console
+         
         console.warn("[bookingHistory] sync threw", err);
       }
     })();
@@ -230,7 +230,7 @@ export function BookingHistoryProvider({ children }: { children: ReactNode }) {
           })
           .then(({ error }) => {
             if (error) {
-              // eslint-disable-next-line no-console
+               
               console.warn(
                 "[bookingHistory] cloud insert failed",
                 error.message

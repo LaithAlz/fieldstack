@@ -40,7 +40,7 @@ export type AnalyticsProvider = {
 export const consoleProvider: AnalyticsProvider = {
   track(event, properties) {
     if (__DEV__) {
-      // eslint-disable-next-line no-console
+       
       console.log("[analytics]", event, properties ?? {});
     }
   },
@@ -72,7 +72,7 @@ export function track(event: AnalyticsEvent, properties?: AnalyticsProperties): 
     // Analytics must never crash callers. Surface to the dev console so a
     // faulty provider is at least visible during development.
     if (__DEV__) {
-      // eslint-disable-next-line no-console
+       
       console.warn("[analytics] provider.track threw", err);
     }
   }
@@ -83,7 +83,7 @@ export function identify(userId: string, traits?: AnalyticsProperties): void {
     currentProvider.identify?.(userId, traits);
   } catch (err) {
     if (__DEV__) {
-      // eslint-disable-next-line no-console
+       
       console.warn("[analytics] provider.identify threw", err);
     }
   }

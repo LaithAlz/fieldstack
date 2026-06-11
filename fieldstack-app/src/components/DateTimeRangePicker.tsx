@@ -413,11 +413,11 @@ function findNextOpenSlots(
   getAvailability: (date: Date, startTime: string) => AvailabilityBucket,
   fromDate: Date,
   limit = 3
-): Array<{ date: Date; startTime: string }> {
+): { date: Date; startTime: string }[] {
   const allSlots: string[] = [];
   for (const p of PERIODS) allSlots.push(...slotsByPeriod[p.id]);
 
-  const out: Array<{ date: Date; startTime: string }> = [];
+  const out: { date: Date; startTime: string }[] = [];
   // Start at the selected date and walk forward. We don't filter past-slots
   // here because the caller's date list already starts at today; if the
   // selected date is today, slots earlier than "now" won't be open anyway

@@ -106,7 +106,7 @@ export function PreferredSlotProvider({ children }: { children: ReactNode }) {
           .maybeSingle();
         if (cancelled) return;
         if (error) {
-          // eslint-disable-next-line no-console
+           
           console.warn("[preferredSlot] pull failed", error.message);
           return;
         }
@@ -131,7 +131,7 @@ export function PreferredSlotProvider({ children }: { children: ReactNode }) {
           void uploadSlot(user.id, slot);
         }
       } catch (err) {
-        // eslint-disable-next-line no-console
+         
         console.warn("[preferredSlot] sync threw", err);
       }
     })();
@@ -243,7 +243,7 @@ async function uploadSlot(userId: string, slot: PreferredSlot): Promise<void> {
     { onConflict: "user_id" }
   );
   if (error) {
-    // eslint-disable-next-line no-console
+     
     console.warn("[preferredSlot] upload failed", error.message);
   }
 }
