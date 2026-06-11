@@ -62,9 +62,7 @@ export async function listMyReviews(
   // supabase-js conservatively types FK joins as arrays. Cast through
   // unknown — the actual shape is a single object since venue_id is a
   // one-to-one FK.
-  const rows = (data ?? []) as unknown as Array<
-    ReviewRow & { venue: { id: string; name: string } | null }
-  >;
+  const rows = (data ?? []) as unknown as (ReviewRow & { venue: { id: string; name: string } | null })[];
   // Drop reviews whose venue join is null (deleted venue) — leaves a clean
   // list rather than a "[unknown venue]" row.
   const mapped: ReviewWithVenue[] = rows

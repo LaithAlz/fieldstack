@@ -171,6 +171,10 @@ function useFieldSearchState(): UseFieldSearchResult {
   // resolves would fire the fetch guard early, be blocked, and never retry.
   const [isRestored, setIsRestored] = useState(false);
   const requestId = useRef(0);
+  // The fetch effect also fires once on mount (seeded location + restored
+  // filters). That run isn't a user action — skip its analytics event so
+  // EVENT_SEARCH_FILTERED doesn't fire on every app open.
+  const isFirstFetchRef = useRef(true);
   /**
    * When `setLocation` is called with explicit coords, the next geocode
    * effect run for that text should be skipped — the caller already knows
@@ -256,7 +260,9 @@ function useFieldSearchState(): UseFieldSearchResult {
       }
       setIsLoading(false);
 
-      if (params) {
+      if (isFirstFetchRef.current) {
+        isFirstFetchRef.current = false;
+      } else if (params) {
         track(EVENT_SEARCH_FILTERED, {
           ...params,
           has_location: params.lat !== undefined,
@@ -308,10 +314,15 @@ function useFieldSearchState(): UseFieldSearchResult {
     const params = buildSearchParams(filters, location, offset);
     searchFields(params ?? {}).then((result) => {
       if (id !== requestId.current) return;
-      if (!result.error && result.data) {
+      if (result.error) {
+        // Surface the failure — silently stopping the spinner left the user
+        // with no signal that the next page never arrived.
+        setError(result.error);
+      } else if (result.data) {
         const page = result.data;
         setResults((prev) => [...prev, ...page]);
         setTotal(result.total);
+        setError(null);
         offsetRef.current = offset + page.length;
       }
       setIsLoadingMore(false);

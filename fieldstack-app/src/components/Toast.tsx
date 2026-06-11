@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
-import { Animated, AccessibilityInfo, StyleSheet, View } from "react-native";
+import { Animated, AccessibilityInfo, StyleSheet } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { borderRadius, spacing } from "../theme/tokens";

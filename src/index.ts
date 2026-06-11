@@ -33,8 +33,8 @@ await app.register(cors, {
   origin: allowedOrigins && allowedOrigins.length > 0 ? allowedOrigins : false,
 });
 
-// Global rate limit: 60 req/min per IP. The search endpoint has a tighter
-// per-route limit set in searchRoutes (20 req/min) because it hits PostGIS.
+// Global rate limit: 60 req/min per IP. The search endpoint sets its own
+// per-route limit in searchRoutes (also 60/min — see the comment there).
 await app.register(rateLimit, {
   global: true,
   max: 60,

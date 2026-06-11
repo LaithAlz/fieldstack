@@ -130,7 +130,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (__DEV__) {
           // Message only — supabase-js error objects can echo back the
           // request/response body, which may include the raw tokens.
-          // eslint-disable-next-line no-console
+           
           console.warn(
             "[auth] setSession from deep link failed",
             err instanceof Error ? err.message : "unknown"

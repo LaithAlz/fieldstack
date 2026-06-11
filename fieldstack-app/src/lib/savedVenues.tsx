@@ -125,7 +125,7 @@ export function SavedVenuesProvider({ children }: { children: ReactNode }) {
           .eq("user_id", user.id);
         if (cancelled) return;
         if (error) {
-          // eslint-disable-next-line no-console
+           
           console.warn("[savedVenues] pull failed", error.message);
           return;
         }
@@ -156,7 +156,7 @@ export function SavedVenuesProvider({ children }: { children: ReactNode }) {
               )
               .then(({ error: upsertErr }) => {
                 if (upsertErr) {
-                  // eslint-disable-next-line no-console
+                   
                   console.warn("[savedVenues] upload failed", upsertErr.message);
                 }
               });
@@ -172,7 +172,7 @@ export function SavedVenuesProvider({ children }: { children: ReactNode }) {
           return union;
         });
       } catch (err) {
-        // eslint-disable-next-line no-console
+         
         console.warn("[savedVenues] sync threw", err);
       }
     })();

@@ -53,7 +53,7 @@ export class ErrorBoundary extends Component<Props, State> {
     // Replace with a real crash reporter (Sentry, Expo Updates' Crashlytics
     // bridge, etc.) when one lands. Log the structured error for now so it
     // shows up in Metro and in dev-tooling.
-    // eslint-disable-next-line no-console
+     
     console.error("[ErrorBoundary]", error, errorInfo.componentStack);
     this.setState((prev) => ({
       errorInfo,

@@ -96,7 +96,7 @@ export function RecentlyViewedProvider({ children }: { children: ReactNode }) {
           .limit(MAX_ENTRIES * 2);
         if (cancelled) return;
         if (error) {
-          // eslint-disable-next-line no-console
+           
           console.warn("[recentlyViewed] pull failed", error.message);
           return;
         }
@@ -143,7 +143,7 @@ export function RecentlyViewedProvider({ children }: { children: ReactNode }) {
               )
               .then(({ error: upErr }) => {
                 if (upErr) {
-                  // eslint-disable-next-line no-console
+                   
                   console.warn(
                     "[recentlyViewed] upload failed",
                     upErr.message
@@ -154,7 +154,7 @@ export function RecentlyViewedProvider({ children }: { children: ReactNode }) {
           return capped;
         });
       } catch (err) {
-        // eslint-disable-next-line no-console
+         
         console.warn("[recentlyViewed] sync threw", err);
       }
     })();
@@ -185,7 +185,7 @@ export function RecentlyViewedProvider({ children }: { children: ReactNode }) {
           )
           .then(({ error }) => {
             if (error) {
-              // eslint-disable-next-line no-console
+               
               console.warn(
                 "[recentlyViewed] cloud upsert failed",
                 error.message
