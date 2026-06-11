@@ -3,7 +3,7 @@ import type { BottomSheetModal } from "@gorhom/bottom-sheet";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { FlatList, Pressable, RefreshControl, StyleSheet, View } from "react-native";
+import { ActivityIndicator, FlatList, Pressable, RefreshControl, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { EmptyState } from "../../components/EmptyState";
@@ -99,6 +99,16 @@ export function VenueListScreen() {
     return [...saved, ...rest];
   }, [venues, nameQuery, savedIds]);
 
+
+  // The name search filters client-side, so it can only see loaded pages.
+  // While a query is active, keep paging in the rest of the result set so a
+  // venue beyond page 1 is still findable. The dataset is small (tens of
+  // venues), so exhausting the pages costs at most a few requests.
+  useEffect(() => {
+    if (nameQuery.trim().length === 0) return;
+    if (!hasMore || loading || loadingMore || refreshing) return;
+    void loadMore();
+  }, [nameQuery, hasMore, loading, loadingMore, refreshing, loadMore]);
 
   // Surface refetch failures as a toast — keep existing data on screen.
   useEffect(() => {
@@ -301,13 +311,21 @@ export function VenueListScreen() {
           ItemSeparatorComponent={ItemSeparator}
           ListEmptyComponent={
             nameQuery.trim().length > 0 ? (
-              <EmptyState
-                icon="search-outline"
-                title={`No venues match "${nameQuery.trim()}"`}
-                description="Try a different name or clear the search."
-                actionLabel="Clear search"
-                onAction={() => setNameQuery("")}
-              />
+              hasMore || loadingMore ? (
+                // Still paging in results for the search — don't flash
+                // "no matches" until every page has been checked.
+                <View style={styles.footerLoading} accessibilityLiveRegion="polite">
+                  <ActivityIndicator color={colors.brand} />
+                </View>
+              ) : (
+                <EmptyState
+                  icon="search-outline"
+                  title={`No venues match "${nameQuery.trim()}"`}
+                  description="Try a different name or clear the search."
+                  actionLabel="Clear search"
+                  onAction={() => setNameQuery("")}
+                />
+              )
             ) : coordsFetchFailed ? (
               <EmptyState
                 icon="location-outline"
@@ -350,6 +368,13 @@ export function VenueListScreen() {
           }
           onEndReached={hasMore ? loadMore : undefined}
           onEndReachedThreshold={0.3}
+          ListFooterComponent={
+            loadingMore && filteredVenues.length > 0 ? (
+              <View style={styles.footerLoading}>
+                <ActivityIndicator color={colors.brand} />
+              </View>
+            ) : null
+          }
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
@@ -430,6 +455,10 @@ const styles = StyleSheet.create({
   },
   separator: {
     height: spacing.md,
+  },
+  footerLoading: {
+    paddingVertical: spacing.lg,
+    alignItems: "center",
   },
   offlineBanner: {
     flexDirection: "row",
