@@ -11,7 +11,7 @@ import { useTheme } from "../theme/useTheme";
 import type { Field, FieldSurface, Venue } from "../types/api";
 
 import { Badge } from "./Badge";
-import { PitchStripes } from "./PitchStripes";
+import { GoalNet } from "./GoalNet";
 import { Text } from "./Text";
 
 const PHOTO_HEIGHT = 148;
@@ -35,9 +35,9 @@ type Props = {
 
 /**
  * Magazine-style venue card: full-bleed photo on top with the price as a
- * chalk pill anchored to its corner, name + meta below. The photo fallback
- * keeps the same geometry (striped pitch texture + ball mark) so cards with
- * and without photos sit comfortably in the same list.
+ * paper pill anchored to its corner, name + meta below. The photo fallback
+ * keeps the same geometry (goal-net texture + ball mark) so cards with and
+ * without photos sit comfortably in the same list.
  */
 export const VenueCard = memo(function VenueCard({
   venue,
@@ -105,7 +105,7 @@ export const VenueCard = memo(function VenueCard({
             importantForAccessibility="no-hide-descendants"
             style={[styles.fallback, { backgroundColor: colors.brand + "10" }]}
           >
-            <PitchStripes bands={5} intensity={0.07} />
+            <GoalNet cols={9} rows={5} intensity={0.1} color={colors.brand} />
             <Ionicons name="football" size={40} color={colors.brand} />
           </View>
         ) : (
@@ -120,7 +120,7 @@ export const VenueCard = memo(function VenueCard({
             />
             {/* Bottom scrim keeps the overlaid pills legible on busy photos. */}
             <LinearGradient
-              colors={["transparent", "rgba(8, 14, 9, 0.42)"]}
+              colors={["transparent", "rgba(12, 14, 24, 0.45)"]}
               style={styles.scrim}
               pointerEvents="none"
             />

@@ -113,9 +113,9 @@
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 200,
           "resizeMode": "contain",
-          "backgroundColor": "#FBFBF7",
+          "backgroundColor": "#FAF7F2",
           "dark": {
-            "backgroundColor": "#0B120D"
+            "backgroundColor": "#0E131F"
           }
         }
       ],
@@ -128,7 +128,7 @@
       [
         "expo-notifications",
         {
-          "color": "#15803D"
+          "color": "#C2410C"
         }
       ],
       "@sentry/react-native"

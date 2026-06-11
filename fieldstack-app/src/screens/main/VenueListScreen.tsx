@@ -11,7 +11,7 @@ import { FadeInUp } from "../../components/FadeInUp";
 import { LocationPickerSheet } from "../../components/LocationPickerSheet";
 import { LocationPill } from "../../components/LocationPill";
 import { RecentlyViewedRow } from "../../components/RecentlyViewedRow";
-import { PitchStripes } from "../../components/PitchStripes";
+import { GoalNet } from "../../components/GoalNet";
 import { SearchInput } from "../../components/SearchInput";
 import { Text } from "../../components/Text";
 import { useToast } from "../../components/Toast";
@@ -177,10 +177,10 @@ export function VenueListScreen() {
 
   return (
     <View style={[styles.root, { backgroundColor: colors.surface }]}>
-      {/* Pitch-green hero — the brand moment. Chalk mow-bands, location chip,
-          the big condensed title, and the map toggle all live on the green.
-          The search card below overlaps its bottom edge like a touchline
-          ad board. */}
+      {/* Night-sky hero — the brand moment. Goal-net texture, location
+          chip, the big condensed title, and the map toggle all live on the
+          ink. The search card below overlaps its bottom edge like a
+          touchline ad board. */}
       <View
         style={[
           styles.hero,
@@ -190,7 +190,7 @@ export function VenueListScreen() {
           },
         ]}
       >
-        <PitchStripes bands={8} intensity={0.06} color={colors.onHero} />
+        <GoalNet intensity={0.07} />
         <View style={styles.heroTopRow}>
           <LocationPill
             label={label}
@@ -205,7 +205,7 @@ export function VenueListScreen() {
             style={({ pressed }) => [
               styles.mapButton,
               {
-                backgroundColor: "rgba(246, 248, 243, 0.16)",
+                backgroundColor: "rgba(246, 242, 234, 0.16)",
                 opacity: pressed ? 0.7 : 1,
               },
             ]}
