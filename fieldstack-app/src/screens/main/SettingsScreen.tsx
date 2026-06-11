@@ -166,7 +166,7 @@ export function SettingsScreen() {
         ]}
         showsVerticalScrollIndicator={false}
       >
-        <Text size="xxl" weight="bold" accessibilityRole="header" style={styles.title}>
+        <Text size="xxxl" weight="bold" font="display" accessibilityRole="header" style={styles.title}>
           Settings
         </Text>
 
@@ -334,7 +334,8 @@ const styles = StyleSheet.create({
     flexGrow: 1,
   },
   title: {
-    letterSpacing: -0.5,
+    letterSpacing: 1,
+    textTransform: "uppercase",
     marginBottom: spacing.lg,
   },
   sectionHeader: {

@@ -46,7 +46,7 @@ export function SavedScreen() {
       style={[styles.root, { backgroundColor: colors.surface, paddingTop: insets.top }]}
     >
       <View style={styles.header}>
-        <Text size="xxl" weight="bold" accessibilityRole="header" style={styles.title}>
+        <Text size="xxxl" weight="bold" font="display" accessibilityRole="header" style={styles.title}>
           Saved
         </Text>
         <Text size="sm" variant="secondary">
@@ -126,7 +126,8 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
   },
   title: {
-    letterSpacing: -0.5,
+    letterSpacing: 1,
+    textTransform: "uppercase",
   },
   list: {
     paddingHorizontal: spacing.lg,

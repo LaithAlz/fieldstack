@@ -30,7 +30,15 @@ export function Badge({ label, variant = "neutral" }: Props) {
 
   return (
     <View style={[styles.pill, { backgroundColor: bg }]}>
-      <Text style={{ color: fg, fontSize: fontSize.xs, fontWeight: fontWeight.medium }}>
+      <Text
+        style={{
+          color: fg,
+          fontSize: fontSize.xs,
+          fontWeight: fontWeight.medium,
+          textTransform: "uppercase",
+          letterSpacing: 0.7,
+        }}
+      >
         {label}
       </Text>
     </View>

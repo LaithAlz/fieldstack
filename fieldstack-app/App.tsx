@@ -1,9 +1,13 @@
 import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
 import {
-  Inter_400Regular,
-  Inter_500Medium,
-  Inter_600SemiBold,
-} from "@expo-google-fonts/inter";
+  BarlowCondensed_600SemiBold,
+  BarlowCondensed_700Bold,
+} from "@expo-google-fonts/barlow-condensed";
+import {
+  Figtree_400Regular,
+  Figtree_500Medium,
+  Figtree_600SemiBold,
+} from "@expo-google-fonts/figtree";
 import { createNavigationContainerRef, NavigationContainer, DefaultTheme, DarkTheme, type LinkingOptions } from "@react-navigation/native";
 import { useFonts } from "expo-font";
 import * as SplashScreen from "expo-splash-screen";
@@ -100,13 +104,16 @@ export default function App() {
   const [fontTimeoutHit, setFontTimeoutHit] = useState(false);
   const scheme = useColorScheme();
 
-  // Inter — fall back to system font during the brief load. If the font fetch
-  // fails (cold install + no network), `fontError` becomes non-null and we
-  // open the gate anyway so the app isn't stranded on the splash.
+  // Figtree (body) + Barlow Condensed (display) — fall back to system font
+  // during the brief load. If the font fetch fails (cold install + no
+  // network), `fontError` becomes non-null and we open the gate anyway so
+  // the app isn't stranded on the splash.
   const [fontsLoaded, fontError] = useFonts({
-    Inter_400Regular,
-    Inter_500Medium,
-    Inter_600SemiBold,
+    Figtree_400Regular,
+    Figtree_500Medium,
+    Figtree_600SemiBold,
+    BarlowCondensed_600SemiBold,
+    BarlowCondensed_700Bold,
   });
   const fontsGateOpen = fontsLoaded || fontError !== null;
 

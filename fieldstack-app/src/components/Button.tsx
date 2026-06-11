@@ -1,6 +1,6 @@
 import { ActivityIndicator, Pressable, StyleSheet, type ViewStyle } from "react-native";
 
-import { borderRadius, fontSize, fontWeight, spacing } from "../theme/tokens";
+import { borderRadius, fontSize, spacing } from "../theme/tokens";
 import { useTheme } from "../theme/useTheme";
 
 import { Text } from "./Text";
@@ -74,7 +74,13 @@ export function Button({
         <ActivityIndicator color={textColor} />
       ) : (
         <Text
-          style={{ color: textColor, fontSize: fontSize.lg, fontWeight: fontWeight.bold }}
+          font="display"
+          style={{
+            color: textColor,
+            fontSize: fontSize.lg + 1,
+            letterSpacing: 0.8,
+            textTransform: "uppercase",
+          }}
           numberOfLines={1}
         >
           {label}

@@ -135,10 +135,10 @@ export const VenueCard = memo(function VenueCard({
           <View
             accessibilityElementsHidden
             importantForAccessibility="no-hide-descendants"
-            style={[styles.recentPill, { backgroundColor: colors.brand + "1A" }]}
+            style={[styles.recentPill, { backgroundColor: colors.accent + "24" }]}
           >
-            <Ionicons name="time-outline" size={10} color={colors.brand} />
-            <Text size="xs" weight="bold" style={{ color: colors.brand }}>
+            <Ionicons name="time-outline" size={10} color={colors.accent} />
+            <Text size="xs" weight="bold" style={{ color: colors.accent, letterSpacing: 0.6 }}>
               BOOKED RECENTLY
             </Text>
           </View>
@@ -148,7 +148,7 @@ export const VenueCard = memo(function VenueCard({
             {venue.name}
           </Text>
           {priceRange ? (
-            <Text size="sm" weight="medium" style={{ color: colors.brand }}>
+            <Text font="display" size="md" style={{ color: colors.brand, letterSpacing: 0.3 }}>
               {priceRange}
             </Text>
           ) : null}

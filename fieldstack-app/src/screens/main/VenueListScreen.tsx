@@ -10,6 +10,7 @@ import { EmptyState } from "../../components/EmptyState";
 import { LocationPickerSheet } from "../../components/LocationPickerSheet";
 import { LocationPill } from "../../components/LocationPill";
 import { RecentlyViewedRow } from "../../components/RecentlyViewedRow";
+import { PitchStripes } from "../../components/PitchStripes";
 import { SearchInput } from "../../components/SearchInput";
 import { Text } from "../../components/Text";
 import { useToast } from "../../components/Toast";
@@ -171,6 +172,7 @@ export function VenueListScreen() {
   return (
     <View style={[styles.root, { backgroundColor: colors.surface, paddingTop: insets.top }]}>
       <View style={styles.header}>
+        <PitchStripes bands={8} intensity={0.045} />
         <LocationPill
           label={label}
           permissionStatus={permissionStatus}
@@ -178,8 +180,9 @@ export function VenueListScreen() {
         />
         <View style={styles.titleRow}>
           <Text
-            size="xxl"
+            size="xxxl"
             weight="bold"
+            font="display"
             accessibilityRole="header"
             numberOfLines={1}
             style={styles.title}
@@ -429,7 +432,8 @@ const styles = StyleSheet.create({
   },
   title: {
     flexShrink: 1,
-    letterSpacing: -0.5,
+    letterSpacing: 1,
+    textTransform: "uppercase",
   },
   mapButton: {
     width: 40,
