@@ -29,7 +29,9 @@ const venueTypeList = z
   .transform((v) => (v ? v.split(",").map((s) => s.trim()).filter(Boolean) : undefined))
   .pipe(z.array(z.enum(VENUE_TYPE_VALUES)).optional());
 
-const SearchFieldsQuery = z
+// Exported for tests — the comma-list transforms and the lat/lng pairing
+// refinement are the route's contract with the mobile client.
+export const SearchFieldsQuery = z
   .object({
     lat: z.coerce.number().min(-90).max(90).optional(),
     lng: z.coerce.number().min(-180).max(180).optional(),
