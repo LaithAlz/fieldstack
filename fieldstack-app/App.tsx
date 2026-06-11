@@ -35,6 +35,7 @@ import {
   useBookingHistory,
 } from "./src/lib/bookingHistory";
 import { initNotifications } from "./src/lib/notifications";
+import { initSessionTracking, onScreenChange } from "./src/lib/sessionTracking";
 import { OnboardingProvider, useOnboarding } from "./src/lib/onboardingContext";
 import {
   PreferredSlotProvider,
@@ -119,6 +120,7 @@ export default function App() {
 
   useEffect(() => {
     track(EVENT_APP_OPENED);
+    initSessionTracking();
     initNotifications();
     let cancelled = false;
     (async () => {
@@ -198,7 +200,24 @@ export default function App() {
                             {/* Hold render until persisted state has hydrated,
                                 so deep links don't see empty defaults. */}
                             <PersistenceGate>
-                              <NavigationContainer ref={navRef} theme={navTheme} linking={linking}>
+                              <NavigationContainer
+                                ref={navRef}
+                                theme={navTheme}
+                                linking={linking}
+                                // Churn instrumentation: report every route
+                                // transition (deduped inside onScreenChange)
+                                // so exit events know which screen the user
+                                // left from.
+                                // Cast: navRef has no RootParamList generic, so
+                                // getCurrentRoute() types as never. Runtime shape
+                                // is always { name: string } when a route exists.
+                                onReady={() =>
+                                  onScreenChange((navRef.getCurrentRoute() as { name?: string } | undefined)?.name)
+                                }
+                                onStateChange={() =>
+                                  onScreenChange((navRef.getCurrentRoute() as { name?: string } | undefined)?.name)
+                                }
+                              >
                                 <RootNavigator />
                                 {/* Fires as soon as the nav container is ready
                                     so a cold-start from a recovery deep link
