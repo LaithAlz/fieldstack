@@ -7,6 +7,8 @@ type Props = {
   bands?: number;
   /** Band opacity. Keep faint — this is texture, not pattern. */
   intensity?: number;
+  /** Band color. Defaults to brand green; pass chalk white on hero greens. */
+  color?: string;
 };
 
 /**
@@ -21,8 +23,9 @@ type Props = {
  *     ...content...
  *   </View>
  */
-export function PitchStripes({ bands = 6, intensity = 0.05 }: Props) {
+export function PitchStripes({ bands = 6, intensity = 0.05, color }: Props) {
   const colors = useTheme();
+  const band = color ?? colors.brand;
   return (
     <View
       pointerEvents="none"
@@ -35,7 +38,7 @@ export function PitchStripes({ bands = 6, intensity = 0.05 }: Props) {
           key={i}
           style={{
             flex: 1,
-            backgroundColor: i % 2 === 0 ? colors.brand : "transparent",
+            backgroundColor: i % 2 === 0 ? band : "transparent",
             opacity: intensity,
           }}
         />

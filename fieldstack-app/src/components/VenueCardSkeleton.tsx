@@ -5,15 +5,15 @@ import { useTheme } from "../theme/useTheme";
 
 import { Skeleton } from "./Skeleton";
 
-const PHOTO_SIZE = 96;
+const PHOTO_HEIGHT = 148;
 const BADGE_HEIGHT = 18;
 const BADGE_RADIUS = borderRadius.sm;
 
 /**
  * Loading placeholder for `VenueCard`. Mirrors the card's geometry — same
- * photo size, border, spacing, body layout — so when the real card hydrates,
- * the eye doesn't have to reparse a different layout. Pulse comes from the
- * underlying `Skeleton` primitive.
+ * full-bleed photo block, body layout, and badge row — so when the real card
+ * hydrates, the eye doesn't have to reparse a different layout. Pulse comes
+ * from the underlying `Skeleton` primitive.
  */
 export function VenueCardSkeleton() {
   const colors = useTheme();
@@ -29,12 +29,9 @@ export function VenueCardSkeleton() {
         },
       ]}
     >
-      <Skeleton width={PHOTO_SIZE} height={PHOTO_SIZE} borderRadius={borderRadius.md} />
+      <Skeleton width="100%" height={PHOTO_HEIGHT} borderRadius={0} />
       <View style={styles.body}>
-        <View style={styles.titleRow}>
-          <Skeleton width="60%" height={18} />
-          <Skeleton width={56} height={14} />
-        </View>
+        <Skeleton width="60%" height={18} />
         <Skeleton width="80%" height={14} />
         <View style={styles.badges}>
           <Skeleton width={48} height={BADGE_HEIGHT} borderRadius={BADGE_RADIUS} />
@@ -47,22 +44,13 @@ export function VenueCardSkeleton() {
 
 const styles = StyleSheet.create({
   card: {
-    flexDirection: "row",
-    padding: spacing.md,
-    borderRadius: borderRadius.lg,
+    borderRadius: borderRadius.xl,
     borderWidth: StyleSheet.hairlineWidth,
-    gap: spacing.md,
+    overflow: "hidden",
   },
   body: {
-    flex: 1,
-    justifyContent: "center",
+    padding: spacing.md,
     gap: spacing.xs + 2,
-  },
-  titleRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: spacing.sm,
   },
   badges: {
     flexDirection: "row",

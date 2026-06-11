@@ -166,7 +166,12 @@ export function MainNavigator() {
             ),
             tabBarStyle: tabBarStyleFor(route) ?? {
               backgroundColor: colors.surface,
-              borderTopColor: colors.border,
+              borderTopWidth: 0,
+              shadowColor: "#000",
+              shadowOpacity: 0.08,
+              shadowRadius: 12,
+              shadowOffset: { width: 0, height: -4 },
+              elevation: 16,
             },
           })}
         />
@@ -180,7 +185,12 @@ export function MainNavigator() {
             ),
             tabBarStyle: tabBarStyleFor(route) ?? {
               backgroundColor: colors.surface,
-              borderTopColor: colors.border,
+              borderTopWidth: 0,
+              shadowColor: "#000",
+              shadowOpacity: 0.08,
+              shadowRadius: 12,
+              shadowOffset: { width: 0, height: -4 },
+              elevation: 16,
             },
           })}
         />
@@ -194,7 +204,12 @@ export function MainNavigator() {
             ),
             tabBarStyle: tabBarStyleFor(route) ?? {
               backgroundColor: colors.surface,
-              borderTopColor: colors.border,
+              borderTopWidth: 0,
+              shadowColor: "#000",
+              shadowOpacity: 0.08,
+              shadowRadius: 12,
+              shadowOffset: { width: 0, height: -4 },
+              elevation: 16,
             },
           })}
         />

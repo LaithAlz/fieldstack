@@ -7,6 +7,7 @@ import { ActivityIndicator, FlatList, Pressable, RefreshControl, StyleSheet, Vie
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { EmptyState } from "../../components/EmptyState";
+import { FadeInUp } from "../../components/FadeInUp";
 import { LocationPickerSheet } from "../../components/LocationPickerSheet";
 import { LocationPill } from "../../components/LocationPill";
 import { RecentlyViewedRow } from "../../components/RecentlyViewedRow";
@@ -125,15 +126,20 @@ export function VenueListScreen() {
   // Stable renderItem — avoids recreating a new closure on every render, which
   // would defeat VenueCard's memo wrapper by always providing a new onPress ref.
   const renderVenueCard = useCallback(
-    ({ item }: { item: VenueWithFields }) => (
-      <VenueCard
-        venue={item}
-        userCoords={coords}
-        isSaved={savedIds.has(item.id)}
-        recentlyAttempted={attemptedIds.has(item.id)}
-        onPress={() => handleCardPress(item)}
-      />
-    ),
+    ({ item, index }: { item: VenueWithFields; index: number }) => {
+      const card = (
+        <VenueCard
+          venue={item}
+          userCoords={coords}
+          isSaved={savedIds.has(item.id)}
+          recentlyAttempted={attemptedIds.has(item.id)}
+          onPress={() => handleCardPress(item)}
+        />
+      );
+      // Staggered entrance for the first screenful only — rows past the
+      // fold mount during scroll, where a fade would read as lag.
+      return index < 8 ? <FadeInUp delay={index * 50}>{card}</FadeInUp> : card;
+    },
     [coords, savedIds, attemptedIds, handleCardPress]
   );
 
@@ -170,25 +176,27 @@ export function VenueListScreen() {
   }, [closePicker, handleUseMyLocation]);
 
   return (
-    <View style={[styles.root, { backgroundColor: colors.surface, paddingTop: insets.top }]}>
-      <View style={styles.header}>
-        <PitchStripes bands={8} intensity={0.045} />
-        <LocationPill
-          label={label}
-          permissionStatus={permissionStatus}
-          onPress={openPicker}
-        />
-        <View style={styles.titleRow}>
-          <Text
-            size="xxxl"
-            weight="bold"
-            font="display"
-            accessibilityRole="header"
-            numberOfLines={1}
-            style={styles.title}
-          >
-            Venues
-          </Text>
+    <View style={[styles.root, { backgroundColor: colors.surface }]}>
+      {/* Pitch-green hero — the brand moment. Chalk mow-bands, location chip,
+          the big condensed title, and the map toggle all live on the green.
+          The search card below overlaps its bottom edge like a touchline
+          ad board. */}
+      <View
+        style={[
+          styles.hero,
+          {
+            backgroundColor: colors.heroSurface,
+            paddingTop: insets.top + spacing.sm,
+          },
+        ]}
+      >
+        <PitchStripes bands={8} intensity={0.06} color={colors.onHero} />
+        <View style={styles.heroTopRow}>
+          <LocationPill
+            label={label}
+            permissionStatus={permissionStatus}
+            onPress={openPicker}
+          />
           <Pressable
             onPress={() => navigation.navigate("MapView")}
             accessibilityRole="button"
@@ -197,14 +205,36 @@ export function VenueListScreen() {
             style={({ pressed }) => [
               styles.mapButton,
               {
-                backgroundColor: colors.surfaceSecondary,
+                backgroundColor: "rgba(246, 248, 243, 0.16)",
                 opacity: pressed ? 0.7 : 1,
               },
             ]}
           >
-            <Ionicons name="map-outline" size={20} color={colors.textPrimary} />
+            <Ionicons name="map-outline" size={20} color={colors.onHero} />
           </Pressable>
         </View>
+        <Text
+          size="xxxl"
+          weight="bold"
+          font="display"
+          accessibilityRole="header"
+          numberOfLines={1}
+          style={[styles.title, { color: colors.onHero }]}
+        >
+          Venues
+        </Text>
+        <Text size="sm" style={[styles.heroSub, { color: colors.onHeroMuted }]}>
+          Every field across the GTA, one tap from booked.
+        </Text>
+      </View>
+
+      {/* Floating search card — overlaps the hero's bottom edge. */}
+      <View
+        style={[
+          styles.floatCard,
+          { backgroundColor: colors.surface, borderColor: colors.border },
+        ]}
+      >
         <WhenPill />
         <SearchInput
           value={nameQuery}
@@ -419,21 +449,39 @@ const styles = StyleSheet.create({
   root: {
     flex: 1,
   },
-  header: {
+  hero: {
     paddingHorizontal: spacing.lg,
-    paddingTop: spacing.sm,
-    paddingBottom: spacing.md,
+    // Extra bottom padding is the green the float card overlaps onto.
+    paddingBottom: spacing.xl + spacing.md,
     gap: spacing.sm,
   },
-  titleRow: {
+  heroTopRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+    gap: spacing.sm,
   },
   title: {
     flexShrink: 1,
-    letterSpacing: 1,
+    letterSpacing: 1.2,
     textTransform: "uppercase",
+  },
+  heroSub: {
+    marginTop: -spacing.xs,
+  },
+  floatCard: {
+    marginHorizontal: spacing.lg,
+    marginTop: -spacing.xl,
+    borderRadius: borderRadius.xl,
+    borderWidth: StyleSheet.hairlineWidth,
+    padding: spacing.md,
+    gap: spacing.sm,
+    marginBottom: spacing.sm,
+    shadowColor: "#000",
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 4,
   },
   mapButton: {
     width: 40,
