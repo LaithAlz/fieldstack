@@ -203,6 +203,53 @@ export function ProfileScreen() {
           onPress={() => whenSheetRef.current?.present()}
         />
 
+        {/* ---- Cold start ---- */}
+        {/* A fresh profile has nothing below the slot card — every section
+            is conditional on history. Point back at the content instead of
+            showing dead air. Disappears as soon as anything accrues. */}
+        {savedIds.size === 0 &&
+        recentBookingsByVenue.length === 0 &&
+        recentIds.length === 0 ? (
+          <Pressable
+            onPress={() =>
+              navigation
+                .getParent<BottomTabNavigationProp<RootTabsParamList>>()
+                ?.navigate("ExploreTab")
+            }
+            accessibilityRole="button"
+            accessibilityLabel="Explore venues"
+            accessibilityHint="Opens the Explore tab"
+            style={({ pressed }) => [
+              styles.coldStartCard,
+              {
+                backgroundColor: colors.surfaceSecondary,
+                borderColor: colors.border,
+                opacity: pressed ? 0.85 : 1,
+              },
+            ]}
+          >
+            <View style={[styles.coldStartIcon, { backgroundColor: colors.brand + "16" }]}>
+              <Ionicons name="football-outline" size={22} color={colors.brand} />
+            </View>
+            <View style={styles.coldStartBody}>
+              <Text size="md" weight="bold">
+                Your pitch history starts here
+              </Text>
+              <Text size="sm" variant="secondary">
+                Browse venues, save your favourites, and book a field — it all
+                shows up on this screen.
+              </Text>
+            </View>
+            <Ionicons
+              name="chevron-forward"
+              size={16}
+              color={colors.textTertiary}
+              accessibilityElementsHidden
+              importantForAccessibility="no-hide-descendants"
+            />
+          </Pressable>
+        ) : null}
+
         {/* ---- Saved venues ---- */}
         {savedIds.size > 0 ? (
           <View style={styles.sectionSpacer}>
@@ -242,10 +289,10 @@ export function ProfileScreen() {
                 <Pressable
                   key={attempt.fieldId}
                   onPress={() =>
-                    navigation.navigate("VenueDetail", { venueId: venue.id })
+                    navigation.navigate("FieldDetail", { fieldId: attempt.fieldId })
                   }
                   accessibilityRole="button"
-                  accessibilityLabel={`Open ${venue.name}`}
+                  accessibilityLabel={`Open your booked field at ${venue.name}`}
                   style={({ pressed }) => [
                     styles.bookingRow,
                     {
@@ -500,6 +547,27 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.xl,
     alignItems: "center",
     justifyContent: "center",
+  },
+  coldStartCard: {
+    marginHorizontal: spacing.lg,
+    marginTop: spacing.md,
+    padding: spacing.md,
+    borderRadius: borderRadius.lg,
+    borderWidth: StyleSheet.hairlineWidth,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.md,
+  },
+  coldStartIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  coldStartBody: {
+    flex: 1,
+    gap: 2,
   },
   signInBanner: {
     marginHorizontal: spacing.lg,
