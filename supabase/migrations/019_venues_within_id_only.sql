@@ -4,7 +4,12 @@
 -- The calling code (src/lib/queries/venues.ts) only uses the id to run a
 -- follow-up hydration SELECT, so the projection change is safe.
 
-create or replace function venues_within(
+-- The return type changes (SETOF venues -> table(id uuid)), and Postgres
+-- forbids CREATE OR REPLACE across return types — drop first. Safe on
+-- replay: 002 recreates it before this runs.
+drop function if exists venues_within(float8, float8, float8);
+
+create function venues_within(
   p_lat           float8,
   p_lng           float8,
   p_radius_meters float8
