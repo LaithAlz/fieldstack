@@ -18,6 +18,7 @@ import { useLocation } from "../../hooks/useLocation";
 import { useVenue } from "../../hooks/useVenue";
 import { useVenueReviews } from "../../hooks/useVenueReviews";
 import { formatEndTime, formatTime12h } from "../../lib/datetime";
+import { openDirections } from "../../lib/directions";
 import { formatScrapedAgo } from "../../lib/freshness";
 import { openOperatorBooking } from "../../lib/openBooking";
 import {
@@ -161,10 +162,19 @@ export function VenueDetailScreen({ route }: Props) {
   const fields = venue.fields;
   const amenities = venue.amenities;
 
-  const headerLines = [
-    { id: "address", text: venue.address },
-    { id: "distance", text: distance ? `${distance} away` : null },
-  ].filter((l): l is { id: string; text: string } => Boolean(l.text));
+  const addressLine = [venue.address, distance ? `${distance} away` : null]
+    .filter(Boolean)
+    .join(" · ");
+
+  const handleDirections = async () => {
+    const ok = await openDirections({
+      lat: venue.lat,
+      lng: venue.lng,
+      address: venue.address,
+      label: venue.name,
+    });
+    if (!ok) toast.show("Couldn't open maps.", { type: "error" });
+  };
 
   return (
     <View style={[styles.root, { backgroundColor: colors.surface }]}>
@@ -188,18 +198,37 @@ export function VenueDetailScreen({ route }: Props) {
 
         <View style={styles.body}>
           <Text
-            size="xl"
+            size="xxl"
             weight="bold"
+            font="display"
             accessibilityRole="header"
             style={styles.title}
           >
             {venue.name}
           </Text>
-          {headerLines.map(({ id, text }) => (
-            <Text key={id} size="sm" variant="secondary">
-              {text}
-            </Text>
-          ))}
+          {addressLine ? (
+            <Pressable
+              onPress={() => void handleDirections()}
+              accessibilityRole="button"
+              accessibilityLabel={`Get directions to ${venue.name}`}
+              accessibilityHint="Opens your maps app"
+              style={({ pressed }) => [styles.addressRow, { opacity: pressed ? 0.6 : 1 }]}
+            >
+              <Ionicons
+                name="navigate-outline"
+                size={15}
+                color={colors.brand}
+                accessibilityElementsHidden
+                importantForAccessibility="no-hide-descendants"
+              />
+              <Text size="sm" variant="secondary" numberOfLines={2} style={styles.addressText}>
+                {addressLine}
+              </Text>
+              <Text size="sm" weight="medium" style={{ color: colors.brand }}>
+                Directions
+              </Text>
+            </Pressable>
+          ) : null}
           {/* Provenance badge. Renders only when migration 007 is applied
               and a last-scraped timestamp exists; otherwise the helper
               returns null and we render nothing. */}
@@ -526,8 +555,16 @@ const styles = StyleSheet.create({
     paddingTop: spacing.lg,
   },
   title: {
-    letterSpacing: -0.3,
+    letterSpacing: 0.2,
     marginBottom: spacing.xs,
+  },
+  addressRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.xs + 2,
+  },
+  addressText: {
+    flexShrink: 1,
   },
   amenities: {
     flexDirection: "row",
