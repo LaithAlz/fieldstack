@@ -244,10 +244,13 @@ export function VenueListScreen() {
           accessibilityLabel="Search venues"
           accessibilityHint="Type a venue name to filter the list"
         />
+        {/* Mode switch, not a filter: Field search lists individual fields
+            with attribute filters. The trailing chevron signals navigation. */}
         <Pressable
           onPress={() => navigation.navigate("FieldSearch")}
           accessibilityRole="button"
-          accessibilityLabel="Filter by surface, size, or price"
+          accessibilityLabel="Search fields by surface, size, and price"
+          accessibilityHint="Opens the field search screen"
           hitSlop={spacing.xs}
           style={({ pressed }) => [
             styles.filterLink,
@@ -255,9 +258,10 @@ export function VenueListScreen() {
           ]}
         >
           <Ionicons name="options-outline" size={16} color={colors.brand} />
-          <Text size="sm" weight="medium" style={{ color: colors.brand }}>
-            Filter by surface, size, or price
+          <Text size="sm" weight="medium" style={[styles.filterLinkText, { color: colors.brand }]}>
+            Search fields by surface, size & price
           </Text>
+          <Ionicons name="chevron-forward" size={14} color={colors.brand} />
         </Pressable>
       </View>
 
@@ -452,9 +456,9 @@ const styles = StyleSheet.create({
   },
   hero: {
     paddingHorizontal: spacing.lg,
-    // Extra bottom padding is the green the float card overlaps onto.
-    paddingBottom: spacing.xl + spacing.md,
-    gap: spacing.sm,
+    // Extra bottom padding is the ink the float card overlaps onto.
+    paddingBottom: spacing.xl,
+    gap: spacing.xs + 2,
   },
   heroTopRow: {
     flexDirection: "row",
@@ -472,11 +476,11 @@ const styles = StyleSheet.create({
   },
   floatCard: {
     marginHorizontal: spacing.lg,
-    marginTop: -spacing.xl,
+    marginTop: -spacing.lg,
     borderRadius: borderRadius.xl,
     borderWidth: StyleSheet.hairlineWidth,
-    padding: spacing.md,
-    gap: spacing.sm,
+    padding: spacing.sm + 2,
+    gap: spacing.xs + 2,
     marginBottom: spacing.sm,
     shadowColor: "#000",
     shadowOpacity: 0.1,
@@ -494,9 +498,11 @@ const styles = StyleSheet.create({
   filterLink: {
     flexDirection: "row",
     alignItems: "center",
-    alignSelf: "flex-start",
     gap: spacing.xs,
     paddingVertical: spacing.xs,
+  },
+  filterLinkText: {
+    flex: 1,
   },
   list: {
     paddingHorizontal: spacing.lg,
