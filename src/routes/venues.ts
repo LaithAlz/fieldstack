@@ -1,12 +1,21 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
-import { listVenues, getVenueWithFields } from "../lib/queries/venues.js";
+import { listVenues, listVenuesByIds, getVenueWithFields } from "../lib/queries/venues.js";
 import { listFieldsByVenue } from "../lib/queries/fields.js";
 import { ApiError } from "../lib/errors.js";
 
 // `coerce.number` because query strings come in as strings.
-const ListVenuesQuery = z
+// Exported for tests.
+export const ListVenuesQuery = z
   .object({
+    // Comma-separated venue UUIDs. When present, proximity params are
+    // ignored — the caller wants exactly these venues (e.g. the Saved tab),
+    // not a location-scoped page. Capped so the PostgREST IN() stays sane.
+    ids: z
+      .string()
+      .optional()
+      .transform((v) => (v ? v.split(",").map((s) => s.trim()).filter(Boolean) : undefined))
+      .pipe(z.array(z.string().uuid()).min(1).max(100).optional()),
     lat: z.coerce.number().min(-90).max(90).optional(),
     lng: z.coerce.number().min(-180).max(180).optional(),
     radius_km: z.coerce.number().positive().max(500).default(10),
@@ -26,9 +35,16 @@ const FieldFiltersQuery = z.object({
 });
 
 export async function venuesRoutes(app: FastifyInstance) {
-  // GET /venues — list active venues, optional proximity sort.
+  // GET /venues — list active venues, optional proximity sort, or an exact
+  // id set (`?ids=a,b,c`) for the Saved tab.
   app.get("/venues", async (req, reply) => {
     const q = ListVenuesQuery.parse(req.query);
+
+    if (q.ids) {
+      const venues = await listVenuesByIds(q.ids);
+      reply.header("Cache-Control", "public, max-age=30, stale-while-revalidate=60");
+      return { data: venues, total: venues.length, dropped: 0, error: null };
+    }
 
     const result = await listVenues({
       lat: q.lat,

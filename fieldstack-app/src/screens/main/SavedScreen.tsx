@@ -20,26 +20,20 @@ import type { VenueWithFields } from "../../types/api";
 type Nav = NativeStackNavigationProp<SavedStackParamList, "SavedList">;
 
 /**
- * Saved tab — flat list of venues the user has hearted. Reuses the standard
- * VenueCard so the row looks identical to the Explore list.
- *
- * The current `useVenues` is location-scoped, so only saved venues within
- * the active radius render here. That's a known limitation; a "saved" API
- * that returns full venue rows by ID set is the right fix later.
+ * Saved tab — flat list of venues the user has hearted, fetched by exact id
+ * (`/venues?ids=…`) so every save shows regardless of the active location.
+ * Reuses the standard VenueCard so rows look identical to the Explore list,
+ * with the heart live so unsaving happens in place.
  */
 export function SavedScreen() {
   const colors = useTheme();
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<Nav>();
   const { coords } = useLocation();
-  const { venues, loading, error, refresh } = useVenues({ coords });
-  const { saved: savedIds } = useSavedVenues();
+  const { saved: savedIds, toggle } = useSavedVenues();
+  const ids = useMemo(() => Array.from(savedIds), [savedIds]);
+  const { venues: savedVenues, loading, error, refresh } = useVenues({ coords, ids });
   const { venueWasRecentlyAttempted } = useBookingHistory();
-
-  const savedVenues = useMemo(
-    () => venues.filter((v) => savedIds.has(v.id)),
-    [venues, savedIds]
-  );
 
   return (
     <View
@@ -91,19 +85,20 @@ export function SavedScreen() {
             <VenueCard
               venue={item}
               userCoords={coords}
-              isSaved
+              isSaved={savedIds.has(item.id)}
               recentlyAttempted={venueWasRecentlyAttempted(item.id)}
               onPress={() => navigation.navigate("VenueDetail", { venueId: item.id })}
+              onToggleSave={() => void toggle(item.id)}
             />
           )}
           ItemSeparatorComponent={() => <View style={{ height: spacing.md }} />}
           ListEmptyComponent={
             <EmptyState
               icon="heart-outline"
-              title={savedIds.size > 0 ? "Saved venues aren't in this area" : "No saved venues yet"}
+              title={savedIds.size > 0 ? "Those venues are gone" : "No saved venues yet"}
               description={
                 savedIds.size > 0
-                  ? "Try a different location or check back when you're nearby."
+                  ? "The venues you saved are no longer listed."
                   : "Tap the heart on any venue to save it for later."
               }
             />

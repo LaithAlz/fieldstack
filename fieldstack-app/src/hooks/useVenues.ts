@@ -22,6 +22,12 @@ const PAGE_SIZE = 50;
 type UseVenuesOptions = {
   coords?: Coords;
   radiusKm?: number;
+  /**
+   * Exact-id mode (Saved tab): fetch precisely these venues, ignoring
+   * location scoping and pagination. An empty array short-circuits to an
+   * empty result without a network call.
+   */
+  ids?: string[];
 };
 
 type UseVenuesResult = {
@@ -39,7 +45,7 @@ type UseVenuesResult = {
   loadMore: () => Promise<void>;
 };
 
-export function useVenues({ coords, radiusKm = 25 }: UseVenuesOptions): UseVenuesResult {
+export function useVenues({ coords, radiusKm = 25, ids }: UseVenuesOptions): UseVenuesResult {
   const [venues, setVenues] = useState<VenueWithFields[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -50,22 +56,38 @@ export function useVenues({ coords, radiusKm = 25 }: UseVenuesOptions): UseVenue
   const [cachedAt, setCachedAt] = useState<number | null>(null);
   const requestId = useRef(0);
   const offsetRef = useRef(0);
+  // Stable identity for the ids list so the fetch effect doesn't re-run on
+  // every render when the caller builds the array inline.
+  const idsKey = ids ? [...ids].sort().join(",") : null;
 
   const fetchVenues = useCallback(
     async (mode: "initial" | "refresh" | "more") => {
       const id = ++requestId.current;
       const offset = mode === "more" ? offsetRef.current : 0;
 
+      // Exact-id mode with nothing saved: settle synchronously.
+      if (idsKey !== null && idsKey.length === 0) {
+        setVenues([]);
+        setTotal(0);
+        setError(null);
+        setLoading(false);
+        setRefreshing(false);
+        setLoadingMore(false);
+        return;
+      }
+
       if (mode === "initial") setLoading(true);
       else if (mode === "refresh") setRefreshing(true);
       else setLoadingMore(true);
 
       try {
-        const params = {
-          ...(coords ? { lat: coords.lat, lng: coords.lng, radius_km: radiusKm } : {}),
-          limit: PAGE_SIZE,
-          offset,
-        };
+        const params = idsKey !== null
+          ? { ids: idsKey.split(",") }
+          : {
+              ...(coords ? { lat: coords.lat, lng: coords.lng, radius_km: radiusKm } : {}),
+              limit: PAGE_SIZE,
+              offset,
+            };
         const result = await getVenues(params);
 
         if (id !== requestId.current) return;
@@ -89,7 +111,9 @@ export function useVenues({ coords, radiusKm = 25 }: UseVenuesOptions): UseVenue
             setVenues(page);
             setStaleFromCache(false);
             setCachedAt(null);
-            void setCachedVenues(page);
+            // Only the location-scoped list feeds the offline cache — an
+            // id-subset (Saved tab) would poison it for the Explore list.
+            if (idsKey === null) void setCachedVenues(page);
           }
           setTotal(result.total);
           setError(null);
@@ -103,7 +127,7 @@ export function useVenues({ coords, radiusKm = 25 }: UseVenuesOptions): UseVenue
         }
       }
     },
-    [coords, radiusKm]
+    [coords, radiusKm, idsKey]
   );
 
   useEffect(() => {

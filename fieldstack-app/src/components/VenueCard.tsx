@@ -31,6 +31,12 @@ type Props = {
   /** True if the user attempted a booking at this venue in the recent window. */
   recentlyAttempted?: boolean;
   onPress: () => void;
+  /**
+   * When provided, the heart becomes a live save/unsave button (always
+   * visible — outline when unsaved). When absent, the heart is a passive
+   * badge shown only on saved venues.
+   */
+  onToggleSave?: () => void;
 };
 
 /**
@@ -45,6 +51,7 @@ export const VenueCard = memo(function VenueCard({
   isSaved = false,
   recentlyAttempted = false,
   onPress,
+  onToggleSave,
 }: Props) {
   const colors = useTheme();
   const [photoFailed, setPhotoFailed] = useState(false);
@@ -152,7 +159,24 @@ export const VenueCard = memo(function VenueCard({
           </View>
         ) : null}
 
-        {isSaved ? (
+        {onToggleSave ? (
+          <Pressable
+            onPress={onToggleSave}
+            accessibilityRole="button"
+            accessibilityLabel={isSaved ? `Remove ${venue.name} from saved` : `Save ${venue.name}`}
+            hitSlop={spacing.sm}
+            style={({ pressed }) => [
+              styles.savedBadge,
+              { backgroundColor: colors.surface, opacity: pressed ? 0.7 : 1 },
+            ]}
+          >
+            <Ionicons
+              name={isSaved ? "heart" : "heart-outline"}
+              size={15}
+              color={isSaved ? colors.danger : colors.textSecondary}
+            />
+          </Pressable>
+        ) : isSaved ? (
           <View
             accessibilityElementsHidden
             importantForAccessibility="no-hide-descendants"
@@ -253,9 +277,9 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: spacing.sm,
     right: spacing.sm,
-    width: 26,
-    height: 26,
-    borderRadius: 13,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
     alignItems: "center",
     justifyContent: "center",
     shadowColor: "#000",
