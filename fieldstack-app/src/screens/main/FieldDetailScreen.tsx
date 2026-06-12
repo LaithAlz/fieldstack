@@ -141,8 +141,9 @@ export function FieldDetailScreen({ route }: Props) {
 
         <View style={styles.body}>
           <Text
-            size="xl"
+            size="xxl"
             weight="bold"
+            font="display"
             accessibilityRole="header"
             style={styles.title}
           >
@@ -179,9 +180,9 @@ export function FieldDetailScreen({ route }: Props) {
           {priceText ? (
             <View style={styles.priceWrap}>
               <Text
-                size="xxl"
-                weight="bold"
-                style={{ color: colors.brand, letterSpacing: -0.5 }}
+                size="xxxl"
+                font="display"
+                style={{ color: colors.brand, letterSpacing: 0.4 }}
               >
                 {priceText}
               </Text>
@@ -194,7 +195,7 @@ export function FieldDetailScreen({ route }: Props) {
           ) : null}
 
           {/* Field specs */}
-          <Text size="lg" weight="bold" accessibilityRole="header" style={styles.section}>
+          <Text size="lg" weight="bold" font="display" accessibilityRole="header" style={styles.section}>
             Field specs
           </Text>
           <View style={[styles.specs, { borderColor: colors.border }]}>
@@ -337,7 +338,7 @@ const styles = StyleSheet.create({
     paddingTop: spacing.lg,
   },
   title: {
-    letterSpacing: -0.3,
+    letterSpacing: 0.2,
   },
   badges: {
     flexDirection: "row",
@@ -360,6 +361,8 @@ const styles = StyleSheet.create({
   section: {
     marginTop: spacing.xl,
     marginBottom: spacing.sm,
+    textTransform: "uppercase",
+    letterSpacing: 1,
   },
   specs: {
     borderWidth: StyleSheet.hairlineWidth,
