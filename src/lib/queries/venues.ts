@@ -107,6 +107,25 @@ function proximityKey(lat: number, lng: number, radiusKm: number, limit: number,
 }
 
 /**
+ * Exact id-set lookup for the Saved tab. No proximity, no pagination — the
+ * caller already knows precisely which venues it wants (capped at 100 by the
+ * route schema). Inactive or deleted ids simply don't come back; callers
+ * treat the response as the source of truth.
+ */
+export async function listVenuesByIds(ids: string[]): Promise<VenueWithFields[]> {
+  const { data, error } = await supabase
+    .from("venues")
+    .select("*, fields(*)")
+    .in("id", ids)
+    .eq("is_active", true)
+    .eq("fields.is_active", true)
+    .order("name");
+
+  if (error) throw error;
+  return (data ?? []) as unknown as VenueWithFields[];
+}
+
+/**
  * Single venue with its active fields and parent operator nested. Returns
  * null if the venue doesn't exist or isn't active. The operator is embedded
  * here (but not on the list endpoint) because the Venue Detail screen's

@@ -74,7 +74,7 @@ export function VenueListScreen() {
     lightImpact();
     await refetchVenues();
   }, [refetchVenues]);
-  const { saved: savedIds } = useSavedVenues();
+  const { saved: savedIds, toggle: toggleSaved } = useSavedVenues();
   const { attempts } = useBookingHistory();
   const { recent: recentIds } = useRecentlyViewed();
   const [nameQuery, setNameQuery] = useState("");
@@ -134,13 +134,14 @@ export function VenueListScreen() {
           isSaved={savedIds.has(item.id)}
           recentlyAttempted={attemptedIds.has(item.id)}
           onPress={() => handleCardPress(item)}
+          onToggleSave={() => void toggleSaved(item.id)}
         />
       );
       // Staggered entrance for the first screenful only — rows past the
       // fold mount during scroll, where a fade would read as lag.
       return index < 8 ? <FadeInUp delay={index * 50}>{card}</FadeInUp> : card;
     },
-    [coords, savedIds, attemptedIds, handleCardPress]
+    [coords, savedIds, attemptedIds, handleCardPress, toggleSaved]
   );
 
   const openPicker = useCallback(() => sheetRef.current?.present(), []);

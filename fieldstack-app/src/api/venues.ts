@@ -2,6 +2,8 @@ import { get, request, type ApiResult } from "./client";
 import type { Field, VenueWithFields } from "../types/api";
 
 type GetVenuesParams = {
+  /** Exact venue ids (Saved tab). When set, proximity params are ignored. */
+  ids?: string[];
   lat?: number;
   lng?: number;
   radius_km?: number;
@@ -32,10 +34,10 @@ export type GetVenuesResult = {
  * "undefined" in the query string. The API client's QueryParams type forbids
  * undefined to keep the shared boundary tight.
  */
-function compactParams<T extends Record<string, string | number | undefined>>(
+function compactParams<T extends Record<string, string | number | string[] | undefined>>(
   input: T
-): Record<string, string | number> {
-  const out: Record<string, string | number> = {};
+): Record<string, string | number | string[]> {
+  const out: Record<string, string | number | string[]> = {};
   for (const [k, v] of Object.entries(input)) {
     if (v !== undefined) out[k] = v;
   }
