@@ -281,7 +281,7 @@ export function MapViewScreen() {
   // React reuses each Marker component across result changes rather than
   // unmounting the old one and mounting a new one, which would call
   // insertReactSubview:atIndex: on AIRMap and crash under Fabric interop.
-  const markerSlots = useMemo((): (VenueMarker | null)[] => {
+  const { markerSlots, placeableCount } = useMemo(() => {
     const valid = markers.filter(
       (m) => m.venue.lat !== null && m.venue.lng !== null
     );
@@ -289,8 +289,12 @@ export function MapViewScreen() {
     for (let i = 0; i < Math.min(valid.length, MAX_MARKERS); i++) {
       pool[i] = valid[i]!;
     }
-    return pool;
+    return { markerSlots: pool, placeableCount: valid.length };
   }, [markers]);
+
+  // Results beyond the fixed marker pool would otherwise drop silently —
+  // tell the user the map is truncated and how to recover (#314).
+  const overflowCount = Math.max(0, placeableCount - MAX_MARKERS);
 
   // Markers within the current camera bounds. Drives the ResultCountPill so
   // "X venues" reflects the visible region rather than the full result set.
@@ -540,6 +544,25 @@ export function MapViewScreen() {
           />
         </View>
 
+        {overflowCount > 0 ? (
+          <View
+            pointerEvents="none"
+            style={styles.countRow}
+            accessibilityLiveRegion="polite"
+          >
+            <View
+              style={[
+                styles.overflowPill,
+                { backgroundColor: colors.surface, borderColor: colors.border },
+              ]}
+            >
+              <Text size="xs" variant="secondary">
+                Showing {MAX_MARKERS} of {placeableCount} venues — move the map to see others
+              </Text>
+            </View>
+          </View>
+        ) : null}
+
         {/* GPS fetch-failed banner — non-blocking, shown only when location
             permission is granted but coords couldn't be read. */}
         {permissionStatus === "granted" && coordsFetchFailed ? (
@@ -598,8 +621,8 @@ export function MapViewScreen() {
                 filters.size.length > 0 ||
                 filters.venueType.length > 0 ||
                 filters.priceMax !== null
-                  ? "Try clearing a filter or panning toward Oakville, Hamilton, or Milton."
-                  : "Pan toward Oakville, Hamilton, or Milton to see venues."
+                  ? "Try clearing a filter or panning to a nearby area."
+                  : "Pan around the map to find venues nearby."
               }
             />
           </View>
@@ -696,6 +719,17 @@ const styles = StyleSheet.create({
   countRow: {
     alignItems: "center",
     marginTop: spacing.md,
+  },
+  overflowPill: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs + 2,
+    borderRadius: borderRadius.xl,
+    borderWidth: StyleSheet.hairlineWidth,
+    shadowColor: "#000",
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 1 },
+    elevation: 2,
   },
   iconButton: {
     width: 40,
