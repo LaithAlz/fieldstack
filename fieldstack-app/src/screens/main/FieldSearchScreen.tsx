@@ -168,6 +168,35 @@ export function FieldSearchScreen() {
           },
         ]}
       >
+        {/* Screen identity — this is a different results model than the
+            Explore venue list, so it announces itself and offers an explicit
+            way back (the push previously had no visible exit). */}
+        <View style={styles.headerRow}>
+          <Pressable
+            onPress={() => nav.goBack()}
+            accessibilityRole="button"
+            accessibilityLabel="Back to venues"
+            hitSlop={spacing.sm}
+            style={({ pressed }) => [
+              styles.backBtn,
+              { backgroundColor: colors.surfaceSecondary, opacity: pressed ? 0.7 : 1 },
+            ]}
+          >
+            <Ionicons name="chevron-back" size={20} color={colors.textPrimary} />
+          </Pressable>
+          <Text
+            size="xl"
+            weight="bold"
+            font="display"
+            accessibilityRole="header"
+            style={styles.screenTitle}
+          >
+            Field search
+          </Text>
+          {/* Spacer balances the back button so the title stays centered. */}
+          <View style={styles.headerSpacer} />
+        </View>
+
         <LocationPill
           label={location.text || "Select area"}
           permissionStatus={permissionStatus}
@@ -437,6 +466,26 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.sm,
     borderBottomWidth: StyleSheet.hairlineWidth,
     gap: spacing.sm,
+  },
+  headerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: spacing.sm,
+  },
+  backBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: borderRadius.xl,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  headerSpacer: {
+    width: 36,
+  },
+  screenTitle: {
+    textTransform: "uppercase",
+    letterSpacing: 1,
   },
   countRow: {
     flexDirection: "row",
