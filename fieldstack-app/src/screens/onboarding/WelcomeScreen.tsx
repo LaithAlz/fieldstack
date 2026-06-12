@@ -6,6 +6,7 @@ import { StyleSheet, View } from "react-native";
 import { Text } from "../../components/Text";
 
 import { Button } from "../../components/Button";
+import { FadeInUp } from "../../components/FadeInUp";
 import { IconDisc } from "../../components/IconDisc";
 import { OnboardingScaffold } from "../../components/OnboardingScaffold";
 import {
@@ -88,19 +89,21 @@ export function WelcomeScreen(_props: Props) {
       }
     >
       <View style={styles.featureList}>
-        {FEATURES.map((f) => (
-          <View key={f.label} style={styles.featureRow}>
-            <View
-              style={[styles.featureIconWrap, { backgroundColor: colors.brand + "1A" }]}
-              accessibilityElementsHidden
-              importantForAccessibility="no-hide-descendants"
-            >
-              <Ionicons name={f.icon} size={18} color={colors.brand} />
+        {FEATURES.map((f, i) => (
+          <FadeInUp key={f.label} delay={150 + i * 110}>
+            <View style={styles.featureRow}>
+              <View
+                style={[styles.featureIconWrap, { backgroundColor: colors.brand + "1A" }]}
+                accessibilityElementsHidden
+                importantForAccessibility="no-hide-descendants"
+              >
+                <Ionicons name={f.icon} size={18} color={colors.brand} />
+              </View>
+              <Text style={[styles.featureText, { color: colors.textPrimary }]}>
+                {f.label}
+              </Text>
             </View>
-            <Text style={[styles.featureText, { color: colors.textPrimary }]}>
-              {f.label}
-            </Text>
-          </View>
+          </FadeInUp>
         ))}
       </View>
     </OnboardingScaffold>

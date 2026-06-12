@@ -57,6 +57,11 @@ export function SignInScreen() {
 
   const [mode, setMode] = useState<Mode>("signin");
   const [contactMethod, setContactMethod] = useState<ContactMethod>("email");
+  // Phone sign-in is wired end-to-end in this file, but the Supabase phone
+  // provider isn't enabled on the project yet — every attempt would error
+  // with "Phone sign-up isn't enabled". Don't offer a tab whose happy path
+  // is an apology; flip this when the provider goes live.
+  const PHONE_AUTH_ENABLED = false;
 
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
@@ -190,7 +195,7 @@ export function SignInScreen() {
         ]}
         showsVerticalScrollIndicator={false}
       >
-        <Text size="xxl" weight="bold" accessibilityRole="header" style={styles.title}>
+        <Text size="xxl" weight="bold" font="display" accessibilityRole="header" style={styles.title}>
           {mode === "signin" ? "Welcome back" : "Create your account"}
         </Text>
         <Text size="sm" variant="secondary" style={styles.subtitle}>
@@ -225,20 +230,22 @@ export function SignInScreen() {
           </View>
         ) : null}
 
-        {/* Email / Phone — the only segmented control left in the form. */}
-        <SegmentedToggle
-          style={styles.contactToggle}
-          left={{
-            label: "Email",
-            active: contactMethod === "email",
-            onPress: () => switchContactMethod("email"),
-          }}
-          right={{
-            label: "Phone",
-            active: contactMethod === "phone",
-            onPress: () => switchContactMethod("phone"),
-          }}
-        />
+        {/* Email / Phone — hidden until the phone provider is enabled. */}
+        {PHONE_AUTH_ENABLED ? (
+          <SegmentedToggle
+            style={styles.contactToggle}
+            left={{
+              label: "Email",
+              active: contactMethod === "email",
+              onPress: () => switchContactMethod("email"),
+            }}
+            right={{
+              label: "Phone",
+              active: contactMethod === "phone",
+              onPress: () => switchContactMethod("phone"),
+            }}
+          />
+        ) : null}
 
         {contactMethod === "email" ? (
           <View style={styles.field}>
@@ -560,7 +567,7 @@ const styles = StyleSheet.create({
     flexGrow: 1,
   },
   title: {
-    letterSpacing: -0.5,
+    letterSpacing: 0.3,
     marginBottom: spacing.xs,
   },
   subtitle: {
