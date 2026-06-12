@@ -99,7 +99,7 @@ export function SetNewPasswordScreen() {
         ]}
         showsVerticalScrollIndicator={false}
       >
-        <Text size="xxl" weight="bold" accessibilityRole="header" style={styles.title}>
+        <Text size="xxl" weight="bold" font="display" accessibilityRole="header" style={styles.title}>
           Set new password
         </Text>
         <Text size="sm" variant="secondary" style={styles.subtitle}>
@@ -220,7 +220,7 @@ const styles = StyleSheet.create({
     flexGrow: 1,
   },
   title: {
-    letterSpacing: -0.5,
+    letterSpacing: 0.3,
     marginBottom: spacing.xs,
   },
   subtitle: {
