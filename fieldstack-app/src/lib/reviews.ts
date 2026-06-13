@@ -10,7 +10,9 @@ import { supabase } from "./supabase";
 export type Review = {
   id: string;
   venueId: string;
-  userId: string;
+  /** Null when the author deleted their account — the review is anonymized
+   *  but kept so venue ratings stay intact. */
+  userId: string | null;
   rating: number;
   body: string | null;
   createdAt: string;
@@ -170,7 +172,7 @@ export async function reportReview(input: {
 type ReviewRow = {
   id: string;
   venue_id: string;
-  user_id: string;
+  user_id: string | null;
   rating: number;
   body: string | null;
   created_at: string;

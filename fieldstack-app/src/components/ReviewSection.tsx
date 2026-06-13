@@ -66,8 +66,10 @@ export function ReviewSection({
   const otherReviews = useMemo(() => {
     const base = user ? reviews.filter((r) => r.userId !== user.id) : Array.from(reviews);
     // Strip out anyone the current user has blocked. App Review Guideline
-    // 1.2 requires that a blocked user's content stop appearing.
-    return base.filter((r) => !isBlocked(r.userId));
+    // 1.2 requires that a blocked user's content stop appearing. Anonymized
+    // reviews (userId null — author deleted their account) can't be blocked,
+    // so they always pass.
+    return base.filter((r) => r.userId === null || !isBlocked(r.userId));
   }, [reviews, user, isBlocked]);
 
   const handleReport = (review: Review) => {
@@ -99,7 +101,7 @@ export function ReviewSection({
     );
   };
 
-  const handleBlock = (review: Review) => {
+  const handleBlock = (userId: string) => {
     Alert.alert(
       "Block this user?",
       "You won't see any reviews from this user. You can unblock anytime from Settings.",
@@ -109,7 +111,7 @@ export function ReviewSection({
           text: "Block",
           style: "destructive",
           onPress: async () => {
-            await block(review.userId);
+            await block(userId);
             toast.show("User blocked.", { type: "success" });
           },
         },
@@ -124,7 +126,16 @@ export function ReviewSection({
       [
         { text: "Cancel", style: "cancel" },
         { text: "Report review", style: "destructive", onPress: () => handleReport(review) },
-        { text: "Block this user", style: "destructive", onPress: () => handleBlock(review) },
+        // No author to block on an anonymized review (deleted account).
+        ...(review.userId
+          ? [
+              {
+                text: "Block this user",
+                style: "destructive" as const,
+                onPress: () => handleBlock(review.userId as string),
+              },
+            ]
+          : []),
       ]
     );
   };
