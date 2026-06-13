@@ -72,7 +72,13 @@ export function SettingsScreen() {
                     const result = await deleteAccount();
                     if (!result.ok) {
                       toast.show(result.error ?? "Couldn't delete account.", { type: "error" });
+                      return;
                     }
+                    // Server data is gone; also wipe the device-local copies
+                    // (saves, preferred slot, history, recents) so the account
+                    // leaves no residue on this device — same wipe as
+                    // "Clear app data".
+                    await resetApp();
                   },
                 },
               ]
