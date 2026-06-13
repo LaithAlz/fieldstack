@@ -538,7 +538,7 @@ export function MapViewScreen() {
         style={[styles.topOverlay, { top: insets.top + spacing.sm }]}
       >
         <View style={styles.searchRow} pointerEvents="box-none">
-          <View pointerEvents="auto">
+          <View style={styles.searchPillWrap} pointerEvents="auto">
             <LocationPill
               label={location.text || "Select area"}
               permissionStatus={permissionStatus}
@@ -780,8 +780,12 @@ const styles = StyleSheet.create({
   searchRow: {
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "space-between",
     paddingHorizontal: spacing.lg,
     gap: spacing.sm,
+  },
+  searchPillWrap: {
+    flexShrink: 1,
   },
   chipsWrap: {
     paddingHorizontal: spacing.lg,
