@@ -691,6 +691,28 @@ export function MapViewScreen() {
         ) : null}
       </Animated.View>
 
+      {/* Recenter-on-me control — the standard bottom-right map affordance,
+          replacing the platform button we disable (showsMyLocationButton).
+          Hidden while the card is up so it never overlaps it. */}
+      {!selectedMarker ? (
+        <Pressable
+          onPress={() => void handleUseMyLocation()}
+          accessibilityRole="button"
+          accessibilityLabel="Recenter on my location"
+          hitSlop={spacing.sm}
+          style={({ pressed }) => [
+            styles.recenterBtn,
+            {
+              bottom: insets.bottom + spacing.lg,
+              backgroundColor: colors.surface,
+              opacity: pressed ? 0.7 : 1,
+            },
+          ]}
+        >
+          <Ionicons name="locate" size={22} color={colors.brand} />
+        </Pressable>
+      ) : null}
+
       {/* OpenStreetMap attribution — ODbL license requires visible credit
           for OSM-derived data (we got our venue list from Overpass).
           Tapping opens the OSM copyright page. Bottom-left, above Apple's
@@ -795,6 +817,20 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     shadowOffset: { width: 0, height: 1 },
     elevation: 2,
+  },
+  recenterBtn: {
+    position: "absolute",
+    right: spacing.lg,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#000",
+    shadowOpacity: 0.18,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 5,
   },
   attribution: {
     position: "absolute",
