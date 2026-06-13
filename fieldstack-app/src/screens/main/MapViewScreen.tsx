@@ -21,6 +21,7 @@ import { useFieldSearch } from "../../hooks/useFieldSearch";
 import { haversineKm } from "../../lib/distance";
 import { useFilterControls } from "../../hooks/useFilterControls";
 import { useLocation } from "../../hooks/useLocation";
+import { selection } from "../../lib/haptics";
 import {
   getCurrentCoords,
   openLocationSettings,
@@ -312,6 +313,17 @@ export function MapViewScreen() {
     [markers, selectedVenueId]
   );
 
+  // Coordinate for the selection overlays (halo + selection marker). Falls
+  // back to null-island when nothing is selected so the always-mounted
+  // overlays simply sit invisibly off-map.
+  const selectedCoord = useMemo(
+    () =>
+      selectedMarker && selectedMarker.venue.lat !== null && selectedMarker.venue.lng !== null
+        ? { latitude: selectedMarker.venue.lat, longitude: selectedMarker.venue.lng }
+        : { latitude: 0, longitude: 0 },
+    [selectedMarker]
+  );
+
   // Successful geocode → fly the map to the new coords. Without this the
   // search bar would update location state but the camera would sit still,
   // which feels broken (typing "Mississauga" should pan the map there).
@@ -409,6 +421,9 @@ export function MapViewScreen() {
   // and undo the memo. `panToVenue` is already useCallback'd.
   const handleMarkerPress = useCallback(
     (venueId: string) => {
+      // Tactile confirmation that the tap registered on the right pin —
+      // reinforces the visual selection cue (filled marker + halo).
+      selection();
       setSelectedVenueId(venueId);
       panToVenue(venueId);
     },
@@ -481,18 +496,34 @@ export function MapViewScreen() {
             on mount/unmount, which crashes under the Fabric interop layer
             even for native overlays like Circle. Only prop changes are safe.
             When nothing is selected, the circle sits at null-island (0,0)
-            with radius 0 and transparent colors — effectively invisible. */}
+            with radius 0 and transparent colors — effectively invisible.
+            Native Circle props DO repaint on change (unlike a custom-view
+            marker under tracksViewChanges=false), so this is where the bulk
+            of the colour cue lives — a filled brand disc + ring. */}
         <Circle
-          center={
-            selectedMarker?.venue.lat !== null && selectedMarker?.venue.lng !== null && selectedMarker
-              ? { latitude: selectedMarker.venue.lat!, longitude: selectedMarker.venue.lng! }
-              : { latitude: 0, longitude: 0 }
-          }
-          radius={selectedMarker ? 36 : 0.1}
-          fillColor={selectedMarker ? colors.brand + "28" : "transparent"}
+          center={selectedCoord}
+          radius={selectedMarker ? 90 : 0.1}
+          fillColor={selectedMarker ? colors.brand + "33" : "transparent"}
           strokeColor={selectedMarker ? colors.brand : "transparent"}
           strokeWidth={selectedMarker ? 3 : 0}
         />
+
+        {/* Dedicated selection marker — always mounted, only moved + faded.
+            Its content (a filled brand football disc) never changes per
+            venue, so the one-time snapshot stays valid with
+            tracksViewChanges=false. Sits ON TOP of the chosen pool pin via a
+            high zIndex, giving an unmistakable colour + size change without
+            ever restyling the base pins. */}
+        <Marker
+          coordinate={selectedCoord}
+          opacity={selectedMarker ? 1 : 0}
+          tracksViewChanges={false}
+          anchor={{ x: 0.5, y: 0.5 }}
+          zIndex={999}
+          pointerEvents="none"
+        >
+          <VenuePin mode="selected" venueName="" />
+        </Marker>
       </MapView>
 
       {/* Top overlay: search bar (with list-view icon) + filter chips */}
@@ -660,6 +691,28 @@ export function MapViewScreen() {
         ) : null}
       </Animated.View>
 
+      {/* Recenter-on-me control — the standard bottom-right map affordance,
+          replacing the platform button we disable (showsMyLocationButton).
+          Hidden while the card is up so it never overlaps it. */}
+      {!selectedMarker ? (
+        <Pressable
+          onPress={() => void handleUseMyLocation()}
+          accessibilityRole="button"
+          accessibilityLabel="Recenter on my location"
+          hitSlop={spacing.sm}
+          style={({ pressed }) => [
+            styles.recenterBtn,
+            {
+              bottom: insets.bottom + spacing.lg,
+              backgroundColor: colors.surface,
+              opacity: pressed ? 0.7 : 1,
+            },
+          ]}
+        >
+          <Ionicons name="locate" size={22} color={colors.brand} />
+        </Pressable>
+      ) : null}
+
       {/* OpenStreetMap attribution — ODbL license requires visible credit
           for OSM-derived data (we got our venue list from Overpass).
           Tapping opens the OSM copyright page. Bottom-left, above Apple's
@@ -764,6 +817,20 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     shadowOffset: { width: 0, height: 1 },
     elevation: 2,
+  },
+  recenterBtn: {
+    position: "absolute",
+    right: spacing.lg,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#000",
+    shadowOpacity: 0.18,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 5,
   },
   attribution: {
     position: "absolute",

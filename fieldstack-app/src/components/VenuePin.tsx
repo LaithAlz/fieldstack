@@ -9,6 +9,7 @@ import { Text } from "./Text";
 
 const PIN_ICON_SIZE = 32;
 const PRICE_HEIGHT = 30;
+const SELECTED_SIZE = 46;
 
 type CountProps = {
   mode: "count";
@@ -23,22 +24,52 @@ type PriceProps = {
   fieldCount?: number;
 };
 
+type SelectedProps = {
+  mode: "selected";
+};
+
 type Props = {
   venueName: string;
-} & (CountProps | PriceProps);
+} & (CountProps | PriceProps | SelectedProps);
 
 /**
- * Map pin — two modes:
- *   - `count`: green teardrop pin (Ionicons location-sharp). No number;
+ * Map pin — three modes:
+ *   - `count`: brand teardrop pin (Ionicons location-sharp). No number;
  *     field count lives in the bottom card after tapping.
- *   - `price`: white pill showing "$X" (lowest price at the venue).
+ *   - `price`: paper pill showing "$X" (lowest price at the venue).
+ *   - `selected`: a bold, brand-FILLED disc with a white centre — the
+ *     unmistakable "this one" marker. Rendered by a single dedicated
+ *     selection marker that's always mounted and only moved/faded, so its
+ *     content never changes and `tracksViewChanges={false}` stays safe.
  *
- * No `selected` prop — pin appearance is static. Selection feedback comes
- * from the bottom card sliding up, which avoids any need to re-snapshot
- * the marker (the root cause of the pin-glitch/disappear bug).
+ * The base price/count pins are intentionally static (no selected styling
+ * of their own): repainting a custom-view marker would require flipping
+ * tracksViewChanges, which crashes under the Expo Go 54 Fabric interop. The
+ * separate filled `selected` marker sits on top of the chosen pin instead.
  */
 export function VenuePin(props: Props) {
   const colors = useTheme();
+
+  if (props.mode === "selected") {
+    return (
+      <View
+        accessibilityElementsHidden
+        importantForAccessibility="no-hide-descendants"
+        style={[
+          styles.selected,
+          {
+            width: SELECTED_SIZE,
+            height: SELECTED_SIZE,
+            borderRadius: SELECTED_SIZE / 2,
+            backgroundColor: colors.brand,
+            borderColor: colors.onBrand,
+          },
+        ]}
+      >
+        <Ionicons name="football" size={22} color={colors.onBrand} />
+      </View>
+    );
+  }
 
   if (props.mode === "price") {
     const label = `$${Math.round(props.price)}`;
@@ -117,5 +148,15 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     shadowOpacity: 0.22,
     elevation: 4,
+  },
+  selected: {
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 3,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 3 },
+    shadowRadius: 8,
+    shadowOpacity: 0.35,
+    elevation: 8,
   },
 });
