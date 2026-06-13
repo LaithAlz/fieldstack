@@ -89,7 +89,8 @@
             ]
           }
         ]
-      }
+      },
+      "usesAppleSignIn": true
     },
     "android": {
       "package": "app.onside.mobile",

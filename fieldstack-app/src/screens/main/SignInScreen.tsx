@@ -1,8 +1,9 @@
 import { Ionicons } from "@expo/vector-icons";
 import { CommonActions, useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
+  ActivityIndicator,
   KeyboardAvoidingView,
   Linking,
   Platform,
@@ -20,6 +21,11 @@ import { Button } from "../../components/Button";
 import { Text } from "../../components/Text";
 import { useToast } from "../../components/Toast";
 import { useAuth, type AuthContact } from "../../lib/auth";
+import {
+  isAppleAuthAvailable,
+  signInWithApple,
+  signInWithGoogle,
+} from "../../lib/socialAuth";
 import type { MeStackParamList } from "../../navigation/MainNavigator";
 import { borderRadius, fontFamily, fontSize, spacing } from "../../theme/tokens";
 import { useTheme } from "../../theme/useTheme";
@@ -70,6 +76,38 @@ export function SignInScreen() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Which social provider has a request in flight, if any — keeps the email
+  // submit button independent of the social buttons' spinners.
+  const [socialBusy, setSocialBusy] = useState<null | "google" | "apple">(null);
+  // Apple's native button only shows on a capable iOS build (module +
+  // entitlement present); hidden everywhere else.
+  const [appleAvailable, setAppleAvailable] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    void isAppleAuthAvailable().then((ok) => {
+      if (!cancelled) setAppleAvailable(ok);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const handleSocial = async (provider: "google" | "apple") => {
+    if (socialBusy || busy) return;
+    setError(null);
+    setSocialBusy(provider);
+    const result =
+      provider === "google" ? await signInWithGoogle() : await signInWithApple();
+    setSocialBusy(null);
+    if (result.cancelled) return;
+    if (!result.ok) {
+      setError(result.error);
+      return;
+    }
+    toast.show("Signed in.", { type: "success" });
+    leaveSignIn();
+  };
 
   /**
    * Exit the SignIn screen. If we were pushed onto an existing stack (the
@@ -410,6 +448,34 @@ export function SignInScreen() {
           />
         </View>
 
+        {/* Social sign-in. Google always shows (web flow, all platforms);
+            Apple only on a capable iOS build. Each no-ops with a clear
+            message until the provider is enabled in Supabase. */}
+        <View style={styles.dividerRow}>
+          <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
+          <Text size="xs" variant="tertiary" style={styles.dividerText}>
+            OR
+          </Text>
+          <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
+        </View>
+
+        <SocialButton
+          icon="logo-google"
+          label="Continue with Google"
+          loading={socialBusy === "google"}
+          disabled={socialBusy !== null || busy}
+          onPress={() => void handleSocial("google")}
+        />
+        {appleAvailable ? (
+          <SocialButton
+            icon="logo-apple"
+            label="Continue with Apple"
+            loading={socialBusy === "apple"}
+            disabled={socialBusy !== null || busy}
+            onPress={() => void handleSocial("apple")}
+          />
+        ) : null}
+
         <View style={styles.modeSwitchRow}>
           <Text size="sm" variant="secondary">
             {mode === "signin"
@@ -461,6 +527,50 @@ export function SignInScreen() {
 }
 
 // ---------------------------------------------------------------------------
+
+function SocialButton({
+  icon,
+  label,
+  loading,
+  disabled,
+  onPress,
+}: {
+  icon: React.ComponentProps<typeof Ionicons>["name"];
+  label: string;
+  loading: boolean;
+  disabled: boolean;
+  onPress: () => void;
+}) {
+  const colors = useTheme();
+  return (
+    <Pressable
+      onPress={onPress}
+      disabled={disabled}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      accessibilityState={{ disabled, busy: loading }}
+      style={({ pressed }) => [
+        styles.socialBtn,
+        {
+          backgroundColor: colors.surface,
+          borderColor: colors.border,
+          opacity: disabled && !loading ? 0.5 : pressed ? 0.7 : 1,
+        },
+      ]}
+    >
+      {loading ? (
+        <ActivityIndicator color={colors.textPrimary} />
+      ) : (
+        <>
+          <Ionicons name={icon} size={20} color={colors.textPrimary} />
+          <Text size="md" weight="medium">
+            {label}
+          </Text>
+        </>
+      )}
+    </Pressable>
+  );
+}
 
 type SegmentSide = {
   label: string;
@@ -650,6 +760,30 @@ const styles = StyleSheet.create({
   },
   cta: {
     marginTop: spacing.sm,
+  },
+  dividerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.md,
+    marginVertical: spacing.lg,
+  },
+  dividerLine: {
+    flex: 1,
+    height: StyleSheet.hairlineWidth,
+  },
+  dividerText: {
+    letterSpacing: 1,
+  },
+  socialBtn: {
+    minHeight: 48,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    borderRadius: borderRadius.lg,
+    borderWidth: StyleSheet.hairlineWidth,
+    marginBottom: spacing.sm,
   },
   modeSwitchRow: {
     flexDirection: "row",
