@@ -6,7 +6,7 @@ import { Alert, Pressable, StyleSheet, TextInput, View } from "react-native";
 
 import { useAuth } from "../lib/auth";
 import { useBlockedUsers } from "../lib/blockedUsers";
-import { reportReview, upsertReview, type Review } from "../lib/reviews";
+import { deleteReview, reportReview, upsertReview, type Review } from "../lib/reviews";
 import type { DetailParamList } from "../navigation/MainNavigator";
 import { borderRadius, fontFamily, fontSize, spacing } from "../theme/tokens";
 import { useTheme } from "../theme/useTheme";
@@ -30,8 +30,11 @@ type Props = {
 /**
  * Reviews block for VenueDetail. Three parts:
  *   1. Aggregate header (avg + count + star row)
- *   2. Write/edit form for the current user (no delete here — that lives
- *      on the Me tab's "My reviews" so a curious tap doesn't lose data)
+ *   2. The current user's review zone — either a write form (no existing
+ *      review) or their posted review with a Delete action. Reviews are not
+ *      edited in place: to change one, the user deletes it and posts a fresh
+ *      one, the same model Google Maps uses. This keeps a single source of
+ *      truth and avoids a half-edited row.
  *   3. Collapsible list of everyone else's reviews
  *
  * Guest users see the aggregate + collapsible list; the write form is
@@ -139,12 +142,11 @@ export function ReviewSection({
       </View>
 
       {user ? (
-        <ReviewForm
-          venueId={venueId}
-          userId={user.id}
-          existing={myReview}
-          onSaved={onChanged}
-        />
+        myReview ? (
+          <MyReviewCard review={myReview} onDeleted={onChanged} />
+        ) : (
+          <ReviewForm venueId={venueId} userId={user.id} onSaved={onChanged} />
+        )
       ) : (
         <Pressable
           onPress={() => {
@@ -236,27 +238,20 @@ export function ReviewSection({
 function ReviewForm({
   venueId,
   userId,
-  existing,
   onSaved,
 }: {
   venueId: string;
   userId: string;
-  existing: Review | null;
   onSaved: () => void;
 }) {
   const colors = useTheme();
-  const [rating, setRating] = useState<number>(existing?.rating ?? 0);
-  const [body, setBody] = useState<string>(existing?.body ?? "");
+  const [rating, setRating] = useState(0);
+  const [body, setBody] = useState("");
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const mountedRef = useRef(true);
 
   useEffect(() => () => { mountedRef.current = false; }, []);
-
-  useEffect(() => {
-    setRating(existing?.rating ?? 0);
-    setBody(existing?.body ?? "");
-  }, [existing?.rating, existing?.body]);
-  const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = async () => {
     if (busy) return;
@@ -267,6 +262,9 @@ function ReviewForm({
     }
     setBusy(true);
     const trimmed = body.trim();
+    // upsert still covers the (venue,user) uniqueness, but the UI only ever
+    // reaches this form when the user has no existing review — so this is
+    // always an insert in practice.
     const { error: err } = await upsertReview({
       userId,
       venueId,
@@ -290,7 +288,7 @@ function ReviewForm({
       ]}
     >
       <Text size="sm" variant="secondary" weight="medium" style={styles.formLabel}>
-        {existing ? "Your review" : "Your rating"}
+        Your rating
       </Text>
       <StarRating value={rating} interactive onChange={setRating} />
 
@@ -323,16 +321,95 @@ function ReviewForm({
       ) : null}
 
       <Button
-        label={existing ? "Update review" : "Post review"}
+        label="Post review"
         onPress={handleSubmit}
         loading={busy}
         disabled={busy}
       />
-      {existing ? (
-        <Text size="xs" variant="tertiary" style={styles.deleteHint}>
-          To delete your review, go to Me → My reviews.
+    </View>
+  );
+}
+
+// ---------------------------------------------------------------------------
+
+/**
+ * The current user's posted review, shown read-only on the venue page with a
+ * Delete action. Editing happens by deleting and posting fresh (Google's
+ * model) — so there's no in-place edit form here.
+ */
+function MyReviewCard({
+  review,
+  onDeleted,
+}: {
+  review: Review;
+  onDeleted: () => void;
+}) {
+  const colors = useTheme();
+  const toast = useToast();
+  const [busy, setBusy] = useState(false);
+  const mountedRef = useRef(true);
+  useEffect(() => () => { mountedRef.current = false; }, []);
+
+  const confirmDelete = () => {
+    Alert.alert(
+      "Delete your review?",
+      "This removes your rating and comment. You can post a new review afterward.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            setBusy(true);
+            const { error } = await deleteReview(review.id);
+            if (!mountedRef.current) return;
+            setBusy(false);
+            if (error) {
+              toast.show("Couldn't delete review. Try again.", { type: "error" });
+              return;
+            }
+            toast.show("Review deleted.", { type: "success" });
+            onDeleted();
+          },
+        },
+      ]
+    );
+  };
+
+  return (
+    <View
+      style={[
+        styles.form,
+        { borderColor: colors.brand, backgroundColor: colors.surface },
+      ]}
+    >
+      <View style={styles.myReviewHeader}>
+        <Text size="sm" variant="secondary" weight="medium" style={styles.formLabel}>
+          Your review
+        </Text>
+        <Pressable
+          onPress={confirmDelete}
+          disabled={busy}
+          accessibilityRole="button"
+          accessibilityLabel="Delete your review"
+          hitSlop={spacing.sm}
+          style={({ pressed }) => [styles.deleteBtn, { opacity: busy ? 0.4 : pressed ? 0.6 : 1 }]}
+        >
+          <Ionicons name="trash-outline" size={16} color={colors.danger} />
+          <Text size="sm" weight="medium" style={{ color: colors.danger }}>
+            Delete
+          </Text>
+        </Pressable>
+      </View>
+      <StarRating value={review.rating} />
+      {review.body ? (
+        <Text size="sm" style={styles.myReviewBody}>
+          {review.body}
         </Text>
       ) : null}
+      <Text size="xs" variant="tertiary">
+        To change it, delete this review and post a new one.
+      </Text>
     </View>
   );
 }
@@ -427,7 +504,17 @@ const styles = StyleSheet.create({
   error: {
     marginTop: spacing.xs,
   },
-  deleteHint: {
+  myReviewHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  deleteBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  myReviewBody: {
     marginTop: spacing.xs,
   },
   toggleRow: {
