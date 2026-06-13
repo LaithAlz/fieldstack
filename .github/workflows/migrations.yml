@@ -1,0 +1,59 @@
+name: Migrations
+
+# Runs only when migrations (or the Supabase config) change. The main CI
+# workflow stays fast for the common app/backend PR; this heavier job —
+# which boots a real local Postgres — is reserved for the PRs that need it.
+on:
+  pull_request:
+    paths:
+      - "supabase/migrations/**"
+      - "supabase/config.toml"
+
+concurrency:
+  group: migrations-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  apply:
+    name: Apply migrations to a fresh database
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      # The load-bearing check: `supabase start` provisions a fresh local
+      # stack and applies every migration in order from scratch. A migration
+      # that can't apply — e.g. a CREATE OR REPLACE that changes a function's
+      # return type (the bug that shipped in 019) — fails here, in CI, instead
+      # of silently on the next manual `db push`.
+      - name: Apply all migrations
+        run: bunx supabase start
+
+      # Optional remote drift guard. Only runs when the project credentials
+      # are configured as repo secrets; otherwise it's skipped with a notice
+      # rather than failing every PR. Catches "merged but never pushed" drift
+      # by diffing local migrations against the linked project.
+      - name: Check remote for unapplied migrations
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+          PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+        run: |
+          if [ -z "$SUPABASE_ACCESS_TOKEN" ] || [ -z "$PROJECT_REF" ]; then
+            echo "::notice::Skipping remote drift check — set SUPABASE_ACCESS_TOKEN, SUPABASE_DB_PASSWORD, and SUPABASE_PROJECT_REF repo secrets to enable it."
+            exit 0
+          fi
+          bunx supabase link --project-ref "$PROJECT_REF"
+          # --dry-run prints the migrations that WOULD be pushed. If any are
+          # listed, the project is behind this branch — fail loudly.
+          PENDING="$(bunx supabase db push --dry-run 2>&1)"
+          echo "$PENDING"
+          if echo "$PENDING" | grep -q "Would push these migrations"; then
+            echo "::error::Remote database is missing migrations merged here. Run 'bun run db:push' against the linked project."
+            exit 1
+          fi
+          echo "Remote is up to date with local migrations."
