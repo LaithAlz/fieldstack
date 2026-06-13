@@ -1,9 +1,9 @@
 # App Store submission checklist
 
-Single source of truth for everything you need to ship FieldStack to the App
+Single source of truth for everything you need to ship **Onside** to the App
 Store (and Play Store, where the parallel applies). Anything you produce
 during prep goes in `fieldstack-app/assets/store/` so it's versioned with the
-code.
+code. For the build/submit/OTA mechanics, see `docs/releasing.md`.
 
 ---
 
@@ -11,14 +11,20 @@ code.
 
 - [x] App icon (`fieldstack-app/assets/images/icon.png`, 1024×1024)
 - [x] Splash screen (`fieldstack-app/assets/images/splash-icon.png`)
-- [x] Bundle ID / scheme set in `app.json` (`fieldstackapp`)
-- [x] Privacy manifest declared in `app.json` (PR 27)
+- [x] Bundle ID / scheme set in `app.json` (`app.onside.mobile` / `onside://`)
+- [x] Privacy manifest declared in `app.json` (incl. UserID for auth)
 - [x] Privacy strings in `infoPlist` (Location, Calendar, Tracking)
 - [x] Notification permission declared via `expo-notifications` plugin
-- [x] Sentry crash reporting wired (PR 24)
-- [ ] Versioning bumped: `app.json` `version` + iOS `buildNumber` for each TestFlight upload
-- [ ] EAS Build profile (`eas.json`) configured for production
+- [x] Sentry crash reporting wired
+- [x] EAS Build profiles (`eas.json`) for development / preview / production
+- [x] OTA updates wired (`expo-updates`, fingerprint runtimeVersion) — see `docs/releasing.md`
+- [x] **Sign in with Apple** offered (required by 4.8 since we also offer Google)
+- [x] **In-app account deletion** (Settings → Delete account → `delete_user` RPC) — required by 5.1.1(v)
+- [x] **UGC moderation**: report review + block user + filtered display — required by 1.2 for reviews
+- [ ] Run `eas update:configure` to populate `extra.eas.projectId` + `updates.url`
+- [ ] Marketing version bumped (`app.json` `version`) for the release (build numbers auto-increment on EAS)
 - [ ] Apple Developer Program enrollment ($99/yr)
+- [ ] Configure Google + Apple providers in Supabase (Auth → Providers) and add `onside://` to the redirect allow-list, or the social buttons report "isn't available yet"
 
 ---
 
@@ -77,12 +83,13 @@ privacy manifest. Walk through these answers:
 | Data category | Collected? | Linked to user? | Tracking? | Purpose |
 |---|---|---|---|---|
 | Email | Yes | Yes | No | App functionality (auth) |
+| User ID | Yes | Yes | No | App functionality (auth — Supabase / Apple) |
 | Precise Location | Yes | No | No | App functionality (distance ranking) |
 | Crash data | Yes | No | No | App functionality (Sentry) |
 | Performance data | Yes | No | No | Analytics (PostHog) |
 | Product interaction | Yes | No | No | Analytics (PostHog) |
 
-If/when we add Apple/Google sign-in or push tokens, add User ID + Device ID rows.
+If/when we add push tokens, add a Device ID row.
 
 ---
 
