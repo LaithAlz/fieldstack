@@ -566,7 +566,7 @@ export function MapViewScreen() {
             same iOS bug as the prior chip row. The 44pt band blocks map
             gestures only directly under the buttons. */}
         <View style={styles.chipsWrap} pointerEvents="auto">
-          <FilterToolbar {...toolbarProps} />
+          <FilterToolbar {...toolbarProps} align="start" />
         </View>
 
         {/* Result count + clear-filters — live-updates as filters / pan

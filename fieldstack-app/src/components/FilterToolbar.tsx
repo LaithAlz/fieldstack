@@ -24,9 +24,15 @@ type Props = {
   filters: FieldSearchFilters;
   onOpenFilters: () => void;
   onOpenSort: () => void;
+  /**
+   * Row alignment. Defaults to "end" (Field Search, where the toolbar sits
+   * under a full-width location pill). The map passes "start" so the chips
+   * read as a conventional left-anchored filter bar.
+   */
+  align?: "start" | "end";
 };
 
-export function FilterToolbar({ filters, onOpenFilters, onOpenSort }: Props) {
+export function FilterToolbar({ filters, onOpenFilters, onOpenSort, align = "end" }: Props) {
   const colors = useTheme();
 
   // Count of active filter categories (not options). Surface=[turf,grass]
@@ -41,7 +47,7 @@ export function FilterToolbar({ filters, onOpenFilters, onOpenSort }: Props) {
   const sortActive = filters.sort !== "distance";
 
   return (
-    <View style={styles.row}>
+    <View style={[styles.row, { justifyContent: align === "start" ? "flex-start" : "flex-end" }]}>
       <Pressable
         onPress={() => {
           selection();
@@ -119,7 +125,6 @@ export function FilterToolbar({ filters, onOpenFilters, onOpenSort }: Props) {
 const styles = StyleSheet.create({
   row: {
     flexDirection: "row",
-    justifyContent: "flex-end",
     alignItems: "center",
     gap: spacing.sm,
   },
