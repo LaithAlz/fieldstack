@@ -313,6 +313,12 @@ export function MapViewScreen() {
     [markers, selectedVenueId]
   );
 
+  const hasActiveFilters =
+    filters.surface.length > 0 ||
+    filters.size.length > 0 ||
+    filters.venueType.length > 0 ||
+    filters.priceMax !== null;
+
   // Coordinate for the selection overlays (halo + selection marker). Falls
   // back to null-island when nothing is selected so the always-mounted
   // overlays simply sit invisibly off-map.
@@ -563,16 +569,37 @@ export function MapViewScreen() {
           <FilterToolbar {...toolbarProps} />
         </View>
 
-        {/* Result count — live-updates as filters / pan apply */}
-        <View
-          pointerEvents="none"
-          style={styles.countRow}
-        >
+        {/* Result count + clear-filters — live-updates as filters / pan
+            apply. The clear chip only appears when filters are active, giving
+            the map the same one-tap reset Field Search has (you no longer
+            have to reopen the sheet to undo a filter). */}
+        <View style={styles.countRow} pointerEvents="box-none">
           <ResultCountPill
             count={visibleMarkers.length}
             noun="venue"
             loading={isLoading}
           />
+          {hasActiveFilters ? (
+            <Pressable
+              onPress={clearFilters}
+              accessibilityRole="button"
+              accessibilityLabel="Clear all filters"
+              hitSlop={spacing.sm}
+              style={({ pressed }) => [
+                styles.clearChip,
+                {
+                  backgroundColor: colors.surface,
+                  borderColor: colors.brand,
+                  opacity: pressed ? 0.7 : 1,
+                },
+              ]}
+            >
+              <Ionicons name="close" size={13} color={colors.brand} />
+              <Text size="xs" weight="medium" style={{ color: colors.brand }}>
+                Clear filters
+              </Text>
+            </Pressable>
+          ) : null}
         </View>
 
         {overflowCount > 0 ? (
@@ -640,18 +667,12 @@ export function MapViewScreen() {
             <EmptyState
               icon="map-outline"
               title={
-                filters.surface.length > 0 ||
-                filters.size.length > 0 ||
-                filters.venueType.length > 0 ||
-                filters.priceMax !== null
+                hasActiveFilters
                   ? "No fields match your filters here"
                   : "No fields in this area"
               }
               description={
-                filters.surface.length > 0 ||
-                filters.size.length > 0 ||
-                filters.venueType.length > 0 ||
-                filters.priceMax !== null
+                hasActiveFilters
                   ? "Try clearing a filter or panning to a nearby area."
                   : "Pan around the map to find venues nearby."
               }
@@ -772,6 +793,21 @@ const styles = StyleSheet.create({
   countRow: {
     alignItems: "center",
     marginTop: spacing.md,
+    gap: spacing.sm,
+  },
+  clearChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: spacing.sm + 2,
+    paddingVertical: spacing.xs + 1,
+    borderRadius: borderRadius.xl,
+    borderWidth: 1.5,
+    shadowColor: "#000",
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 1 },
+    elevation: 2,
   },
   overflowPill: {
     paddingHorizontal: spacing.md,
