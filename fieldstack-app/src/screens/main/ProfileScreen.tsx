@@ -7,6 +7,7 @@ import { useEffect, useMemo, useRef } from "react";
 import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { GoalNet } from "../../components/GoalNet";
 import { MyReviewsSection } from "../../components/MyReviewsSection";
 import { Text } from "../../components/Text";
 import { VenueScrollRow } from "../../components/VenueScrollRow";
@@ -82,6 +83,21 @@ export function ProfileScreen() {
     return "Hey there";
   }, [user]);
 
+  // First initial for the hero avatar — name metadata, then email, else null
+  // (guest renders a person glyph instead).
+  const avatarInitial = useMemo(() => {
+    if (!user) return null;
+    const meta = (user.user_metadata ?? {}) as Record<string, unknown>;
+    const name = [meta.name, meta.full_name].find(
+      (v): v is string => typeof v === "string" && v.trim().length > 0
+    );
+    const source = name?.trim() || user.email || "";
+    return source.charAt(0).toUpperCase() || null;
+  }, [user]);
+
+  // Identity line under the greeting: the account email, or a guest note.
+  const identityLine = user?.email ?? "Browsing as guest";
+
   const whenSheetRef = useRef<BottomSheetModal>(null);
 
   // Visible saved/recent counts — i.e. venues actually renderable given the
@@ -126,15 +142,56 @@ export function ProfileScreen() {
       <ScrollView
         contentContainerStyle={[
           styles.scroll,
-          { paddingTop: insets.top + spacing.sm, paddingBottom: insets.bottom + spacing.xl },
+          { paddingBottom: insets.bottom + spacing.xl },
         ]}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.header}>
-          <View style={styles.headerRow}>
-            <Text size="xxxl" weight="bold" font="display" accessibilityRole="header" style={styles.title}>
-              {greeting}
-            </Text>
+        {/* Ink-navy hero — same marquee treatment as Explore. Avatar +
+            greeting + identity line on the goal-net backdrop give the Me tab
+            a real header instead of a bare title on the page surface. */}
+        <View
+          style={[
+            styles.hero,
+            { backgroundColor: colors.heroSurface, paddingTop: insets.top + spacing.md },
+          ]}
+        >
+          <GoalNet intensity={0.07} />
+          <View style={styles.heroTopRow}>
+            <View style={styles.heroIdentity}>
+              <View
+                style={[
+                  styles.avatar,
+                  {
+                    backgroundColor: user ? colors.brand : "rgba(244, 241, 234, 0.16)",
+                  },
+                ]}
+                accessibilityElementsHidden
+                importantForAccessibility="no-hide-descendants"
+              >
+                {user && avatarInitial ? (
+                  <Text font="display" size="xl" style={{ color: colors.onBrand }}>
+                    {avatarInitial}
+                  </Text>
+                ) : (
+                  <Ionicons name="person" size={24} color={colors.onHero} />
+                )}
+              </View>
+              <View style={styles.heroText}>
+                <Text
+                  size="xxl"
+                  weight="bold"
+                  font="display"
+                  accessibilityRole="header"
+                  numberOfLines={1}
+                  style={[styles.title, { color: colors.onHero }]}
+                >
+                  {greeting}
+                </Text>
+                <Text size="sm" numberOfLines={1} style={{ color: colors.onHeroMuted }}>
+                  {identityLine}
+                </Text>
+              </View>
+            </View>
             <Pressable
               onPress={() => navigation.navigate("Settings")}
               accessibilityRole="button"
@@ -142,15 +199,12 @@ export function ProfileScreen() {
               hitSlop={spacing.sm}
               style={({ pressed }) => [
                 styles.gearBtn,
-                { backgroundColor: colors.surfaceSecondary, opacity: pressed ? 0.7 : 1 },
+                { backgroundColor: "rgba(244, 241, 234, 0.16)", opacity: pressed ? 0.7 : 1 },
               ]}
             >
-              <Ionicons name="settings-outline" size={20} color={colors.textPrimary} />
+              <Ionicons name="settings-outline" size={20} color={colors.onHero} />
             </Pressable>
           </View>
-          <Text size="sm" variant="secondary">
-            Your preferences and history, all in one place.
-          </Text>
         </View>
 
         {/* Sign-in banner — only when guest. Saves are device-local, so the
@@ -526,18 +580,36 @@ const styles = StyleSheet.create({
   scroll: {
     flexGrow: 1,
   },
-  header: {
+  hero: {
     paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.md,
-    gap: spacing.xs,
+    paddingBottom: spacing.lg,
+    overflow: "hidden",
   },
-  headerRow: {
+  heroTopRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+    gap: spacing.md,
+  },
+  heroIdentity: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.md,
+  },
+  avatar: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  heroText: {
+    flex: 1,
+    gap: 1,
   },
   title: {
-    letterSpacing: 1,
+    letterSpacing: 0.6,
     textTransform: "uppercase",
     flexShrink: 1,
   },
