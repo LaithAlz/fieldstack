@@ -79,6 +79,15 @@ export function SignInScreen() {
    * SignIn forever. Detect that and reset the stack to Profile instead.
    */
   const leaveSignIn = () => {
+    // The cross-tab review CTA reaches us via
+    // navigate("MeTab", { screen: "SignIn" }), which React Navigation stores
+    // as `params.screen = "SignIn"` on the MeTab route. That param sticks:
+    // every later tap of the Me tab re-applies it and reopens SignIn even
+    // after the user is signed in. Clear it on the way out so Me always
+    // resolves to Profile. (No-op on the in-stack banner path, which never
+    // set the param.)
+    nav.getParent()?.setParams({ screen: undefined });
+
     if (nav.canGoBack()) {
       nav.goBack();
       return;
