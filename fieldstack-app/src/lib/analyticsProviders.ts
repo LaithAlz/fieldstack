@@ -14,7 +14,8 @@ import PostHog from "posthog-react-native";
 
 import type { AnalyticsProvider } from "./analytics";
 
-const POSTHOG_HOST = "https://us.i.posthog.com";
+// US cloud by default; EU projects set EXPO_PUBLIC_POSTHOG_HOST=https://eu.i.posthog.com.
+const DEFAULT_POSTHOG_HOST = "https://us.i.posthog.com";
 
 /**
  * PostHog-backed provider. Returns null when no API key is set so callers
@@ -25,7 +26,7 @@ export function createPosthogProvider(): AnalyticsProvider | null {
   if (!apiKey) return null;
 
   const client = new PostHog(apiKey, {
-    host: POSTHOG_HOST,
+    host: process.env.EXPO_PUBLIC_POSTHOG_HOST ?? DEFAULT_POSTHOG_HOST,
     // Capture lifecycle + screen events automatically. Manual `track`
     // calls layer on top of these for product-specific events.
     captureAppLifecycleEvents: true,
@@ -40,6 +41,11 @@ export function createPosthogProvider(): AnalyticsProvider | null {
     },
     identify(userId, traits) {
       client.identify(userId, traits as unknown as Record<string, never>);
+    },
+    reset() {
+      // Drops the current person + anonymous id so the next user's events
+      // (or a guest session) aren't merged into the one that just signed out.
+      client.reset();
     },
   };
 }

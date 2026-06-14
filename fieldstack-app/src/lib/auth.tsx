@@ -16,10 +16,12 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
 
+import { identify, reset as resetAnalytics } from "./analytics";
 import { supabase } from "./supabase";
 
 type AuthResult = {
@@ -154,6 +156,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       linkingSub.remove();
     };
   }, []);
+
+  // Tie analytics movement to the person: identify when a user is present
+  // (sign-in or a restored session on launch), reset when they sign out so
+  // the next session/guest isn't merged into the previous user. Idempotent
+  // re-identify on relaunch is harmless.
+  const prevUserIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    const uid = session?.user?.id ?? null;
+    if (uid && uid !== prevUserIdRef.current) {
+      identify(uid, { email: session?.user?.email ?? null });
+    } else if (!uid && prevUserIdRef.current) {
+      resetAnalytics();
+    }
+    prevUserIdRef.current = uid;
+  }, [session]);
 
   const signIn = useCallback<ContextValue["signIn"]>(async (contact, password) => {
     setBusy(true);
