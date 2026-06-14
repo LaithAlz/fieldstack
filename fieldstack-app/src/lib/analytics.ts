@@ -41,6 +41,11 @@ export type AnalyticsProvider = {
   track(event: AnalyticsEvent, properties?: AnalyticsProperties): void;
   /** Optional — only providers that distinguish users implement this. */
   identify?(userId: string, traits?: AnalyticsProperties): void;
+  /**
+   * Optional — clear the identified user so later events aren't attributed
+   * to them. Called on sign-out.
+   */
+  reset?(): void;
 };
 
 /** Built-in dev-time logger. Production builds emit nothing by default. */
@@ -90,8 +95,20 @@ export function identify(userId: string, traits?: AnalyticsProperties): void {
     currentProvider.identify?.(userId, traits);
   } catch (err) {
     if (__DEV__) {
-       
+
       console.warn("[analytics] provider.identify threw", err);
+    }
+  }
+}
+
+/** Clear the identified user (sign-out). No-op on providers without reset. */
+export function reset(): void {
+  try {
+    currentProvider.reset?.();
+  } catch (err) {
+    if (__DEV__) {
+
+      console.warn("[analytics] provider.reset threw", err);
     }
   }
 }
