@@ -16,7 +16,7 @@ import {
 import { useOnboarding } from "../../lib/onboardingContext";
 import { setLastLocation } from "../../lib/storage";
 import type { OnboardingStackParamList } from "../../navigation/OnboardingNavigator";
-import { fontFamily, fontSize, fontWeight, spacing } from "../../theme/tokens";
+import { fontFamily, fontSize, spacing } from "../../theme/tokens";
 import { useTheme } from "../../theme/useTheme";
 
 const FEATURES: { icon: React.ComponentProps<typeof Ionicons>["name"]; label: string }[] = [
@@ -65,7 +65,14 @@ export function WelcomeScreen(_props: Props) {
       hero={
         <View style={styles.brandStack}>
           <IconDisc icon="football" size={120} />
-          <Text style={[styles.wordmark, { color: colors.textPrimary }]}>Onside</Text>
+          <Text
+            font="display"
+            size="xxxl"
+            weight="bold"
+            style={[styles.wordmark, { color: colors.textPrimary }]}
+          >
+            Onside
+          </Text>
         </View>
       }
       title="Find soccer fields, fast"
@@ -116,9 +123,9 @@ const styles = StyleSheet.create({
     gap: spacing.lg,
   },
   wordmark: {
-    fontFamily: fontFamily.displayBold,
-    fontSize: fontSize.xxxl,
-    fontWeight: fontWeight.displayBold,
+    // Size/weight/family come from the Text props (font="display" size="xxxl")
+    // so the line height matches the glyphs — overriding fontSize here without
+    // a matching lineHeight is what clipped the wordmark to "UNSIDE".
     letterSpacing: 4,
     textTransform: "uppercase",
   },
