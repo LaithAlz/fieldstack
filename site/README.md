@@ -49,7 +49,11 @@ framework apps). To turn it on: Vercel → project → **Analytics → Enable We
 Analytics**. Data appears after the first deploy with it enabled; it only
 collects when served from Vercel.
 
-(This tracks the marketing site. In-app product analytics are separate —
+**Speed Insights** (Core Web Vitals) is wired the same way — the
+`/_vercel/speed-insights/script.js` snippet is on every page. Turn it on:
+Vercel → project → **Speed Insights → Enable**.
+
+(These track the marketing site. In-app product analytics are separate —
 PostHog, in the mobile app.)
 
 ## Email
