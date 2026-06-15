@@ -29,8 +29,11 @@ export async function healthRoute(app: FastifyInstance) {
       checkRedis(),
     ]);
 
-    const allOk = supabaseStatus === "ok" && redisStatus === "ok";
-    if (!allOk) reply.code(503);
+    // Supabase is the hard dependency — a 503 here pulls the instance from
+    // the load balancer. Redis is a best-effort cache (the cache helper
+    // falls through to live queries when it's down), so a Redis outage is
+    // reported as degraded but does NOT fail the health check / readiness.
+    if (supabaseStatus !== "ok") reply.code(503);
 
     return {
       data: { supabase: supabaseStatus, redis: redisStatus },
