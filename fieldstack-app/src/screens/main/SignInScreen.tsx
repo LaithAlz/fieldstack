@@ -38,8 +38,8 @@ const MIN_PASSWORD = 6;
 const PHONE_DIGITS_REQUIRED = 10;
 const PHONE_COUNTRY_CODE = "+1"; // GTA-focused — North American numbers only for v1
 
-const TERMS_URL = "https://onside.app/terms";
-const PRIVACY_URL = "https://onside.app/privacy";
+const TERMS_URL = "https://getonside.ca/terms";
+const PRIVACY_URL = "https://getonside.ca/privacy";
 
 /**
  * Combined sign-in / sign-up screen. Defaults to sign-in; the user switches

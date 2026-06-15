@@ -18,9 +18,9 @@ import { useTheme } from "../../theme/useTheme";
 type Nav = NativeStackNavigationProp<MeStackParamList, "Settings">;
 
 // Hosted destinations. Swap to real URLs once the marketing site exists.
-const PRIVACY_URL = "https://onside.app/privacy";
-const TERMS_URL = "https://onside.app/terms";
-const SUPPORT_EMAIL = "support@onside.app";
+const PRIVACY_URL = "https://getonside.ca/privacy";
+const TERMS_URL = "https://getonside.ca/terms";
+const SUPPORT_EMAIL = "support@getonside.ca";
 
 export function SettingsScreen() {
   const colors = useTheme();
