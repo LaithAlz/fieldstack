@@ -123,15 +123,19 @@ export function FieldSearchScreen() {
 
   // Result count label. Empty location text → bare count; otherwise read out
   // the location the hook has cached (which is the same string the search
-  // input shows).
+  // input shows). The "Near you" sentinel already reads as a place, so it
+  // gets "nearby" phrasing rather than the double "near Near you".
   const countLabel = useMemo(() => {
     const noun = total === 1 ? "field" : "fields";
-    if (location.text.trim().length === 0) {
+    const text = location.text.trim();
+    if (text.length === 0) {
       return isLoading ? "Searching…" : `${total} ${noun}`;
     }
-    return isLoading
-      ? `Searching ${location.text}…`
-      : `${total} ${noun} near ${location.text}`;
+    const isNearby = text === "Near you";
+    if (isLoading) {
+      return isNearby ? "Searching nearby…" : `Searching ${text}…`;
+    }
+    return isNearby ? `${total} ${noun} nearby` : `${total} ${noun} near ${text}`;
   }, [total, isLoading, location.text]);
 
   const handleCardPress = useCallback(
