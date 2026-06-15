@@ -40,6 +40,18 @@ cd site && vercel --prod
 ```
 `vercel` run inside `site/` treats it as the project root automatically.
 
+## Web Analytics
+
+Page-view analytics use **Vercel Web Analytics** via the static-site script
+(`/_vercel/insights/script.js`) already included in every page's HTML — no npm
+package or build step (the `@vercel/analytics` React component is only for
+framework apps). To turn it on: Vercel → project → **Analytics → Enable Web
+Analytics**. Data appears after the first deploy with it enabled; it only
+collects when served from Vercel.
+
+(This tracks the marketing site. In-app product analytics are separate —
+PostHog, in the mobile app.)
+
 ## Email
 The site and app use `support@getonside.ca`. Set up free forwarding to your
 inbox — on Vercel-managed DNS use any email-routing provider (e.g. Cloudflare
