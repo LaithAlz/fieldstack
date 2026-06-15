@@ -16,29 +16,35 @@ site/
 It's plain HTML/CSS — open `index.html` locally to preview, or serve the
 folder with `python3 -m http.server` from inside `site/`.
 
-## Deploy (Cloudflare Pages — free, easy `.ca` custom domain)
+`vercel.json` sets `cleanUrls`, so `/support`, `/privacy`, and `/terms` serve
+without the `.html` extension (matching the URLs the app links to).
 
-1. Push this repo to GitHub (done).
-2. Cloudflare dashboard → **Workers & Pages → Create → Pages → Connect to Git**.
-3. Pick this repo. Build settings:
-   - **Framework preset:** None
-   - **Build command:** *(leave empty)*
-   - **Build output directory:** `site`
-4. Deploy. You'll get a `*.pages.dev` URL to verify.
-5. **Custom domains → Add `getonside.ca`** and follow the DNS steps (Cloudflare
-   adds the records automatically if the domain is on Cloudflare DNS).
+## Deploy (Vercel)
 
-Netlify/Vercel work the same way — set the publish/output directory to `site`
-and no build command.
+The repo is a monorepo, so point Vercel at the `site/` folder only.
 
-### Clean URLs (so `/support` works without `.html`)
-Cloudflare Pages and Netlify serve `support.html` at `/support` automatically.
-On a host that doesn't, either keep the `.html` links or add rewrites.
+**Dashboard:**
+1. Vercel → **Add New → Project → Import** this GitHub repo.
+2. **Root Directory → Edit → select `site`.**
+3. Framework Preset: **Other**. Build command: *(empty)*. Output dir: *(empty —
+   it's already static).*
+4. Deploy → you get a `*.vercel.app` URL to verify.
+5. **Project → Settings → Domains → add `getonside.ca`** (and `www`), then set
+   the DNS records Vercel shows (an `A` record to Vercel's IP, or a `CNAME` for
+   `www`). If the domain is registered elsewhere, add those records there.
+
+**Or CLI** (from repo root):
+```sh
+npm i -g vercel
+cd site && vercel --prod
+```
+`vercel` run inside `site/` treats it as the project root automatically.
 
 ## Email
 The site and app use `support@getonside.ca`. Set up free forwarding to your
-inbox with **Cloudflare Email Routing** (Email → Email Routing → add
-`support@` → forward to your address).
+inbox — on Vercel-managed DNS use any email-routing provider (e.g. Cloudflare
+Email Routing, or your registrar's forwarding) to forward `support@` to your
+address.
 
 ## After the app is live
 Replace the placeholder App Store links in `index.html` (search for
