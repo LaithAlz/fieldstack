@@ -15,14 +15,16 @@
       "ios": { "simulator": false },
       "channel": "preview",
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://api-staging.getonside.ca"
+        "EXPO_PUBLIC_API_URL": "https://api-staging.getonside.ca",
+        "EXPO_PUBLIC_POSTHOG_KEY": "REPLACE_WITH_POSTHOG_PROJECT_KEY"
       }
     },
     "production": {
       "autoIncrement": true,
       "channel": "production",
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://api.getonside.ca"
+        "EXPO_PUBLIC_API_URL": "https://api.getonside.ca",
+        "EXPO_PUBLIC_POSTHOG_KEY": "REPLACE_WITH_POSTHOG_PROJECT_KEY"
       }
     }
   },
