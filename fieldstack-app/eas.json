@@ -24,7 +24,7 @@
       "channel": "production",
       "env": {
         "EXPO_PUBLIC_API_URL": "https://api.getonside.ca",
-        "EXPO_PUBLIC_POSTHOG_KEY": "REPLACE_WITH_POSTHOG_PROJECT_KEY"
+        "EXPO_PUBLIC_POSTHOG_KEY": "phc_zmQ5ovzb8DXrUvBnj66R79MhbEcGq9kxrDFW7WGR7Mwc"
       }
     }
   },
