@@ -109,7 +109,11 @@
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "android.permission.READ_CALENDAR",
+        "android.permission.WRITE_CALENDAR"
+      ]
     },
     "web": {
       "output": "single",
@@ -150,6 +154,12 @@
     },
     "updates": {
       "fallbackToCacheTimeout": 0
-    }
+    },
+    "extra": {
+      "eas": {
+        "projectId": "33ee0cde-86f1-4df9-8b97-97898c3ae7e3"
+      }
+    },
+    "owner": "allaith"
   }
 }
