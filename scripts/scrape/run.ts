@@ -32,6 +32,7 @@ import { createClient } from "@supabase/supabase-js";
 
 import { osmAdapter } from "./sources/osm.js";
 import { manualAdapter } from "./sources/manual.js";
+import { googlePlacesAdapter } from "./sources/googlePlaces.js";
 import type { ScrapeAdapter, ScrapedField, ScrapedVenue } from "./types.js";
 import {
   loadManualVenues,
@@ -43,6 +44,7 @@ import { findOperator } from "./lib/operatorMatcher.js";
 const ADAPTERS: Record<string, ScrapeAdapter> = {
   [osmAdapter.source]: osmAdapter,
   [manualAdapter.source]: manualAdapter,
+  [googlePlacesAdapter.source]: googlePlacesAdapter,
 };
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
