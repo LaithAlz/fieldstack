@@ -122,7 +122,7 @@ export class ErrorBoundary extends Component<Props, State> {
           <RNText style={styles.title}>Something went wrong</RNText>
           <RNText style={styles.body}>
             {stuck
-              ? "The app is stuck on a crash. Clearing local data usually fixes it — you'll need to set your area + preferences again."
+              ? "The app is stuck on a crash. Clearing local data usually fixes it, though you'll need to set your area and preferences again."
               : "The app hit an unexpected error. Try reloading; if it keeps happening, let us know."}
           </RNText>
           {__DEV__ ? (

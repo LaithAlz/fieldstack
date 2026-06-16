@@ -3,7 +3,7 @@ import Link from "next/link";
 import { Footer } from "@/components/footer";
 
 export const metadata: Metadata = {
-  title: "Support — Onside",
+  title: "Support | Onside",
   description: "Help and support for the Onside soccer-field app.",
 };
 
@@ -18,7 +18,7 @@ export default function Support() {
         <div className="contact-card">
           <p style={{ marginBottom: 6 }}><strong>Email us</strong></p>
           <p style={{ marginBottom: 0 }}>
-            <a href="mailto:support@getonside.ca">support@getonside.ca</a> — questions, bug
+            <a href="mailto:support@getonside.ca">support@getonside.ca</a> for questions, bug
             reports, or a field we should add.
           </p>
         </div>

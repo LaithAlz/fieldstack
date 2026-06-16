@@ -284,7 +284,7 @@ export function VenueListScreen() {
             importantForAccessibility="no-hide-descendants"
           />
           <Text size="sm" variant="secondary" style={styles.offlineBannerText}>
-            Showing saved results — couldn&apos;t reach the server.
+            Showing saved results since we couldn&apos;t reach the server.
           </Text>
           <Pressable
             onPress={() => void refetchVenues()}

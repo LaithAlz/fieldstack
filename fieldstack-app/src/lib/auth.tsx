@@ -42,15 +42,15 @@ function presentAuthError(err: AuthError | null): string | null {
   if (!err) return null;
   const msg = err.message?.toLowerCase() ?? "";
   if (msg.includes("invalid login credentials")) return "Email, phone, or password is incorrect.";
-  if (msg.includes("email not confirmed")) return "Confirm your email — check your inbox for a link.";
-  if (msg.includes("phone not confirmed")) return "Confirm your phone — check your texts for a code.";
+  if (msg.includes("email not confirmed")) return "Confirm your email. Check your inbox for a link.";
+  if (msg.includes("phone not confirmed")) return "Confirm your phone. Check your texts for a code.";
   if (msg.includes("user already registered") || msg.includes("already registered"))
     return "That account already exists. Try signing in.";
   if (msg.includes("password should be at least")) return "Password must be at least 6 characters.";
   if (msg.includes("rate limit") || msg.includes("too many")) return "Too many attempts. Try again in a minute.";
   if (msg.includes("network")) return "Couldn't reach the server. Check your connection.";
   if (msg.includes("phone") && (msg.includes("provider") || msg.includes("disabled")))
-    return "Phone sign-up isn't enabled yet — use email instead.";
+    return "Phone sign-up isn't enabled yet. Use email instead.";
   // Anything else: don't surface internals.
   return "Something went wrong. Please try again.";
 }

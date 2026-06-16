@@ -615,7 +615,7 @@ export function MapViewScreen() {
               ]}
             >
               <Text size="xs" variant="secondary">
-                Showing {MAX_MARKERS} of {placeableCount} venues — move the map to see others
+                Showing {MAX_MARKERS} of {placeableCount} venues. Move the map to see others.
               </Text>
             </View>
           </View>
@@ -636,7 +636,7 @@ export function MapViewScreen() {
               ]}
             >
               <Text size="sm" variant="secondary">
-                Couldn&apos;t read your location — showing results near downtown Toronto.
+                Couldn&apos;t read your location. Showing results near downtown Toronto.
               </Text>
             </View>
           </View>

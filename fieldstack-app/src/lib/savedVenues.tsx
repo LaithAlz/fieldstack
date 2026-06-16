@@ -241,7 +241,7 @@ export function SavedVenuesProvider({ children }: { children: ReactNode }) {
             );
             return rolled;
           });
-          toast.show("Could not save venue — check your connection", { type: "error" });
+          toast.show("Couldn't save venue. Check your connection.", { type: "error" });
         }
       });
 

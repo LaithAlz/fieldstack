@@ -5,11 +5,11 @@ import { PitchLines } from "@/components/pitch-lines";
 import { getAllVenues, getVenuesByCity } from "@/lib/venues";
 
 const FEATURES = [
-  { ic: "⚽", h: "Every field, one map", p: "Indoor domes, outdoor turf, grass parks, and futsal courts across the GTA — as a list or a live map." },
+  { ic: "⚽", h: "Every field, one map", p: "Indoor domes, outdoor turf, grass parks, and futsal courts across the GTA, as a list or a live map." },
   { ic: "⚙", h: "Filter to what fits", p: "Surface, size from 5-a-side to 11-a-side, and price. See distance, hours, amenities, and photos at a glance." },
-  { ic: "↗", h: "Book direct", p: "One tap takes you to the operator's own booking page — you always reserve straight with the field." },
+  { ic: "↗", h: "Book direct", p: "One tap takes you to the operator's own booking page. You always reserve straight with the field." },
   { ic: "♥", h: "Save your spots", p: "Keep the fields you play at, set your usual day and time once, and pick up where you left off." },
-  { ic: "★", h: "Real reviews", p: "See what other local players say about a pitch before you commit — and add your own." },
+  { ic: "★", h: "Real reviews", p: "See what other local players say about a pitch before you commit, and add your own." },
   { ic: "⚡", h: "Built for last-minute", p: "Made for pickup organizers and league captains chasing a free slot tonight. Free to use." },
 ];
 

@@ -80,7 +80,7 @@ export function VenueDetailScreen({ route }: Props) {
           // (both platforms), so we only see this catch for genuine failures.
           // Surface those in dev; users won't get a toast for a cancel.
           await Share.share({
-            message: `${venue.name}${slotPart} — wanna play?${address}`,
+            message: `${venue.name}${slotPart}. Wanna play?${address}`,
           });
         } catch (err) {
           if (__DEV__) {

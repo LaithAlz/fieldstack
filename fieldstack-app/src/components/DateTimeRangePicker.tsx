@@ -302,7 +302,7 @@ export function DateTimeRangePicker({
             importantForAccessibility="no-hide-descendants"
           />
           <Text size="xs" variant="tertiary" style={styles.availabilityNoteText}>
-            Likely busy — final availability confirmed on the operator&apos;s site.
+            Likely busy. Final availability is confirmed on the operator&apos;s site.
           </Text>
         </View>
       ) : null}

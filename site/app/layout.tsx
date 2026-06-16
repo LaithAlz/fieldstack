@@ -21,12 +21,12 @@ const barlow = Barlow_Condensed({
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://getonside.ca"),
-  title: "Onside — Every soccer field in the GTA",
+  title: "Onside: Every soccer field in the GTA",
   description:
     "Find every soccer field across the Greater Toronto Area. Browse turf, indoor, and outdoor pitches, filter by size and price, and book direct with the operator.",
   icons: { icon: "/mark.svg" },
   openGraph: {
-    title: "Onside — Every soccer field in the GTA",
+    title: "Onside: Every soccer field in the GTA",
     description:
       "Browse every pitch in the GTA, filter by surface, size, and price, and jump straight to the operator's booking page.",
     url: "https://getonside.ca",
