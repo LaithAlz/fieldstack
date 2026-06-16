@@ -17,6 +17,12 @@ jobs:
   apply:
     name: Apply migrations to a fresh database
     runs-on: ubuntu-latest
+    # The supabase CLI is a dep of apps/api, so install + run bunx from there.
+    # supabase/ lives at the repo root, so each command points back with
+    # `--workdir ../..` (the dir that contains the supabase/ folder).
+    defaults:
+      run:
+        working-directory: apps/api
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
@@ -31,7 +37,7 @@ jobs:
       # return type (the bug that shipped in 019) — fails here, in CI, instead
       # of silently on the next manual `db push`.
       - name: Apply all migrations
-        run: bunx supabase start
+        run: bunx supabase start --workdir ../..
 
       # Optional remote drift guard. Only runs when the project credentials
       # are configured as repo secrets; otherwise it's skipped with a notice
@@ -47,10 +53,10 @@ jobs:
             echo "::notice::Skipping remote drift check — set SUPABASE_ACCESS_TOKEN, SUPABASE_DB_PASSWORD, and SUPABASE_PROJECT_REF repo secrets to enable it."
             exit 0
           fi
-          bunx supabase link --project-ref "$PROJECT_REF"
+          bunx supabase link --project-ref "$PROJECT_REF" --workdir ../..
           # --dry-run prints the migrations that WOULD be pushed. If any are
           # listed, the project is behind this branch — fail loudly.
-          PENDING="$(bunx supabase db push --dry-run 2>&1)"
+          PENDING="$(bunx supabase db push --dry-run --workdir ../.. 2>&1)"
           echo "$PENDING"
           if echo "$PENDING" | grep -q "Would push these migrations"; then
             echo "::error::Remote database is missing migrations merged here. Run 'bun run db:push' against the linked project."

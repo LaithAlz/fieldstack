@@ -282,13 +282,13 @@ committed passwords — before anything goes live.
 
 | To understand… | Open… |
 |----------------|-------|
-| The API server and its routes | `src/index.ts`, `src/routes/` |
-| How the API reads data + caches it | `src/lib/queries/`, `src/lib/cache.ts` |
+| The API server and its routes | `apps/api/src/index.ts`, `apps/api/src/routes/` |
+| How the API reads data + caches it | `apps/api/src/lib/queries/`, `apps/api/src/lib/cache.ts` |
 | The database structure (tables, rules) | `supabase/migrations/` |
 | The app's screens and navigation | `fieldstack-app/src/screens/`, `fieldstack-app/src/navigation/` |
 | How the app calls the API | `fieldstack-app/src/api/`, `fieldstack-app/src/hooks/` |
 | The website's venue pages | `site/app/venues/`, `site/lib/venues.ts` |
-| The scraping + clean-up scripts | `scripts/scrape/run.ts`, `scripts/scrape/refine.ts`, `scripts/scrape/sources/` |
+| The scraping + clean-up scripts | `apps/api/scripts/scrape/run.ts`, `apps/api/scripts/scrape/refine.ts`, `apps/api/scripts/scrape/sources/` |
 | Strategy for connecting operator booking systems | `docs/scraping.md` |
 
 ---

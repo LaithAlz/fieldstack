@@ -1,0 +1,12 @@
+# Build context is apps/api. The Dockerfile copies only package*.json,
+# tsconfig.json, types/, and src/ — everything below is excluded so it never
+# bloats the image or invalidates the layer cache.
+node_modules
+bun.lock
+tests
+scripts
+*.md
+.env
+.env.*
+.git
+.gitignore

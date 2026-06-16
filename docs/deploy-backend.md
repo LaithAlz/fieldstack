@@ -7,13 +7,15 @@ store: the **Fastify API on Fly.io**, and the **iOS build via EAS**.
 
 ## 1. Backend → Fly.io
 
-The API is containerized (`Dockerfile`) and configured in `fly.toml`. It runs
-the TypeScript entry with `tsx` and listens on port 3000.
+The API is containerized (`apps/api/Dockerfile`) and configured in
+`apps/api/fly.toml`. It runs the TypeScript entry with `tsx` and listens on
+port 3000. All `fly` commands below run from `apps/api/` (that's where
+`fly.toml` lives, so flyctl picks up the app name automatically).
 
 ### One-time
 
 ```sh
-# from the repo root
+cd apps/api                  # fly.toml + Dockerfile live here
 brew install flyctl          # or: curl -L https://fly.io/install.sh | sh
 fly auth login
 fly launch --no-deploy       # detects fly.toml + Dockerfile; pick the app name
@@ -69,8 +71,8 @@ Then in **Vercel → Domains → getonside.ca → DNS**, add:
 
 ### Updating later
 
-`fly deploy` from the repo root rebuilds and ships. The image only contains the
-server (`src/`, `types/`, configs) — see `.dockerignore`.
+`fly deploy` from `apps/api/` rebuilds and ships. The image only contains the
+server (`src/`, `types/`, configs) — see `apps/api/.dockerignore`.
 
 ---
 

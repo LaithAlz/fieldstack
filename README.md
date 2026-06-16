@@ -10,13 +10,23 @@ A soccer field discovery and booking aggregator for the Greater Toronto Area. Th
 
 ## Project layout
 
+A monorepo. Each top-level folder is one self-contained project:
+
 ```
 .
-├── supabase/migrations/001_init.sql   # schema + extensions + RLS + trigger
-├── scripts/seed.ts                    # service-role seed of 15 GTA venues
-├── types/database.ts                  # generated Supabase types
-└── package.json
+├── apps/api/         # Fastify API + scrape/seed scripts + Fly/Docker deploy
+│   ├── src/          #   server, routes, lib, queries
+│   ├── scripts/      #   seed.ts + scrape/ pipeline
+│   ├── types/        #   generated Supabase types
+│   └── package.json
+├── fieldstack-app/   # Expo / React Native mobile app
+├── site/             # Next.js marketing + SEO site
+├── supabase/         # shared DB: migrations, config, seed
+└── docs/             # architecture, deploy, scraping, business plan
 ```
+
+> Backend commands run from `apps/api/`. The Supabase project lives at the repo
+> root, so the `db:*` npm scripts pass `--workdir ../..` to reach it for you.
 
 ## Database
 
@@ -25,18 +35,20 @@ A soccer field discovery and booking aggregator for the Greater Toronto Area. Th
 You need the [Supabase CLI](https://supabase.com/docs/guides/local-development/cli/getting-started) and Docker.
 
 ```bash
+cd apps/api
+
 # 1. Install deps
-npm install                    # or: pnpm install
+npm install
 
 # 2. Boot the local stack (Postgres, PostgREST, Studio, etc.)
-npx supabase start
+npm run db:start
 
 # 3. Apply the migration
-npx supabase db reset          # wipes + re-applies every migration in supabase/migrations
+npm run db:reset               # wipes + re-applies every migration in supabase/migrations
 
 # 4. Configure env
 cp .env.example .env
-# Paste the `service_role key` printed by `supabase start` into .env
+# Paste the `service_role key` printed by `db:start` into .env
 
 # 5. Seed
 npm run seed
@@ -47,9 +59,10 @@ Studio is at <http://127.0.0.1:54323> after `supabase start`.
 ### Setup — remote (linked Supabase project)
 
 ```bash
+cd apps/api
 npx supabase login
-npx supabase link --project-ref <your-project-ref>
-npx supabase db push           # applies migrations to the remote DB
+npx supabase link --project-ref <your-project-ref> --workdir ../..
+npm run db:push                # applies migrations to the remote DB
 
 # Then update .env to point at the remote project URL + service_role key
 npm run seed
@@ -57,7 +70,7 @@ npm run seed
 
 ### Re-generating types
 
-`types/database.ts` is committed by hand to keep the repo usable without the CLI installed. To regenerate from the live schema:
+`apps/api/types/database.ts` is committed by hand to keep the repo usable without the CLI installed. To regenerate from the live schema (from `apps/api/`):
 
 ```bash
 npm run db:types               # against local stack
