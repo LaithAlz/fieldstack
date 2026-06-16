@@ -16,6 +16,7 @@
     "db:types:remote": "supabase gen types typescript --linked --schema public > types/database.ts",
     "seed": "tsx scripts/seed.ts",
     "scrape": "bun scripts/scrape/run.ts",
+    "scrape:refine": "bun scripts/scrape/refine.ts",
     "start": "tsx src/index.ts"
   },
   "dependencies": {
