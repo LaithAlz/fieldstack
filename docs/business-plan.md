@@ -14,9 +14,14 @@ Today it's a directory: it has the cleanest list of every venue in the region
 details and reviews, and links players out to each operator's own booking page.
 
 **The opportunity:** field time is fragmented, hard to find, and operators have
-empty off-peak hours they can't fill. Nobody owns "where do I play soccer in
-Toronto." Onside can — by aggregating demand first (app + search), then becoming
-the booking layer operators pay to access that demand.
+empty off-peak hours they can't fill. One funded incumbent — **CatchCorner (by
+Sports Illustrated)** — already does transactional booking for *partner*
+facilities in the GTA (see §3), so the booking lane is not empty. But nobody owns
+**comprehensive discovery**: every field (including the long tail of public
+pitches and non-partner operators), with reviews, on one map. Onside's wedge is
+to own that discovery layer + player relationship first, then layer booking on
+top — competing on completeness and a player-first experience, not by being
+"first" to hourly booking.
 
 **The honest framing:** this is **not** an obvious billion-dollar venture. It is
 a realistic path to either (a) a profitable, capital-efficient SMB/marketplace
@@ -54,13 +59,15 @@ both get more valuable in that environment.
 
 ## 3. Competitive landscape
 
-There is no dominant "soccer field discovery + booking" player in Canada. The
-field splits into four camps:
+There is a transactional-booking incumbent in the GTA (**CatchCorner**), but no
+one yet owns *comprehensive soccer discovery* — every field, with reviews, on one
+map. The field splits into four camps:
 
 ### 3a. Booking *marketplaces* (own the transaction — the model to grow into)
 
 | Company | What they do | Scale / funding | Relevance |
 |---|---|---|---|
+| **CatchCorner** (Toronto) ⚠️ **most direct competitor** | By-the-hour marketplace for booking soccer fields, rinks, and courts at *partner* facilities — Onside's transactional end-state, already live in the GTA | Operates as **"CatchCorner by Sports Illustrated"** (acquired / brand-backed by a major sports-media name); **strategic deal with Canlan Sports** (TSX: ICE); powers Toronto Pan Am Sports Centre, Monarch Park & Central Tech Stadiums, Toronto Soccerplex | The incumbent to reckon with. It owns *transactional booking for facilities it has signed.* Onside's gaps to exploit: **completeness** (the long tail CatchCorner doesn't carry — public pitches, non-partner operators), **reviews + player-first discovery**, and **SEO** (a page for every field). Compete on discovery, not on being first to hourly booking. ([Toronto Guardian](https://torontoguardian.com/2024/12/toronto-business-catchcorner/), [Canlan Sports](https://www.canlansports.com/news/canlan-sports-x-catch-corner/)) |
 | **Playtomic** (Spain) | Racket-sports (padel/tennis) court booking marketplace | **$273M valuation** (Mar 2025), ~$153M raised, 6,000 clubs / 63 countries / 1.5M MAU, €240M bookings in 2024; expanding to US/UK/Germany | Proof the consumer booking-marketplace model scales massively — but in racket sports, not soccer. Could enter soccer/North America (both a threat and a potential acquirer). ([US News](https://www.usnews.com/news/technology/articles/2025-03-19/spanish-startup-playtomic-valued-at-273-million-in-new-funding-round)) |
 | **Pitchbooking** (Belfast) | Booking + management for sports **pitches** (the direct analog) | Founded 2018, **~£800K total raised**, **£25M+ bookings/year**, clients incl. Irish FA, Nottingham Forest & West Ham foundations | The closest precedent to Onside's end-state, and proof it's doable **capital-efficiently**. Focused on UK/Ireland — not Canada. ([Silicon Republic](https://www.siliconrepublic.com/start-ups/belfast-sports-tech-start-up-pitchbooking-secures-550000)) |
 
@@ -77,32 +84,41 @@ These power the operators' own booking systems. Onside integrates with or sits
 on top of them; several are realistic acquirers (Section 9).
 
 - **Amilia** (Montreal) — recreation/facility management + payments; **$35M raised** May 2025, 1,500 orgs / 6,600 facilities, **~$1B transactions/yr**, +130% revenue since 2022. ([Fintech.ca](https://www.fintech.ca/2025/05/08/montreal-amilia-raises-scale-recreation-fintech-platform/))
-- **EZFacility** (owned by **Jonas Software**), **CourtReserve**, **Skedda**, **Upper Hand**, **Daxko**, **LeagueApps** (acquired **RecTimes**, a facility-booking tool, May 2025).
+- **AllBooked by Skedda** (Melbourne; backed by Five Elms Capital) — booking + venue-management software purpose-built for sports facilities; its Memberships monetization reports ~13% revenue uplift for venues. Supply-side rails, not a consumer marketplace. ([AllBooked launch](https://www.prnewswire.com/news-releases/allbooked-by-skedda-launches-monetization-infrastructure-venues-using-memberships-see-13-revenue-uplift-302726848.html))
+- **EZFacility** (owned by **Jonas Software**), **CourtReserve**, **Upper Hand**, **Daxko**, **LeagueApps** (acquired **RecTimes**, a facility-booking tool, May 2025).
 
 ### 3d. Onside today (demand-side discovery)
 
 A clean directory + map + reviews that links out. **No competitor owns GTA
-soccer discovery.** That's the open lane.
+soccer *discovery*** — the complete map of every field (CatchCorner only lists
+facilities it has signed for booking). That's the open lane.
 
 ### Positioning
 
 ```
                  OWNS THE TRANSACTION
                           ▲
-                          │   Playtomic (racket)
-        Pitchbooking ●    │   ● Amilia / CourtReserve (operator SaaS)
-        (pitches)         │
+                          │  CatchCorner (GTA, partner facilities) ●
+        Pitchbooking ●    │  Playtomic (racket) ●
+        (pitches)         │  ● Amilia / Skedda / CourtReserve (operator SaaS)
    SUPPLY-SIDE ───────────┼─────────────── DEMAND-SIDE
    (sell to operators)    │              (own the player)
                           │   ● OpenSports / GoodRec (pickup)
-                          │   ★ ONSIDE today (discovery, links out)
-                          │   ⤷ Onside target: move UP (own booking)
+                          │   ★ ONSIDE today (full discovery, reviews, links out)
+                          │   ⤷ Onside target: own discovery, then add booking
                           ▼
                   JUST LISTS / REFERS
 ```
 
-**Onside's wedge:** start bottom-right (own demand cheaply via app + SEO), then
-move up into the transaction — the quadrant nobody occupies in Canadian soccer.
+**Onside's wedge — revised for CatchCorner:** CatchCorner already sits top-of-
+transaction for its *partner* facilities, so racing it head-on to "book any
+field" is the wrong fight. The defensible lane is **completeness + the player
+relationship**: be the one place that lists *every* GTA field (the long tail
+CatchCorner doesn't carry, plus public pitches), with reviews and the best
+discovery experience, and win search. From that demand base, add booking — and
+where a venue is bookable on CatchCorner, Onside can even *aggregate* that rather
+than rebuild it. Own the player; stay neutral on where the booking happens until
+Onside has the leverage to take it in-house.
 
 ---
 
