@@ -9,6 +9,18 @@
 
 import type { FieldSize, FieldSurface, VenueType } from "./fieldEnums.js";
 
+/**
+ * Booking platform a field is bookable through. Mirrors the DB
+ * `integration_type` enum (migration 001) + `fields.booking_platform`.
+ * Used by future platform adapters to mark a field's booking tier — see
+ * docs/scraping.md §3.1. `'none'` = plain booking_url / website / phone.
+ */
+export type BookingPlatform =
+  | "none"
+  | "playtomic"
+  | "courtreserve"
+  | "amilia";
+
 export type ScrapedField = {
   /** Source-namespaced id, e.g. "mississauga:LANDMARK-12345". Unique across all sources. */
   externalId: string;
@@ -20,6 +32,13 @@ export type ScrapedField = {
   pricePerHour?: number | null;
   /** Booking URL when the source carries one. */
   bookingUrl?: string | null;
+  /**
+   * SCAFFOLDING (docs/scraping.md §3) — not yet consumed by run.ts.
+   * Booking platform for this field, when a platform adapter knows it.
+   * Lets the runner eventually set `fields.booking_platform` instead of
+   * always `'none'`. Defaults to `'none'` semantics when omitted.
+   */
+  bookingPlatform?: BookingPlatform;
 };
 
 export type ScrapedVenue = {
@@ -40,6 +59,21 @@ export type ScrapedVenue = {
   /** Operator-side notes (booking rules / cancellation) — strings or null. */
   bookingNotes?: string | null;
   cancellationPolicy?: string | null;
+  /**
+   * SCAFFOLDING (docs/scraping.md §1.3) — not yet consumed by run.ts.
+   * Google Place ID. The one Places field we're allowed to store durably
+   * (Places *content* must be fetched at display time, never cached). A
+   * future enrichment adapter resolves + stores this so we can re-hydrate
+   * photos/hours/phone on demand.
+   */
+  googlePlaceId?: string | null;
+  /**
+   * SCAFFOLDING (docs/scraping.md §1.4 / §4.3) — not yet consumed by run.ts.
+   * Source confidence, for cross-source conflict resolution. Higher wins
+   * when two sources describe the same venue. Suggested scale: operator/
+   * platform > municipal > Google > OSM.
+   */
+  confidence?: number;
   /** Per-field children. At least one per venue. */
   fields: ScrapedField[];
 };
