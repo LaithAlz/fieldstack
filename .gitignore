@@ -3,6 +3,10 @@
 # ---------------------------------------------------------------------------
 node_modules/
 
+# Bun lockfile is intentionally NOT tracked — CI installs from the tracked
+# package-lock.json, and committing bun.lock breaks the frozen-lockfile install.
+bun.lock
+
 # ---------------------------------------------------------------------------
 # Env files — never commit; copy .env.example and fill in locally.
 # ---------------------------------------------------------------------------
@@ -56,3 +60,15 @@ yarn-error.*
 .vscode/*
 !.vscode/extensions.json
 !.vscode/settings.json
+
+# Redis on-disk dump from local backend runs
+dump.rdb
+*.rdb
+
+# Local agent scratch / handoff notes — never committed
+_temp/
+handoff/
+ARCHITECT.md
+BUILDER.md
+REVIEWER.md
+new-setup.md

@@ -29,7 +29,9 @@ export const ListVenuesQuery = z
 
 const VenueIdParams = z.object({ id: z.string().uuid() });
 
-const FieldFiltersQuery = z.object({
+// Exported for tests — the optional surface/size enums are the contract for
+// GET /venues/:id/fields.
+export const FieldFiltersQuery = z.object({
   surface: z.enum(["turf", "grass", "concrete", "indoor"]).optional(),
   size: z.enum(["5v5", "7v7", "11v11", "futsal", "3v3"]).optional(),
 });

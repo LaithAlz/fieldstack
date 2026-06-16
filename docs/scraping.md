@@ -14,7 +14,7 @@ is shippable on its own and the build order at the end reflects effort vs. payof
 
 ## 0. Where we are today
 
-The pipeline (`scripts/scrape/`) is a single idempotent runner:
+The pipeline (`apps/api/scripts/scrape/`) is a single idempotent runner:
 
 - `run.ts` upserts operators from `data/operators.yaml`, runs source adapters,
   matches each scraped venue to an operator (`lib/operatorMatcher.ts`), and
@@ -29,7 +29,7 @@ The pipeline (`scripts/scrape/`) is a single idempotent runner:
   `data_source`, `last_scraped_at`, `venue_type`, `hours`, PostGIS `location`),
   `fields` (`surface`, `size`, `price_per_hour`, `booking_url`,
   `booking_platform`).
-- Run: `bun scripts/scrape/run.ts <source>` with `SUPABASE_SERVICE_ROLE_KEY`.
+- Run: `bun apps/api/scripts/scrape/run.ts <source>` with `SUPABASE_SERVICE_ROLE_KEY`.
   **Today it is run by hand.**
 
 > Note: `run.ts`'s `ADAPTERS` map currently registers only `osm` and `manual`.
@@ -284,7 +284,7 @@ disabled-by-default via the secret gate). Migrate to Fly cron only if the job
 outgrows Actions' model.
 
 The shipped workflow (`.github/workflows/scrape.yml`) mirrors
-`migrations.yml`'s optional-step pattern: it runs `bun scripts/scrape/run.ts all`
+`migrations.yml`'s optional-step pattern: it runs `bun apps/api/scripts/scrape/run.ts all`
 on a weekly cron (and on manual `workflow_dispatch`), and **skips gracefully**
 with a `::notice::` when `SUPABASE_SERVICE_ROLE_KEY` is not configured — so it
 never fails red on a fork or before the secret is set.
@@ -393,15 +393,15 @@ Ordered by payoff-to-effort. Each step is independently shippable.
 
 Minimal, clearly-marked, and non-breaking:
 
-- **`scripts/scrape/types.ts`** — additive optional fields on the adapter types
+- **`apps/api/scripts/scrape/types.ts`** — additive optional fields on the adapter types
   for future platform adapters (`platform`, `confidence`, `googlePlaceId`,
   per-field `bookingPlatform`). All optional; existing adapters compile
   unchanged.
-- **`scripts/scrape/sources/playtomic.ts`** — a **stub** `ScrapeAdapter` that is
+- **`apps/api/scripts/scrape/sources/playtomic.ts`** — a **stub** `ScrapeAdapter` that is
   **not registered** in `run.ts`. It documents the intended discovery flow and
   throws a clear "not implemented" error if ever run. No live API calls.
 - **`.github/workflows/scrape.yml`** — scheduled (`cron`) + `workflow_dispatch`
-  workflow running `bun scripts/scrape/run.ts all`, gated on the
+  workflow running `bun apps/api/scripts/scrape/run.ts all`, gated on the
   `SUPABASE_SERVICE_ROLE_KEY` secret and skipping with a notice if absent
   (mirrors `migrations.yml`'s optional drift step).
 

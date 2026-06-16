@@ -1,7 +1,7 @@
 # Analytics — events & PostHog dashboards
 
 What the app emits and the insights to build for tracking user movement,
-activation, and churn. Events flow through `src/lib/analytics.ts` → the
+activation, and churn. Events flow through `fieldstack-app/src/lib/analytics.ts` → the
 PostHog provider (active once `EXPO_PUBLIC_POSTHOG_KEY` is set; see
 `docs/releasing.md` / `.env.example`). Every event is attributed to the
 signed-in user via `identify(user.id)`; guests are anonymous until they sign
