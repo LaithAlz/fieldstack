@@ -1,520 +1,327 @@
-# Onside — System Architecture
+# Onside — How the Whole System Works
 
-> A field-discovery + booking-aggregator for soccer in the Greater Toronto Area.
-> Players find a pitch; Onside links them to the operator's own booking page.
-> Onside never holds inventory or takes payment (today) — it's a discovery layer
-> on top of a clean, deduped database of every venue in the region.
+This document explains the entire Onside system in plain language. No prior
+knowledge assumed. Every technical term is spelled out the first time it
+appears, and there's a full **[glossary](#glossary)** at the bottom.
 
-This document explains the **whole system**: what each piece is, how they fit
-together, how data flows through them, and where everything runs.
-
----
-
-## 1. The big picture
-
-Onside is a **monorepo with four surfaces** sitting on **one shared database**.
-
-```mermaid
-graph TB
-    subgraph Clients["User-facing surfaces"]
-        APP["📱 Mobile app<br/>(Expo / React Native)<br/>iOS"]
-        SITE["🌐 Marketing + SEO site<br/>(Next.js)<br/>getonside.ca"]
-    end
-
-    subgraph Backend["Backend"]
-        API["⚙️ API server<br/>(Fastify)<br/>api.getonside.ca"]
-        CACHE[("⚡ Redis<br/>best-effort cache")]
-    end
-
-    subgraph Data["Data backbone"]
-        DB[("🗄️ Supabase<br/>Postgres + PostGIS + RLS<br/>Auth")]
-    end
-
-    subgraph Pipeline["Data pipeline (offline / scheduled)"]
-        SCRAPE["🔎 Scrapers<br/>OSM · Google Places · manual"]
-        REFINE["🧹 Refine pass<br/>dedupe + classify"]
-    end
-
-    EXT["🏟️ Operator booking sites<br/>(Playtomic, CourtReserve, Amilia, custom)"]
-
-    APP -->|"REST /venues /search<br/>(read)"| API
-    APP -->|"auth: sign-in/up<br/>(direct)"| DB
-    APP -.->|"deep link to book"| EXT
-
-    SITE -->|"SSG at build time<br/>(read, anon key)"| DB
-    SITE -.->|"outbound book click"| EXT
-
-    API -->|"anon key + RLS"| DB
-    API <-->|"read-through"| CACHE
-
-    SCRAPE -->|"service role<br/>(bypass RLS)"| DB
-    REFINE -->|"service role"| DB
-    SCRAPE -.->|"discovers"| EXT
-```
-
-**Key idea:** the database is the hub. Every surface reads from the same
-Supabase tables; the only writers are the user (via Auth + RLS-scoped tables)
-and the scraping pipeline (via the service-role key). The API is a thin,
-cacheable read layer with auth; the website generates static pages from the
-same data at build time.
-
-### Repository layout
-
-| Path | Surface | Stack |
-|---|---|---|
-| `src/` | Backend API | Fastify 5, TypeScript, tsx |
-| `fieldstack-app/` | Mobile app | Expo SDK 54, React Native 0.81, React 19 |
-| `site/` | Marketing + SEO site | Next.js 16 (App Router), React 19 |
-| `scripts/scrape/` | Data pipeline | TypeScript, run via bun |
-| `supabase/migrations/` | Database schema | SQL (21 migrations) |
-| `types/database.ts` | Shared DB types | Generated from Supabase |
+All the diagrams here are drawn in plain text, so they show up correctly
+anywhere — GitHub, a code editor, a terminal, anywhere.
 
 ---
 
-## 2. The data backbone — Supabase
+## 1. What Onside is, in one sentence
 
-Everything orbits a single Postgres database (hosted by Supabase) with the
-**PostGIS** extension for geospatial queries, **Row-Level Security (RLS)** for
-authorization, and **Supabase Auth** for identity.
+**Onside helps people find a soccer field to play on in the Toronto area, and
+sends them to that field's own website to book it.**
 
-### Entity model
-
-```mermaid
-erDiagram
-    operators ||--o{ venues : "operates"
-    venues ||--o{ fields : "has"
-    venues ||--o{ venue_reviews : "receives"
-    auth_users ||--o{ venue_reviews : "writes"
-    auth_users ||--o{ user_saved_venues : "saves"
-    auth_users ||--o{ user_recently_viewed : "views"
-    auth_users ||--o{ user_booking_history : "books"
-    auth_users ||--o{ user_preferred_slot : "sets"
-    venues ||--o{ user_saved_venues : ""
-    fields ||--o{ user_booking_history : ""
-
-    operators {
-        uuid id PK
-        text name
-        text website
-        enum integration_type
-    }
-    venues {
-        uuid id PK
-        uuid operator_id FK
-        text name
-        text address
-        float8 lat
-        float8 lng
-        geography location "PostGIS point"
-        text[] amenities
-        enum venue_type "public|private"
-        text external_id UK "idempotency key"
-        bool is_active "RLS gate"
-        text data_source
-        jsonb hours
-    }
-    fields {
-        uuid id PK
-        uuid venue_id FK
-        text name
-        enum surface "turf|grass|concrete|indoor"
-        enum size "3v3|5v5|7v7|11v11|futsal"
-        numeric price_per_hour
-        text booking_url
-        enum booking_platform
-        text external_id UK
-        bool is_active "RLS gate"
-    }
-    venue_reviews {
-        uuid id PK
-        uuid venue_id FK
-        uuid user_id FK "nulled on account delete"
-        int rating
-        text body
-    }
-```
-
-Plus user-data tables (`user_saved_venues`, `user_recently_viewed`,
-`user_booking_history`, `user_preferred_slot`), a `venue_review_summary` view
-(aggregate rating/count), and a `waitlist` table.
-
-### Authorization model (RLS)
-
-RLS is the **single source of truth for who-can-read-what**, so the API can use
-the low-privilege anon key and still be safe:
-
-| Table | Read policy | Write |
-|---|---|---|
-| `operators` | `using (true)` — fully public | service role only |
-| `venues` | `using (is_active)` — only active rows | service role only |
-| `fields` | `using (is_active)` | service role only |
-| `venue_reviews` | public read | owner (`auth.uid() = user_id`) |
-| `user_*` | owner only | owner only |
-
-This is why **`is_active` is the master switch**: the refine pass flips it to
-hide a venue everywhere (app, map, search, website) at once, with no code
-change and full reversibility.
-
-### Server-side logic (RPCs)
-
-Two Postgres functions do the heavy lifting that's awkward in PostgREST:
-
-- **`venues_within(lat, lng, radius_meters)`** — PostGIS proximity search,
-  returns venue ids ordered by distance. Powers the map and "near me" list.
-- **`search_fields(...)`** — multi-filter field search (surface, size, price,
-  proximity, pagination) joining venues + fields with the `is_active` gates.
-
-### Schema evolution
-
-21 sequential SQL migrations (`supabase/migrations/001…021`) define the schema.
-A dedicated **Migrations CI workflow** spins up a fresh `supabase start` and
-applies them all to guarantee they replay cleanly from zero (this caught a
-`CREATE OR REPLACE FUNCTION` return-type change that needed an explicit `DROP`).
+Think of it like a "Google Maps for soccer fields": we keep a clean, complete
+list of every field in the region, show it on a map with prices and details,
+and when you want to play, we hand you off to the place that actually takes the
+booking. Onside itself doesn't take your money or your reservation — it's the
+discovery layer.
 
 ---
 
-## 3. Backend API — Fastify on Fly.io
+## 2. The five parts (the cast of characters)
 
-A small, stateless REST server. Its whole job: serve cached, validated,
-RLS-safe reads of venue/field data to the app.
+The whole system is made of **five pieces**. Four of them are things people or
+robots interact with; the fifth is the database in the middle that ties
+everything together.
 
-```mermaid
-graph LR
-    REQ["Incoming request"] --> HELMET["helmet<br/>(security headers)"]
-    HELMET --> CORS["CORS allowlist"]
-    CORS --> RL["rate-limit<br/>60/min per IP"]
-    RL --> JWT["verifyJWT preHandler<br/>(permissive: sets req.user or null)"]
-    JWT --> ROUTE{"route"}
-    ROUTE --> Z["Zod parse<br/>query/params"]
-    Z --> Q["query layer"]
-    Q --> C{"in Redis?"}
-    C -->|hit| RESP["{ data, error } envelope"]
-    C -->|miss| SB["Supabase<br/>(anon key + RLS)"]
-    SB --> STORE["store in Redis (TTL)"] --> RESP
-```
+| # | Part | In plain words | Built with |
+|---|------|----------------|------------|
+| 1 | **Mobile app** | The iPhone app players actually use. | Expo / React Native |
+| 2 | **Website** (getonside.ca) | Pages on the web that advertise the app and show every venue (so Google can find them). | Next.js |
+| 3 | **API server** | A program that the app phones up to ask "give me the fields near me." It fetches the answer from the database. | Fastify |
+| 4 | **Scraping scripts** | Robots that go out, find new soccer fields online, and add them to the database. | TypeScript scripts |
+| 5 | **The database** | The single place where every field, venue, user, and review is stored. Everything else reads from or writes to it. | Supabase (a hosted Postgres database) |
 
-**Endpoints**
-
-| Method · Path | Purpose |
-|---|---|
-| `GET /venues` | List active venues (+nested active fields). Optional proximity sort (`lat`/`lng`/`radius_km`) via `venues_within`, or exact id set (`?ids=`) for the Saved tab. |
-| `GET /venues/:id` | One venue with fields. |
-| `GET /venues/:id/fields` | Fields for a venue, filterable by surface/size. |
-| `GET /fields` | Field lookups. |
-| `GET /search/fields` | Multi-filter search via `search_fields` RPC. |
-| `GET /health` | Liveness — 503 only if Supabase is down; Redis degraded ≠ fatal. |
-
-**Design choices worth knowing**
-
-- **Anon key, not service role.** The API authenticates to Supabase with the
-  public anon key and leans entirely on RLS for read safety. User identity
-  comes from the **`verifyJWT` preHandler**, which validates the Supabase
-  bearer token and attaches `req.user` — but *permissively*: guests browse
-  fine, and user-scoped endpoints opt in by checking `req.user`.
-- **Redis is best-effort.** `cached()` is read-through; if Redis is down or a
-  cached entry is malformed, it silently falls through to Supabase. A bad
-  `REDIS_URL` can't crash the server (hardened `createRedis`). The API is
-  fully functional with no cache.
-- **Uniform envelope.** Every response is `{ data, error }`; the central error
-  handler maps `ApiError` → its status, `ZodError` → 400, everything else → 500.
-- **Stateless** → scales horizontally and **scales to zero** on Fly.io when
-  idle (cold-start on first request).
-
-Runs on **Fly.io** (`region: yyz`, Toronto), Dockerized (`node:20-slim`,
-`tsx src/index.ts`), fronted by `api.getonside.ca`, `TRUST_PROXY=true` behind
-Fly's proxy so per-IP rate limiting sees the real client IP.
+> **Why a separate API server AND a database?** The database just stores data.
+> The API server is the *gatekeeper* in front of it: it checks requests, adds
+> caching so things are fast, and only ever hands out data that's allowed to be
+> public. The phone app talks to the API server, not straight to the raw
+> database (except for login — more on that later).
 
 ---
 
-## 4. Mobile app — Expo / React Native
+## 3. The whole system at a glance
 
-The primary product. iOS-first (iPhone). React Navigation v7 with a
-three-tab root, each tab a native stack.
+Here's how the five parts connect. Arrows show "who talks to whom."
 
-```mermaid
-graph TD
-    ROOT["RootNavigator<br/>(auth gate)"]
-    ROOT -->|"first launch"| ONB["OnboardingNavigator<br/>· Welcome"]
-    ROOT -->|"otherwise"| TABS["Bottom tabs"]
-
-    TABS --> EXP["Explore tab"]
-    TABS --> SAV["Saved tab"]
-    TABS --> ME["Me tab"]
-
-    EXP --> VL["VenueList"]
-    EXP --> MV["MapView"]
-    EXP --> VD["VenueDetail"]
-    EXP --> FD["FieldDetail"]
-    EXP --> FS["FieldSearch"]
-    SAV --> SS["Saved venues"]
-    ME --> PR["Profile"]
-    ME --> SET["Settings"]
-    ME --> SI["SignIn"]
+```
+        PEOPLE                          ROBOTS (run on a schedule)
+   ┌──────────────┐  ┌──────────────┐   ┌────────────────────────┐
+   │ Player on     │  │ Visitor in    │   │  Scraping scripts       │
+   │ iPhone        │  │ a web browser │   │  (find new fields)      │
+   └──────┬───────┘  └──────┬───────┘   └───────────┬────────────┘
+          │                 │                        │
+          ▼                 ▼                        │ adds + cleans
+   ┌──────────────┐  ┌──────────────┐                │ field listings
+   │ MOBILE APP    │  │ WEBSITE       │                │
+   │ (1)           │  │ getonside.ca  │                │
+   └──────┬───────┘  │ (2)           │                │
+          │          └──────┬───────┘                │
+          │ "fields near me?"│                        │
+          ▼                 │ reads venue data        │
+   ┌──────────────┐         │ once, while the site    │
+   │ API SERVER    │         │ is being built          │
+   │ (3)           │         │                         │
+   └──────┬───────┘         │                         │
+          │                 │                         │
+          ▼                 ▼                         ▼
+   ┌───────────────────────────────────────────────────────────┐
+   │                  THE DATABASE  (5)                          │
+   │   Every venue, field, operator, user, and review is here.   │
+   └───────────────────────────────────────────────────────────┘
 ```
 
-**State & data layers**
-
-- **Server data** comes through `src/api/client.ts` — a typed `fetch` wrapper
-  (`EXPO_PUBLIC_API_URL` → `api.getonside.ca`) that unwraps the `{ data, error }`
-  envelope, with a 10s timeout. Hooks (`useVenues`, `useVenue`, `useField`,
-  `useFieldSearch`, `useVenueReviews`) wrap these calls.
-- **Auth** talks to **Supabase directly** (`src/lib/supabase.ts`) — the API has
-  no auth routes. Email/password + **Google & Apple social sign-in**
-  (`socialAuth.ts`). The session JWT is what the API's `verifyJWT` validates.
-- **Local/offline state** lives in **AsyncStorage-backed React context
-  providers**: `auth`, `savedVenues`, `recentlyViewed`, `bookingHistory`,
-  `preferredSlot`, `blockedUsers`, `onboarding`, plus a `Toast` provider.
-  These also mirror to user-data tables when signed in.
-- **Maps** via `react-native-maps`; **theming** via `src/theme` tokens (the
-  "Night Kickoff" paper/ink/tangerine identity); **analytics** via PostHog
-  (`analyticsProviders.ts` / `analytics.ts`) with `identify`/`reset` on auth;
-  **errors** via Sentry.
-- **Booking** is a deep link out (`openBooking.ts` / `bookingUrl.ts`) to the
-  operator's own page — Onside never transacts.
-
-**Account deletion** anonymizes reviews (sets `user_id` null, migration 021)
-rather than hard-deleting them, then clears local data — so the directory keeps
-the review content without retaining personal data.
-
-**Shipping & updates**
-
-- Built/submitted via **EAS Build/Submit**.
-- **OTA updates** via `expo-updates` with a **fingerprint** `runtimeVersion`:
-  JS-only changes ship instantly with `eas update` (no App Store review);
-  native changes require a new binary.
+The key idea: **the database in the middle is the single source of truth.**
+The app and website only *read* from it. The only things that *write* new field
+data are the scraping scripts. This keeps everything consistent — there's one
+list of fields, and everyone sees the same one.
 
 ---
 
-## 5. Marketing + SEO site — Next.js on Vercel
+## 4. The database (the centre of everything)
 
-`getonside.ca`. Two jobs: convert visitors to app installs, and — the growth
-engine — **rank in search for every venue**.
+The database holds a handful of related tables. The three that matter most:
 
-```mermaid
-graph TD
-    subgraph Build["next build (at deploy time)"]
-        GAV["getAllVenues()<br/>Supabase anon read<br/>(memoized once)"]
-        GAV --> GSP["generateStaticParams<br/>→ 207 venue slugs"]
-        GSP --> PAGES["207 static venue pages<br/>+ /venues index<br/>+ sitemap.xml + robots.txt"]
-    end
-    PAGES --> CDN["Static HTML on Vercel CDN"]
-    CDN --> CRAWL["🔍 Google indexes<br/>'indoor soccer mississauga' etc."]
-    CDN --> USER["Visitor"]
-    USER -.->|"venue_book_click<br/>(Vercel Analytics)"| INTENT["Intent data<br/>(operator-sales signal)"]
+```
+   OPERATOR  (the company that runs a field — e.g. "Milton Sports Dome Inc.")
+      │
+      │ owns one or more
+      ▼
+   VENUE  (a physical place — e.g. "Milton Soccer Dome", with an address + map pin)
+      │
+      │ contains one or more
+      ▼
+   FIELD  (a single playable pitch — e.g. "Indoor Turf 5-a-side, $120/hr")
 ```
 
-- **Static generation (SSG):** at build time, `site/lib/venues.ts` reads the
-  same Supabase tables (anon key, RLS) and emits one page per active venue
-  (`/venues/[slug]`, slug like `mattamy-indoor-soccer-field-mississauga`), a
-  `/venues` index grouped by city, plus `sitemap.xml` and `robots.txt`. **No
-  runtime DB calls** — pure CDN HTML.
-- **SEO payload per page:** `SportsActivityLocation` + `BreadcrumbList`
-  JSON-LD, canonical URL, OpenGraph, and human content (fields, amenities,
-  map link, related venues).
-- **Intent capture:** the "Book on operator's site" CTA is a client component
-  that fires a `venue_book_click` analytics event before redirecting — the raw
-  material for the operator-sales pitch ("we sent you N players").
-- **Graceful degradation:** if the Supabase env vars aren't set in a given
-  build, the data layer returns `[]` and the build still succeeds (just no
-  venue pages) — so previews never break.
+So: an **operator** runs one or more **venues**; each **venue** has one or more
+**fields** you can actually book. There are also tables for **users**,
+**reviews**, **saved venues**, and a few others.
 
-> Designed to later host an Expo-for-web build of the app itself under the same
-> domain.
+Two things about the database are worth understanding because they come up
+everywhere:
+
+**(a) The "is it allowed to show" switch.**
+Every venue and field has an on/off flag called `is_active`. The database is
+configured so that the public can only ever read rows where this flag is ON.
+That single switch controls visibility everywhere at once — the app, the map,
+the search, and the website all respect it. To hide a junk listing, we just flip
+the switch OFF (we never delete — so it can always be turned back on).
+
+**(b) The "guard at the door" (called RLS).**
+RLS = **Row-Level Security**. It's a rule, enforced by the database itself, that
+decides which rows each person is allowed to see or change. For example: anyone
+can read active venues, but you can only read or edit *your own* saved venues and
+*your own* reviews. Because the database enforces this directly, the API server
+can use a low-privilege key and still be safe — the database refuses to hand out
+anything private.
 
 ---
 
-## 6. Data pipeline — how venues get in and get clean
+## 5. Each part, explained
 
-The pipeline runs **offline / on a schedule**, never on a user request. It's a
-source-adapter pattern feeding an idempotent upsert, followed by a reversible
-cleanup pass.
+### Part 1 — The mobile app (the iPhone app)
 
-```mermaid
-graph LR
-    subgraph Sources["Source adapters"]
-        OSM["OSM / Overpass<br/>(public parks)"]
-        GP["Google Places (New)<br/>(private/indoor)"]
-        MAN["manual YAML<br/>(curated)"]
-    end
-    OSM --> RUN
-    GP --> RUN
-    MAN --> RUN
-    RUN["run.ts<br/>upsert operators → venues → fields<br/>idempotent on external_id<br/>(service role)"]
-    RUN --> DBALL[("All venues<br/>is_active = true")]
-    DBALL --> REFINE["refine.ts<br/>1. classify (drop clubs/academies/retail)<br/>2. dedupe by address<br/>(flips is_active, never deletes)"]
-    REFINE --> DBCLEAN[("Confirmed facilities<br/>is_active = true<br/>noise → is_active = false")]
-```
+This is the main product. It has three tabs at the bottom:
 
-- **Idempotency:** every venue/field carries an `external_id` (e.g.
-  `google:<placeId>`); `run.ts` upserts on conflict, so re-runs **update**
-  rather than duplicate.
-- **Discovery vs. precision:** scrapers cast a wide net (e.g. Google returned
-  ~300 hits). `refine.ts` then collapses same-address duplicates and
-  deactivates clubs/academies/retail/wrong-sport — **reversibly**, via
-  `is_active`, with an `ALLOWLIST` so manual keeps survive the
-  **scrape → refine cycle** (re-scraping reactivates everything, so refine runs
-  after each scrape). This cut ~300 raw Google hits to ~125 confirmed
-  bookable facilities.
-- **Privilege:** the pipeline uses the **service-role key** (bypasses RLS to
-  write) — kept strictly server-side, never in any client.
-- **Scheduling:** a weekly GitHub Actions cron (`scrape.yml`), secret-gated on
-  the service-role key, plus `workflow_dispatch` for manual runs.
-- **Booking integrations:** `operators.integration_type` /
-  `fields.booking_platform` track per-operator platforms (Playtomic,
-  CourtReserve, Amilia, custom) for the future move from "link out" to "book
-  in-app" (requires operator credentials — see `docs/scraping.md`).
+- **Explore** — browse fields as a list or on a live map, search and filter.
+- **Saved** — the fields you've bookmarked.
+- **Me** — your profile, settings, sign-in.
+
+When the app needs data ("what fields are near me?"), it asks the **API server**
+(Part 3). When you want to actually book, the app opens the field operator's own
+website in your browser — Onside hands you off.
+
+Login is the one exception: the app talks **directly** to the database's login
+system (Supabase Auth), supporting email/password plus "Sign in with Google" and
+"Sign in with Apple."
+
+The app can also update itself *without* a full App Store review for small
+changes (text, layout, bug fixes), using a feature called **OTA** (Over-The-Air
+updates). Big changes still need a new App Store release.
+
+### Part 2 — The website (getonside.ca)
+
+Two jobs:
+
+1. **Marketing** — convince visitors to download the app.
+2. **Search visibility (SEO)** — this is the growth engine. SEO =
+   **Search Engine Optimization**, i.e. getting found on Google. The website
+   builds **one page for every single venue** (e.g. a page for "Milton Soccer
+   Dome"). When someone googles "indoor soccer Milton," that page can show up,
+   and they discover Onside.
+
+Here's the clever part: those venue pages are built **ahead of time**, not when
+a visitor arrives. When we publish the site, it reaches into the database once,
+grabs all the venues, and writes out a finished HTML page for each one. Visitors
+(and Google) then get plain, instant, pre-made pages. This "build it ahead of
+time" approach is called **SSG** = **Static Site Generation**.
+
+### Part 3 — The API server (the gatekeeper)
+
+A small program whose only job is to answer the app's questions about venue
+data, quickly and safely. For each request it:
+
+1. Checks the request isn't abusive (rate-limiting: max 60 requests/minute).
+2. Notes who's asking, if they're logged in (by checking their login token).
+3. Looks up the answer — first in a fast temporary store (**cache**), and if it's
+   not there, in the database.
+4. Sends back the answer in a consistent format.
+
+It's **stateless** (it remembers nothing between requests), which means we can
+run many copies, and it can even shut down to zero when no one's using it (to
+save money) and wake back up on the next request.
+
+### Part 4 — The scraping scripts (how fields get into the system)
+
+"Scraping" means automatically collecting information from public sources. These
+scripts are how the database gets filled with fields. They pull from:
+
+- **OpenStreetMap (OSM)** — a free, public map of the world; good for outdoor
+  park pitches.
+- **Google Places** — Google's directory of businesses; good for private indoor
+  facilities (domes, futsal centres).
+- **Manual list** — a hand-curated file for anything we want to add by hand.
+
+The process has two steps:
+
+1. **Collect** — cast a wide net and pull in everything that might be a soccer
+   field. (One Google run found ~300 places.)
+2. **Clean up** — a second script removes the junk: it merges duplicate listings
+   of the same place, and switches off things that aren't really bookable fields
+   (youth clubs, academies, sports-equipment shops). It never deletes — it just
+   flips the `is_active` switch off, so anything can be restored. (This cut ~300
+   raw results down to ~125 real, bookable facilities.)
+
+These run on a **schedule** (weekly), not on every request.
 
 ---
 
-## 7. Key flows end-to-end
+## 6. How data flows — three walk-throughs
 
-### Browsing the map (the most common path)
+### Walk-through A: A player opens the map
 
-```mermaid
-sequenceDiagram
-    participant U as User
-    participant App as Mobile app
-    participant API as Fastify API
-    participant R as Redis
-    participant DB as Supabase
-
-    U->>App: open Explore / Map
-    App->>API: GET /venues?lat&lng&radius_km
-    API->>API: verifyJWT (sets req.user|null), Zod parse
-    API->>R: get(proximity cache key)
-    alt cache hit
-        R-->>API: venues JSON
-    else miss
-        API->>DB: rpc venues_within(lat,lng,r)
-        DB-->>API: ids by distance
-        API->>DB: hydrate venues + active fields
-        DB-->>API: rows (RLS-filtered to is_active)
-        API->>R: setex(key, 60s)
-    end
-    API-->>App: { data: venues, error: null }
-    App-->>U: pins on map / cards
+```
+  1. Player opens the Explore map in the app.
+  2. App → API server:  "venues within 10 km of my location?"
+  3. API server checks its fast cache.
+       • If the answer's cached → returns it immediately.
+       • If not → asks the database, which uses its map smarts (PostGIS) to
+         find the nearest venues, then the API saves that answer in the cache
+         for next time.
+  4. API server → App:  the list of venues.
+  5. App draws the pins on the map.
 ```
 
-### Sign-in & authorized data
+### Walk-through B: A new field gets discovered and cleaned
 
-```mermaid
-sequenceDiagram
-    participant U as User
-    participant App as Mobile app
-    participant Auth as Supabase Auth
-    participant API as Fastify API
-    participant DB as Supabase (RLS)
-
-    U->>App: Sign in (email / Google / Apple)
-    App->>Auth: signInWith… (direct)
-    Auth-->>App: session (JWT)
-    App->>App: PostHog.identify(user)
-    Note over App,API: subsequent reads send Authorization: Bearer <JWT>
-    App->>API: GET /venues (Bearer JWT)
-    API->>Auth: getUser(token) → req.user
-    App->>DB: read/write user_saved_venues (direct, RLS = auth.uid())
-    DB-->>App: only this user's rows
+```
+  1. Scraping script runs (weekly, or on demand).
+  2. It searches Google/OpenStreetMap for soccer places across each GTA city.
+  3. For each place found, it adds or updates a venue in the database.
+       (It uses a unique ID per place, so re-running never makes duplicates.)
+  4. The clean-up script runs: merges duplicates, switches off the non-fields.
+  5. Result: the database now has the new real fields, switched ON; junk OFF.
+  6. The app, map, and website all immediately reflect this — no code change.
 ```
 
-### The growth loop (why the SEO pages matter)
+### Walk-through C: The website gets published
 
-```mermaid
-graph LR
-    SCRAPE["Scrape + refine<br/>→ clean venue DB"] --> SEO["SSG venue pages<br/>(getonside.ca)"]
-    SEO --> RANK["Rank for<br/>'indoor soccer near me'"]
-    RANK --> VISIT["Organic visitors"]
-    VISIT --> INSTALL["App installs"]
-    VISIT --> CLICK["venue_book_click<br/>intent data"]
-    CLICK --> SALES["Operator sales:<br/>'we sent you N players'"]
-    SALES --> OPS["Operators connect inventory"]
-    OPS --> TXN["Book in-app<br/>(future: take rate)"]
-    INSTALL --> CLICK
+```
+  1. We publish a new version of the website.
+  2. During the build, the site reads all active venues from the database once.
+  3. It writes a finished web page for each venue, plus a sitemap (a list of all
+     those page addresses that tells Google what to crawl).
+  4. Those pre-made pages go live on getonside.ca.
+  5. Google crawls them; people searching "indoor soccer <city>" find Onside.
 ```
 
 ---
 
-## 8. Infrastructure & deployment
+## 7. Where everything runs (hosting)
 
-```mermaid
-graph TB
-    subgraph GH["GitHub (monorepo)"]
-        CI["GitHub Actions<br/>· Backend typecheck<br/>· Mobile typecheck+lint+test<br/>· Migrations replay<br/>· GitGuardian secrets"]
-    end
+Each part lives on a different service. None of this runs on a server we
+physically own — it's all hosted.
 
-    subgraph Fly["Fly.io · region yyz"]
-        APIC["API container<br/>node:20-slim · scale-to-zero"]
-    end
+| Part | Runs on | Address |
+|------|---------|---------|
+| Mobile app | Apple App Store (built/shipped via Expo's "EAS" service) | iPhone |
+| Website | Vercel (a website host) | getonside.ca |
+| API server | Fly.io (an app host), in a Toronto data centre | api.getonside.ca |
+| Database + login | Supabase (hosted) | — |
+| Scraping scripts | GitHub Actions (runs scripts on a schedule) | — |
 
-    subgraph Vercel["Vercel"]
-        SITEC["Next.js static site<br/>Root Directory = site"]
-    end
-
-    subgraph Supa["Supabase (hosted)"]
-        PG[("Postgres + PostGIS")]
-        AUTH["Auth"]
-    end
-
-    subgraph Expo["Expo EAS"]
-        BUILD["EAS Build/Submit → App Store"]
-        OTA["EAS Update (OTA)"]
-    end
-
-    DEV["Push to main / open PR"] --> CI
-    CI --> APIC
-    CI --> SITEC
-    APIC --> PG
-    SITEC -->|build-time read| PG
-    BUILD --> STORE["📱 App Store"]
-    OTA -.->|JS-only updates| STORE
-
-    DNS1["api.getonside.ca"] --> APIC
-    DNS2["getonside.ca"] --> SITEC
-    APP2["Installed app"] --> APIC
-    APP2 --> AUTH
-```
-
-| Concern | How |
-|---|---|
-| **CI** | GitHub Actions: backend typecheck, mobile typecheck+lint+test, migrations fresh-replay, GitGuardian secret scan. Vercel checks on the site. |
-| **API deploy** | Fly.io, Dockerized, scale-to-zero, Toronto region, `api.getonside.ca`. |
-| **Site deploy** | Vercel (Root Directory = `site`), static, `getonside.ca`. |
-| **App deploy** | EAS Build → App Store; EAS Update for OTA JS patches keyed to a fingerprint `runtimeVersion`. |
-| **Analytics** | PostHog (app product analytics), Vercel Analytics + Speed Insights (site). |
-| **Errors** | Sentry (app). |
-| **Secrets** | Service-role key only in CI/scraper + Fly; anon key is public-safe (ships in app + used by site/API). |
+Whenever we push new code, automated checks (**CI** = Continuous Integration)
+run first — they type-check the code, run tests, and scan for accidentally
+committed passwords — before anything goes live.
 
 ---
 
-## 9. Cross-cutting principles
+## 8. A few principles that hold it all together
 
-- **One database, many readers; few writers.** Users (RLS-scoped) and the
-  scraper (service role) are the only writers. The API and website are pure
-  readers. This keeps consistency trivial and the read surface cacheable.
-- **`is_active` as the master visibility switch.** Curation, refinement, and
-  takedowns are all a boolean flip — reversible, instant, and enforced in one
-  place (RLS) so every surface honours it.
-- **Idempotent ingestion.** `external_id` + upsert means the pipeline can run
-  as often as we like without creating duplicates.
-- **Fail-soft dependencies.** Redis down, env var missing, operator join
-  blocked — each degrades gracefully instead of taking a surface down.
-- **Discovery wide, display precise.** Scrape everything; show only confirmed
-  facilities. The wide net + reversible cleanup is the supply engine.
-- **City-agnostic by construction.** Cities live in `cities.yaml`; nothing is
-  hard-coded to the GTA, so the same machine extends to new metros.
+- **One database, many readers, few writers.** Everyone reads the same data.
+  Only you (your own rows) and the scrapers can write. This makes the system
+  easy to reason about.
+- **The `is_active` switch is the master control.** Hiding, cleaning, and
+  un-hiding a listing is just flipping a flag — instant, reversible, and obeyed
+  everywhere.
+- **Collect wide, show narrow.** Scrapers grab everything; the clean-up step
+  shows only confirmed real fields.
+- **Nothing is hard-wired to Toronto.** The list of cities lives in a simple
+  config file, so the exact same system can expand to other cities later.
+- **Fail softly.** If the cache is down, or a setting is missing, the system
+  degrades gracefully instead of crashing.
 
 ---
 
-## 10. Where to look in the code
+## 9. Where to look in the code
 
-| To understand… | Start at… |
-|---|---|
-| API routing & middleware | `src/index.ts`, `src/routes/*` |
-| Read queries & caching | `src/lib/queries/*`, `src/lib/cache.ts`, `src/lib/redis.ts` |
-| Auth on the server | `src/lib/verifyJWT.ts`, `src/lib/supabase.ts` |
-| DB schema & policies | `supabase/migrations/*` |
-| App navigation & screens | `fieldstack-app/src/navigation/*`, `fieldstack-app/src/screens/*` |
-| App state providers | `fieldstack-app/src/lib/*.tsx` |
-| App ↔ API | `fieldstack-app/src/api/*`, `fieldstack-app/src/hooks/*` |
-| SEO venue pages | `site/app/venues/*`, `site/lib/venues.ts` |
-| Scraping & refinement | `scripts/scrape/run.ts`, `scripts/scrape/refine.ts`, `scripts/scrape/sources/*` |
-| Scaling/booking strategy | `docs/scraping.md` |
+| To understand… | Open… |
+|----------------|-------|
+| The API server and its routes | `src/index.ts`, `src/routes/` |
+| How the API reads data + caches it | `src/lib/queries/`, `src/lib/cache.ts` |
+| The database structure (tables, rules) | `supabase/migrations/` |
+| The app's screens and navigation | `fieldstack-app/src/screens/`, `fieldstack-app/src/navigation/` |
+| How the app calls the API | `fieldstack-app/src/api/`, `fieldstack-app/src/hooks/` |
+| The website's venue pages | `site/app/venues/`, `site/lib/venues.ts` |
+| The scraping + clean-up scripts | `scripts/scrape/run.ts`, `scripts/scrape/refine.ts`, `scripts/scrape/sources/` |
+| Strategy for connecting operator booking systems | `docs/scraping.md` |
+
+---
+
+## Glossary
+
+Every term used in this doc, in plain language.
+
+| Term | What it means |
+|------|---------------|
+| **API** | Application Programming Interface. A program (here, the "API server") that other programs call to get data. The app calls our API to get venue lists. |
+| **API server** | Our gatekeeper program (built with Fastify) that answers the app's data requests and talks to the database. |
+| **Cache** | A small, fast, temporary store of recent answers, so we don't re-ask the database for the same thing repeatedly. Here it's powered by Redis. |
+| **CDN** | Content Delivery Network. A network of servers worldwide that serve the website's pre-made pages quickly to nearby visitors. |
+| **CI** | Continuous Integration. Automated checks (tests, type-checks, security scans) that run on every code change before it goes live. |
+| **Fastify** | The software framework the API server is built with. |
+| **Field** | A single playable pitch inside a venue (e.g. "Indoor Turf, 5-a-side"). Has a size, surface, and price. |
+| **Fly.io** | The hosting service the API server runs on. |
+| **GTA** | Greater Toronto Area — the region Onside covers (Toronto, Mississauga, Brampton, etc.). |
+| **`is_active`** | An on/off flag on each venue and field. Public users only see rows where it's ON. Flipping it off hides a listing everywhere, reversibly. |
+| **JWT** | JSON Web Token. The little signed "ID badge" the app gets when you log in, and shows the API to prove who you are. |
+| **Next.js** | The framework the website is built with. |
+| **Operator** | The company/organization that runs a venue and takes the bookings. |
+| **OSM (OpenStreetMap)** | A free, public, community-made map of the world. One of our sources for finding outdoor field locations. |
+| **OTA** | Over-The-Air update. Pushing small app updates (text, layout, fixes) straight to phones without a full App Store review. |
+| **PostGIS** | An add-on to the database that does map math — e.g. "find venues within 10 km of this point." |
+| **Postgres** | The kind of database we use (a popular, reliable relational database). Supabase hosts it for us. |
+| **RLS (Row-Level Security)** | A database rule that decides, row by row, who can read or change what. It's why the public can see active venues but only you can see your own saved list. |
+| **RPC** | Remote Procedure Call. Here it means a function that runs *inside* the database (like the "find venues nearby" search) that the API calls directly. |
+| **Scraping** | Automatically collecting information from public sources (Google, OpenStreetMap) to fill our database with fields. |
+| **SEO** | Search Engine Optimization. Making our pages show up on Google when people search for soccer fields. |
+| **SSG (Static Site Generation)** | Building all the website's pages *ahead of time* (when we publish), so visitors get instant, pre-made pages instead of pages assembled on the spot. |
+| **Stateless** | The API server remembers nothing between requests, so we can run many copies and scale freely. |
+| **Supabase** | The service that hosts our database, the login system, and the security rules. |
+| **Venue** | A physical place with an address and a map pin (e.g. "Milton Soccer Dome"). Contains one or more fields. |
+| **Vercel** | The hosting service the website runs on. |
