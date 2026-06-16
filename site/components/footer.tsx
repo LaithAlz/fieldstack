@@ -10,6 +10,7 @@ export function Footer() {
           <span className="name display">Onside</span>
         </Link>
         <div className="foot-links">
+          <Link href="/venues">Find fields</Link>
           <Link href="/support">Support</Link>
           <Link href="/privacy">Privacy</Link>
           <Link href="/terms">Terms</Link>

@@ -10,6 +10,7 @@ export function Nav() {
           <span className="name display">Onside</span>
         </Link>
         <div className="nav-links">
+          <Link href="/venues">Find fields</Link>
           <a href="/#features">Features</a>
           <Link href="/support">Support</Link>
           <a href="/#get">Get the app</a>
