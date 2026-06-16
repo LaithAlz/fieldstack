@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Nav } from "@/components/nav";
 import { Footer } from "@/components/footer";
 import { AppStoreButton } from "@/components/app-store-button";
+import { PitchLines } from "@/components/pitch-lines";
 import { getAllVenues, getVenuesByCity, surfaceLabel } from "@/lib/venues";
 
 export const metadata: Metadata = {
@@ -38,19 +39,20 @@ export default async function VenuesIndex() {
       <header className="hero venues-hero">
         <div className="wrap">
           <div>
-            <span className="eyebrow">Soccer fields · Greater Toronto Area</span>
-            <h1 className="display">Every soccer field in the GTA</h1>
-            <p className="lede">
+            <span className="eyebrow rise">Soccer fields · Greater Toronto Area</span>
+            <h1 className="display rise d1">Every soccer field<br />in the GTA</h1>
+            <p className="lede rise d2">
               {all.length > 0
                 ? `${all.length} indoor domes, turf pitches, futsal courts, and outdoor fields across the Greater Toronto Area — browse by city, then book direct with the operator.`
                 : "Indoor domes, turf pitches, futsal courts, and outdoor fields across the Greater Toronto Area."}
             </p>
-            <div className="cta-row">
+            <div className="cta-row rise d3">
               <AppStoreButton />
               <span className="cta-note">Free · iPhone · No account needed to browse</span>
             </div>
           </div>
         </div>
+        <PitchLines className="pitch" />
       </header>
 
       {byCity.length === 0 ? (

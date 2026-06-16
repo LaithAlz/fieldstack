@@ -13,7 +13,7 @@ export function Nav() {
           <Link href="/venues">Find fields</Link>
           <a href="/#features">Features</a>
           <Link href="/support">Support</Link>
-          <a href="/#get">Get the app</a>
+          <a href="/#get" className="nav-cta">Get the app</a>
         </div>
       </div>
     </nav>
