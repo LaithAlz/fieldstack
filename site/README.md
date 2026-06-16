@@ -1,67 +1,53 @@
-# getonside.ca — marketing & support site
+# getonside.ca — marketing & support site (Next.js)
 
-Static site (no build step) that serves as the App Store **Support URL** and
-**Marketing URL**, plus the required **Privacy** and **Terms** pages.
+Next.js (App Router, TypeScript) site that serves as the App Store **Support
+URL** and **Marketing URL**, plus the required **Privacy** and **Terms** pages.
+Built as a Next app (not static HTML) so it can grow into a real web app —
+add app routes, API routes, and auth later, sharing `api.getonside.ca`.
 
 ```
 site/
-  index.html      → https://getonside.ca/
-  support.html    → https://getonside.ca/support   (App Store Support URL)
-  privacy.html    → https://getonside.ca/privacy   (App Store Privacy Policy URL)
-  terms.html      → https://getonside.ca/terms
-  styles.css
-  assets/         icon + app screenshots
+  app/
+    layout.tsx        fonts (next/font), metadata, Vercel Analytics + Speed Insights
+    page.tsx          landing  → /
+    support/page.tsx  → /support   (App Store Support URL)
+    privacy/page.tsx  → /privacy   (App Store Privacy Policy URL)
+    terms/page.tsx    → /terms
+    globals.css       "Night Kickoff" brand styles
+  components/         nav, footer, app-store-button
+  public/            mark.svg + app screenshots
 ```
 
-It's plain HTML/CSS — open `index.html` locally to preview, or serve the
-folder with `python3 -m http.server` from inside `site/`.
+## Develop / build
 
-`vercel.json` sets `cleanUrls`, so `/support`, `/privacy`, and `/terms` serve
-without the `.html` extension (matching the URLs the app links to).
+```sh
+cd site
+npm install
+npm run dev      # http://localhost:3000
+npm run build    # production build (also runs TypeScript checks)
+```
 
 ## Deploy (Vercel)
 
-The repo is a monorepo, so point Vercel at the `site/` folder only.
+Monorepo, so point Vercel at the `site/` folder:
+1. Vercel → project → **Settings → Build & Deployment → Root Directory → `site`**.
+2. Framework Preset: **Next.js** (auto-detected). No other config needed.
+3. **Settings → Domains → add `getonside.ca` + `www`** and set the DNS records.
 
-**Dashboard:**
-1. Vercel → **Add New → Project → Import** this GitHub repo.
-2. **Root Directory → Edit → select `site`.**
-3. Framework Preset: **Other**. Build command: *(empty)*. Output dir: *(empty —
-   it's already static).*
-4. Deploy → you get a `*.vercel.app` URL to verify.
-5. **Project → Settings → Domains → add `getonside.ca`** (and `www`), then set
-   the DNS records Vercel shows (an `A` record to Vercel's IP, or a `CNAME` for
-   `www`). If the domain is registered elsewhere, add those records there.
-
-**Or CLI** (from repo root):
-```sh
-npm i -g vercel
-cd site && vercel --prod
-```
-`vercel` run inside `site/` treats it as the project root automatically.
-
-## Web Analytics
-
-Page-view analytics use **Vercel Web Analytics** via the static-site script
-(`/_vercel/insights/script.js`) already included in every page's HTML — no npm
-package or build step (the `@vercel/analytics` React component is only for
-framework apps). To turn it on: Vercel → project → **Analytics → Enable Web
-Analytics**. Data appears after the first deploy with it enabled; it only
-collects when served from Vercel.
-
-**Speed Insights** (Core Web Vitals) is wired the same way — the
-`/_vercel/speed-insights/script.js` snippet is on every page. Turn it on:
-Vercel → project → **Speed Insights → Enable**.
-
-(These track the marketing site. In-app product analytics are separate —
-PostHog, in the mobile app.)
+Analytics: **Settings → Analytics → Enable Web Analytics** and **Speed Insights**
+(the `<Analytics/>` + `<SpeedInsights/>` components are already in the layout).
 
 ## Email
-The site and app use `support@getonside.ca`. Set up free forwarding to your
-inbox — on Vercel-managed DNS use any email-routing provider (e.g. Cloudflare
-Email Routing, or your registrar's forwarding) to forward `support@` to your
-address.
+The site uses `support@getonside.ca`. Set up free forwarding (Cloudflare Email
+Routing, or your registrar) to your inbox.
 
 ## After the app is live
-Replace the placeholder App Store links in `index.html` (search for
-`id000000000`) with the real `https://apps.apple.com/app/onside/id…` URL.
+Replace the placeholder App Store URL in `components/app-store-button.tsx`
+(`id000000000`) with the real `https://apps.apple.com/app/onside/id…`.
+
+## Later: the app on the web
+The phone app (`../fieldstack-app`) can target web via Expo (react-native-web):
+`expo export --platform web`. The natural home is a subdomain like
+`app.getonside.ca`, reusing the RN code — while this Next.js site stays the
+SEO-friendly marketing front door. (react-native-maps needs a web map swap;
+some native modules no-op on web.)
