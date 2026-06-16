@@ -58,18 +58,33 @@ export default async function VenuePage({
   if (!v) notFound();
 
   const all = await getAllVenues();
-  const related = all
-    .filter((x) => x.city === v.city && x.id !== v.id)
-    .slice(0, 6);
+  const related = all.filter((x) => x.city === v.city && x.id !== v.id).slice(0, 6);
 
-  const mapsUrl = v.lat != null && v.lng != null
-    ? `https://www.google.com/maps/search/?api=1&query=${v.lat},${v.lng}`
+  const hasCoords = v.lat != null && v.lng != null;
+  const mapsUrl = hasCoords
+    ? `https://www.google.com/maps/dir/?api=1&destination=${v.lat},${v.lng}`
     : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${v.name}, ${v.address}`)}`;
+  // Free OpenStreetMap embed (no API key) — small bbox around the pin.
+  const d = 0.006;
+  const embedUrl = hasCoords
+    ? `https://www.openstreetmap.org/export/embed.html?bbox=${v.lng! - d}%2C${v.lat! - d}%2C${v.lng! + d}%2C${v.lat! + d}&layer=mapnik&marker=${v.lat}%2C${v.lng}`
+    : null;
 
   const surfaces = [...new Set(v.fields.map((f) => surfaceLabel(f.surface)))];
   const sizes = [...new Set(v.fields.map((f) => sizeLabel(f.size)))];
+  const prices = v.fields.map((f) => f.pricePerHour).filter((p): p is number => p != null);
+  const priceFrom = prices.length ? Math.min(...prices) : null;
+  const venueTypeLabel =
+    v.venueType === "private" ? "Private facility" : v.venueType === "public" ? "Public park" : null;
 
-  // JSON-LD: SportsActivityLocation for rich results.
+  const facts: { label: string; value: string }[] = [
+    { label: v.fields.length === 1 ? "Field" : "Fields", value: String(v.fields.length) },
+    ...(surfaces.length ? [{ label: "Surface", value: surfaces.join(", ") }] : []),
+    ...(sizes.length ? [{ label: "Sizes", value: sizes.join(", ") }] : []),
+    ...(priceFrom != null ? [{ label: "From", value: `$${priceFrom}/hr` }] : []),
+    ...(venueTypeLabel ? [{ label: "Type", value: venueTypeLabel }] : []),
+  ];
+
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "SportsActivityLocation",
@@ -77,20 +92,19 @@ export default async function VenuePage({
     description: summary(v),
     url: `https://getonside.ca/venues/${v.slug}`,
     address: { "@type": "PostalAddress", streetAddress: v.address, addressRegion: "ON", addressCountry: "CA" },
-    ...(v.lat != null && v.lng != null
-      ? { geo: { "@type": "GeoCoordinates", latitude: v.lat, longitude: v.lng } }
-      : {}),
+    ...(hasCoords ? { geo: { "@type": "GeoCoordinates", latitude: v.lat, longitude: v.lng } } : {}),
     ...(v.bookingUrl ? { sameAs: v.bookingUrl } : {}),
     sport: "Soccer",
-    ...(v.amenities.length ? { amenityFeature: v.amenities.map((a) => ({ "@type": "LocationFeatureSpecification", name: a })) } : {}),
+    ...(v.amenities.length
+      ? { amenityFeature: v.amenities.map((a) => ({ "@type": "LocationFeatureSpecification", name: a })) }
+      : {}),
   };
-
   const breadcrumbLd = {
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
     itemListElement: [
       { "@type": "ListItem", position: 1, name: "Soccer fields", item: "https://getonside.ca/venues" },
-      { "@type": "ListItem", position: 2, name: v.city, item: `https://getonside.ca/venues?city=${encodeURIComponent(v.city)}` },
+      { "@type": "ListItem", position: 2, name: v.city, item: `https://getonside.ca/venues` },
       { "@type": "ListItem", position: 3, name: v.name, item: `https://getonside.ca/venues/${v.slug}` },
     ],
   };
@@ -103,34 +117,56 @@ export default async function VenuePage({
 
       <article className="venue">
         <nav className="crumbs">
-          <Link href="/venues">Soccer fields</Link>
+          <Link href="/venues">Find fields</Link>
           <span>›</span>
-          <Link href={`/venues?city=${encodeURIComponent(v.city)}`}>{v.city}</Link>
+          <span>{v.city}</span>
         </nav>
 
         <header className="venue-head">
           <span className="eyebrow">Soccer field · {v.city}, ON</span>
           <h1 className="display">{v.name}</h1>
           <p className="venue-addr">
-            <a href={mapsUrl} target="_blank" rel="noopener noreferrer">{v.address} ↗</a>
+            <a href={mapsUrl} target="_blank" rel="noopener noreferrer">📍 {v.address}</a>
           </p>
-          <div className="venue-tags">
-            {v.venueType && <span className="tag">{v.venueType === "private" ? "Private facility" : v.venueType === "public" ? "Public park" : v.venueType}</span>}
-            {surfaces.map((s) => <span className="tag" key={s}>{s}</span>)}
-            {sizes.map((s) => <span className="tag" key={s}>{s}</span>)}
-          </div>
           {v.bookingUrl && (
             <div className="cta-row">
               <BookButton href={v.bookingUrl} venue={v.name} city={v.city}>
                 Book on operator&apos;s site ↗
               </BookButton>
+              <a className="btn-secondary" href={mapsUrl} target="_blank" rel="noopener noreferrer">
+                Directions ↗
+              </a>
             </div>
           )}
         </header>
 
+        {/* Scannable quick facts */}
+        <div className="quickfacts">
+          {facts.map((f) => (
+            <div className="qf" key={f.label}>
+              <b>{f.value}</b>
+              <span>{f.label}</span>
+            </div>
+          ))}
+        </div>
+
         <section className="venue-body">
           <div className="venue-main">
-            <h2 className="display sub">Fields at {v.name}</h2>
+            {embedUrl && (
+              <div className="venue-map">
+                <iframe
+                  src={embedUrl}
+                  title={`Map showing ${v.name}`}
+                  loading="lazy"
+                  referrerPolicy="no-referrer-when-downgrade"
+                />
+                <a className="map-link" href={mapsUrl} target="_blank" rel="noopener noreferrer">
+                  Open in Google Maps ↗
+                </a>
+              </div>
+            )}
+
+            <h2 className="sub">{v.fields.length === 1 ? "Field" : "Fields"} at this venue</h2>
             <div className="field-list">
               {v.fields.map((f) => (
                 <div className="field-row" key={f.id}>
@@ -152,33 +188,20 @@ export default async function VenuePage({
 
             {v.amenities.length > 0 && (
               <>
-                <h2 className="display sub">Amenities</h2>
+                <h2 className="sub">Amenities</h2>
                 <ul className="amenities">
                   {v.amenities.map((a) => <li key={a}>{a}</li>)}
                 </ul>
               </>
             )}
-
-            <div className="venue-prose">
-              <h2 className="display sub">About this field</h2>
-              <p>
-                {v.name} is a soccer {v.venueType === "private" ? "facility" : "field"} in {v.city}, Ontario, with{" "}
-                {v.fields.length} {v.fields.length === 1 ? "playable field" : "playable fields"}
-                {surfaces.length ? ` (${surfaces.join(", ").toLowerCase()})` : ""}. Browse it on the Onside app to
-                see it on the map, check distance and hours, read reviews from local players, and book direct with
-                the operator. Onside is a free directory of every soccer field across the Greater Toronto Area.
-              </p>
-            </div>
           </div>
 
           <aside className="venue-aside">
             <div className="aside-card">
-              <h3 className="display">Get directions</h3>
-              <a className="btn-secondary" href={mapsUrl} target="_blank" rel="noopener noreferrer">Open in Google Maps ↗</a>
-            </div>
-            <div className="aside-card">
-              <h3 className="display">Play here</h3>
-              <p>Find {v.name} and every other GTA pitch in the Onside app.</p>
+              <h3>Play here</h3>
+              <p>
+                See {v.name} on the live map, check hours and reviews, and save it — in the free Onside app.
+              </p>
               <AppStoreButton />
             </div>
           </aside>
@@ -186,16 +209,16 @@ export default async function VenuePage({
 
         {related.length > 0 && (
           <section className="related">
-            <h2 className="display sub">More soccer fields in {v.city}</h2>
+            <h2 className="sub">More soccer fields in {v.city}</h2>
             <div className="related-grid">
               {related.map((r) => (
                 <Link className="related-card" href={`/venues/${r.slug}`} key={r.id}>
                   <strong>{r.name}</strong>
-                  <span>{[...new Set(r.fields.map((f) => surfaceLabel(f.surface)))].join(" · ")}</span>
+                  <span>{[...new Set(r.fields.map((f) => surfaceLabel(f.surface)))].join(" · ") || "Soccer field"}</span>
                 </Link>
               ))}
             </div>
-            <p className="related-all"><Link href="/venues">Browse all GTA soccer fields →</Link></p>
+            <p className="related-all"><Link href="/venues">← Back to all GTA soccer fields</Link></p>
           </section>
         )}
       </article>

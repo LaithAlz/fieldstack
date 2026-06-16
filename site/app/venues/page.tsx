@@ -1,22 +1,36 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 
 import { Nav } from "@/components/nav";
 import { Footer } from "@/components/footer";
 import { AppStoreButton } from "@/components/app-store-button";
 import { PitchLines } from "@/components/pitch-lines";
-import { getAllVenues, getVenuesByCity, surfaceLabel } from "@/lib/venues";
+import { VenueFinder, type FinderVenue } from "@/components/venue-finder";
+import { getAllVenues, getVenuesByCity, surfaceLabel, sizeLabel } from "@/lib/venues";
 
 export const metadata: Metadata = {
-  title: "Soccer Fields in the GTA — Indoor, Turf & Futsal | Onside",
+  title: "Find Soccer Fields in the GTA — Indoor, Turf & Futsal | Onside",
   description:
-    "Browse every soccer field in the Greater Toronto Area: indoor domes, turf, futsal, and outdoor pitches across Toronto, Mississauga, Brampton, Vaughan, Markham, Hamilton, and more. Free on Onside.",
+    "Search and filter every soccer field in the Greater Toronto Area: indoor domes, turf, futsal, and outdoor pitches across Toronto, Mississauga, Brampton, Vaughan, Markham, Hamilton, and more. Free on Onside.",
   alternates: { canonical: "https://getonside.ca/venues" },
 };
 
 export default async function VenuesIndex() {
   const all = await getAllVenues();
   const byCity = await getVenuesByCity();
+
+  const finderVenues: FinderVenue[] = all.map((v) => {
+    const prices = v.fields.map((f) => f.pricePerHour).filter((p): p is number => p != null);
+    return {
+      slug: v.slug,
+      name: v.name,
+      city: v.city,
+      surfaces: [...new Set(v.fields.map((f) => surfaceLabel(f.surface)))],
+      sizes: [...new Set(v.fields.map((f) => sizeLabel(f.size)))],
+      fieldCount: v.fields.length,
+      priceFrom: prices.length ? Math.min(...prices) : null,
+    };
+  });
+  const cityNames = byCity.map(([c]) => c);
 
   const itemListLd = {
     "@context": "https://schema.org",
@@ -40,53 +54,30 @@ export default async function VenuesIndex() {
         <div className="wrap">
           <div>
             <span className="eyebrow rise">Soccer fields · Greater Toronto Area</span>
-            <h1 className="display rise d1">Every soccer field<br />in the GTA</h1>
+            <h1 className="display rise d1">Find your<br />next pitch</h1>
             <p className="lede rise d2">
               {all.length > 0
-                ? `${all.length} indoor domes, turf pitches, futsal courts, and outdoor fields across the Greater Toronto Area — browse by city, then book direct with the operator.`
+                ? `Search and filter ${all.length} indoor domes, turf pitches, futsal courts, and outdoor fields across the GTA — then book direct with the operator.`
                 : "Indoor domes, turf pitches, futsal courts, and outdoor fields across the Greater Toronto Area."}
             </p>
-            <div className="cta-row rise d3">
-              <AppStoreButton />
-              <span className="cta-note">Free · iPhone · No account needed to browse</span>
-            </div>
           </div>
         </div>
         <PitchLines className="pitch" />
       </header>
 
-      {byCity.length === 0 ? (
+      {all.length === 0 ? (
         <section>
           <div className="wrap">
-            <p style={{ color: "var(--ink-2)" }}>Field listings are coming soon.</p>
+            <p style={{ color: "var(--text-2)" }}>Field listings are coming soon.</p>
           </div>
         </section>
       ) : (
-        <section className="venues-index">
-          <div className="wrap">
-            {byCity.map(([city, venues]) => (
-              <div className="city-block" key={city} id={slugAnchor(city)}>
-                <h2 className="display sub">
-                  Soccer fields in {city} <span className="count">{venues.length}</span>
-                </h2>
-                <div className="venue-grid">
-                  {venues.map((v) => (
-                    <Link className="venue-card" href={`/venues/${v.slug}`} key={v.id}>
-                      <strong>{v.name}</strong>
-                      <span className="vc-meta">
-                        {[...new Set(v.fields.map((f) => surfaceLabel(f.surface)))].join(" · ") || "Soccer field"}
-                      </span>
-                    </Link>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
+        <VenueFinder venues={finderVenues} cities={cityNames} />
       )}
 
       <section>
         <div className="band">
+          <PitchLines className="pitch" />
           <h2 className="display">Get on the pitch</h2>
           <p>Download Onside and find a field near you in seconds.</p>
           <AppStoreButton />
@@ -96,8 +87,4 @@ export default async function VenuesIndex() {
       <Footer />
     </>
   );
-}
-
-function slugAnchor(city: string): string {
-  return city.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 }
