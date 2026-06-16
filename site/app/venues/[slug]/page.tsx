@@ -25,7 +25,7 @@ export async function generateStaticParams() {
 function summary(v: Venue): string {
   const surfaces = [...new Set(v.fields.map((f) => surfaceLabel(f.surface)))];
   const surfacePhrase = surfaces.length ? surfaces.join(" & ").toLowerCase() + " " : "";
-  return `${v.name} in ${v.city}, ON — ${surfacePhrase}soccer field details, sizes, pricing, and booking. Find and book this pitch on Onside.`;
+  return `${v.name} is a ${surfacePhrase}soccer field in ${v.city}, ON. See sizes, pricing, hours, and how to book on Onside.`;
 }
 
 export async function generateMetadata({
@@ -35,9 +35,9 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { slug } = await params;
   const v = await getVenueBySlug(slug);
-  if (!v) return { title: "Venue not found — Onside" };
+  if (!v) return { title: "Venue not found | Onside" };
 
-  const title = `${v.name} — Soccer Field in ${v.city} | Onside`;
+  const title = `${v.name}: Soccer Field in ${v.city} | Onside`;
   const description = summary(v);
   const url = `https://getonside.ca/venues/${v.slug}`;
   return {
@@ -200,7 +200,7 @@ export default async function VenuePage({
             <div className="aside-card">
               <h3>Play here</h3>
               <p>
-                See {v.name} on the live map, check hours and reviews, and save it — in the free Onside app.
+                See {v.name} on the live map, check hours and reviews, and save it in the free Onside app.
               </p>
               <AppStoreButton />
             </div>

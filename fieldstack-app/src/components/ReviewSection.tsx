@@ -94,7 +94,7 @@ export function ReviewSection({
               toast.show("Couldn't submit report. Try again.", { type: "error" });
               return;
             }
-            toast.show("Thanks — we'll review it.", { type: "success" });
+            toast.show("Thanks, we'll review it.", { type: "success" });
           },
         },
       ]
@@ -145,7 +145,7 @@ export function ReviewSection({
       <View style={styles.summary}>
         <StarRating value={avgRating} />
         <Text size="md" weight="bold">
-          {reviewCount > 0 ? avgRating.toFixed(1) : "—"}
+          {reviewCount > 0 ? avgRating.toFixed(1) : "–"}
         </Text>
         <Text size="sm" variant="secondary">
           ({reviewCount} {reviewCount === 1 ? "review" : "reviews"})
@@ -306,7 +306,7 @@ function ReviewForm({
       <TextInput
         value={body}
         onChangeText={(t) => setBody(t.slice(0, MAX_BODY))}
-        placeholder="Optional — what was the field like?"
+        placeholder="What was the field like? (optional)"
         placeholderTextColor={colors.textTertiary}
         multiline
         accessibilityLabel="Review text"

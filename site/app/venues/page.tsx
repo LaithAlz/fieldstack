@@ -8,7 +8,7 @@ import { VenueFinder, type FinderVenue } from "@/components/venue-finder";
 import { getAllVenues, getVenuesByCity, surfaceLabel, sizeLabel } from "@/lib/venues";
 
 export const metadata: Metadata = {
-  title: "Find Soccer Fields in the GTA — Indoor, Turf & Futsal | Onside",
+  title: "Find Soccer Fields in the GTA: Indoor, Turf & Futsal | Onside",
   description:
     "Search and filter every soccer field in the Greater Toronto Area: indoor domes, turf, futsal, and outdoor pitches across Toronto, Mississauga, Brampton, Vaughan, Markham, Hamilton, and more. Free on Onside.",
   alternates: { canonical: "https://getonside.ca/venues" },
@@ -57,7 +57,7 @@ export default async function VenuesIndex() {
             <h1 className="display rise d1">Find your<br />next pitch</h1>
             <p className="lede rise d2">
               {all.length > 0
-                ? `Search and filter ${all.length} indoor domes, turf pitches, futsal courts, and outdoor fields across the GTA — then book direct with the operator.`
+                ? `Search and filter ${all.length} indoor domes, turf pitches, futsal courts, and outdoor fields across the GTA, then book direct with the operator.`
                 : "Indoor domes, turf pitches, futsal courts, and outdoor fields across the Greater Toronto Area."}
             </p>
           </div>

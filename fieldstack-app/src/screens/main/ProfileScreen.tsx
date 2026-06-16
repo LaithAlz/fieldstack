@@ -290,7 +290,7 @@ export function ProfileScreen() {
                 Your pitch history starts here
               </Text>
               <Text size="sm" variant="secondary">
-                Browse venues, save your favourites, and book a field — it all
+                Browse venues, save your favourites, and book a field. It all
                 shows up on this screen.
               </Text>
             </View>
@@ -420,7 +420,7 @@ export function ProfileScreen() {
         recentIds.length === 0 ? (
           <View style={styles.emptyAll}>
             <Text size="sm" variant="secondary" style={{ textAlign: "center" }}>
-              Start exploring fields — anything you save or open will show up here.
+              Start exploring fields. Anything you save or open will show up here.
             </Text>
           </View>
         ) : null}

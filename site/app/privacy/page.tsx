@@ -3,7 +3,7 @@ import Link from "next/link";
 import { Footer } from "@/components/footer";
 
 export const metadata: Metadata = {
-  title: "Privacy Policy — Onside",
+  title: "Privacy Policy | Onside",
 };
 
 export default function Privacy() {
@@ -22,17 +22,17 @@ export default function Privacy() {
 
         <h2>What we collect</h2>
         <ul>
-          <li><strong>Account info</strong> — if you create an account, your email address (or the identifier from Sign in with Apple / Google) and a display name. We never see your password; authentication is handled by our provider.</li>
-          <li><strong>Your activity in the app</strong> — venues you save, your preferred play time, booking attempts, recently viewed venues, and any reviews you post. Saved data lives on your device and, when signed in, syncs to your account.</li>
-          <li><strong>Location</strong> — if you grant permission, your approximate/precise location is used on-device to rank fields by distance. You can decline and choose an area manually.</li>
-          <li><strong>Diagnostics &amp; usage</strong> — crash reports and anonymous product-usage events such as screens viewed, to fix bugs and improve the app.</li>
+          <li><strong>Account info.</strong> If you create an account, your email address (or the identifier from Sign in with Apple / Google) and a display name. We never see your password; authentication is handled by our provider.</li>
+          <li><strong>Your activity in the app.</strong> Venues you save, your preferred play time, booking attempts, recently viewed venues, and any reviews you post. Saved data lives on your device and, when signed in, syncs to your account.</li>
+          <li><strong>Location.</strong> If you grant permission, your approximate or precise location is used on-device to rank fields by distance. You can decline and choose an area manually.</li>
+          <li><strong>Diagnostics &amp; usage.</strong> Crash reports and anonymous product-usage events such as screens viewed, to fix bugs and improve the app.</li>
         </ul>
 
         <h2>What we don&apos;t do</h2>
         <ul>
           <li>We don&apos;t sell your personal information.</li>
           <li>We don&apos;t track you across other companies&apos; apps or websites.</li>
-          <li>We don&apos;t process payments — bookings happen on each field operator&apos;s own website under their policies.</li>
+          <li>We don&apos;t process payments. Bookings happen on each field operator&apos;s own website, under their policies.</li>
         </ul>
 
         <h2>How we use it</h2>

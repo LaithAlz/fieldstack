@@ -111,7 +111,7 @@ export function getAllVenues(): Promise<Venue[]> {
 async function loadVenues(): Promise<Venue[]> {
   if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
     console.warn(
-      "[venues] SUPABASE_URL / SUPABASE_ANON_KEY not set — skipping venue pages"
+      "[venues] SUPABASE_URL / SUPABASE_ANON_KEY not set, skipping venue pages"
     );
     return [];
   }

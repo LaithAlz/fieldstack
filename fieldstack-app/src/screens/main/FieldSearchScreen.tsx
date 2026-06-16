@@ -244,7 +244,7 @@ export function FieldSearchScreen() {
           accessibilityLiveRegion="polite"
         >
           <Text size="sm" variant="secondary" style={styles.gpsBannerText}>
-            Couldn&apos;t read your location — showing results near downtown Toronto.
+            Couldn&apos;t read your location. Showing results near downtown Toronto.
           </Text>
         </View>
       ) : null}
