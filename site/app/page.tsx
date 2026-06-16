@@ -1,6 +1,8 @@
 import { Nav } from "@/components/nav";
 import { Footer } from "@/components/footer";
 import { AppStoreButton } from "@/components/app-store-button";
+import { PitchLines } from "@/components/pitch-lines";
+import { getAllVenues, getVenuesByCity } from "@/lib/venues";
 
 const FEATURES = [
   { ic: "⚽", h: "Every field, one map", p: "Indoor domes, outdoor turf, grass parks, and futsal courts across the GTA — as a list or a live map." },
@@ -18,7 +20,11 @@ const SHOTS = [
   ["/screens/04-profile.png", "Your profile"],
 ];
 
-export default function Home() {
+export default async function Home() {
+  const venues = await getAllVenues();
+  const cities = await getVenuesByCity();
+  const count = venues.length;
+
   return (
     <>
       <Nav />
@@ -26,32 +32,50 @@ export default function Home() {
       <header className="hero">
         <div className="wrap">
           <div>
-            <span className="eyebrow">Soccer fields · Greater Toronto Area</span>
-            <h1 className="display">
-              Find your
-              <br />
-              next pitch.
+            <span className="eyebrow rise">Soccer fields · Greater Toronto Area</span>
+            <h1 className="display rise d1">
+              Find your<br />
+              <span className="swipe">next pitch.</span>
             </h1>
-            <p className="lede">
+            <p className="lede rise d2">
               Every soccer field in the GTA, in one app. Browse turf, indoor, and outdoor
               pitches, filter by size and price, and book direct with the operator.
             </p>
-            <div className="cta-row" id="get">
+            <p className="stat-line rise d2">
+              {count > 0 && <b>{count}</b>}
+              <span>{count > 0 ? "venues mapped" : "Every venue in the city"}</span>
+              <i className="dot" />
+              <span>one map</span>
+              <i className="dot" />
+              <span>free</span>
+            </p>
+            <div className="cta-row rise d3" id="get">
               <AppStoreButton />
               <span className="cta-note">Free · iPhone · No account needed to browse</span>
             </div>
           </div>
-          <div className="hero-art">
+          <div className="hero-art rise d2">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/screens/01-explore.png" alt="Onside app showing soccer venues across the GTA" />
           </div>
         </div>
+        <PitchLines className="pitch" />
       </header>
+
+      {count > 0 && (
+        <section className="stats">
+          <div className="wrap">
+            <div className="stat"><b>{count}</b><span>venues across the GTA</span></div>
+            <div className="stat"><b>{cities.length}</b><span>cities &amp; areas covered</span></div>
+            <div className="stat"><b>$0</b><span>free to browse &amp; book direct</span></div>
+          </div>
+        </section>
+      )}
 
       <section id="features">
         <div className="wrap">
           <div className="section-head">
-            <h2 className="display">Stop texting around for a field</h2>
+            <h2 className="display">Stop texting around <span className="accent">for a field</span></h2>
             <p>One place for every pitch in the city, with the details that actually decide where you play.</p>
           </div>
           <div className="features">
@@ -82,6 +106,7 @@ export default function Home() {
 
       <section>
         <div className="band">
+          <PitchLines className="pitch" />
           <h2 className="display">Get on the pitch</h2>
           <p>Download Onside and find a field near you in seconds.</p>
           <AppStoreButton />
