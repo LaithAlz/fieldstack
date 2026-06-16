@@ -9,15 +9,14 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true,
+      "supportsTablet": false,
       "bundleIdentifier": "app.onside.mobile",
       "config": {
         "usesNonExemptEncryption": false
       },
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "Onside uses your location to rank nearby soccer fields and show distance.",
-        "NSCalendarsUsageDescription": "Onside adds your booked slots to your calendar.",
-        "NSUserTrackingUsageDescription": "Onside does not track you across apps or websites."
+        "NSCalendarsUsageDescription": "Onside adds your booked slots to your calendar."
       },
       "privacyManifests": {
         "NSPrivacyAccessedAPITypes": [
