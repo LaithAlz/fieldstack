@@ -613,6 +613,12 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
     borderRadius: borderRadius.md,
     borderWidth: StyleSheet.hairlineWidth,
+    // Gentle lift so the field options read as cards on the warm paper.
+    shadowColor: "#1A1D2B",
+    shadowOpacity: 0.06,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 5 },
+    elevation: 2,
   },
   fieldRowMain: {
     flex: 1,
