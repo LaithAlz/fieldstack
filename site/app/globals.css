@@ -213,17 +213,78 @@ footer a:hover { color: var(--brand); }
 .foot-legal { font-size: 13px; width: 100%; color: var(--text-3); padding-top: 10px; line-height: 1.6; }
 
 /* ---------- legal / support docs ---------- */
-.doc { max-width: 760px; margin: 0 auto; padding: 64px 24px 88px; }
+.doc { max-width: 760px; margin: 0 auto; padding: 44px 24px 88px; }
 .doc .back { font-size: 14px; color: var(--text-2); }
 .doc .back:hover { color: var(--brand); }
 .doc h1 { font-size: clamp(36px, 5vw, 56px); margin: 18px 0 6px; }
 .doc .updated { color: var(--text-3); font-size: 14px; margin-bottom: 36px; }
-.doc h2 { font-size: 23px; margin: 36px 0 10px; }
+.doc h2 { font-family: var(--font-barlow); font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.5px; font-size: clamp(22px, 3vw, 28px); margin: 44px 0 16px; }
 .doc h3 { font-size: 18px; margin: 26px 0 8px; }
 .doc p, .doc li { color: var(--text-2); margin-bottom: 12px; }
-.doc ul { padding-left: 22px; }
+.doc ul:not([class]) { padding-left: 22px; }
 .doc a { font-weight: 600; }
-.contact-card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 24px; margin: 24px 0; box-shadow: var(--shadow-card); }
+
+/* page header */
+.doc-head { margin-bottom: 6px; }
+.doc-head h1 { font-size: clamp(38px, 6vw, 64px); margin: 14px 0 12px; }
+.doc-head .lede { color: var(--text-2); font-size: 18px; max-width: 58ch; }
+.doc-meta { display: inline-flex; align-items: center; gap: 8px; margin-top: 18px;
+  font-size: 12.5px; letter-spacing: 0.4px; color: var(--text-3);
+  background: var(--panel-2); border: 1px solid var(--line); border-radius: 999px; padding: 5px 13px; }
+
+/* short-version / reassurance callout */
+.callout { background: var(--panel); border: 1px solid var(--line); border-left: 3px solid var(--brand);
+  border-radius: var(--radius); padding: 20px 24px; box-shadow: var(--shadow-card); }
+.callout .k { display: block; font-size: 12px; text-transform: uppercase; letter-spacing: 1px;
+  font-weight: 700; color: var(--brand); margin-bottom: 7px; }
+.callout p { color: var(--text-2); margin: 0; font-size: 15.5px; }
+
+/* info cards (data categories) */
+.info-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
+.info-card { background: var(--panel); border: 1px solid var(--line); border-radius: 14px;
+  padding: 20px; box-shadow: var(--shadow-card); }
+.info-card .ic { width: 40px; height: 40px; border-radius: 11px; display: grid; place-items: center;
+  background: var(--brand-wash); border: 1px solid rgba(194, 65, 12, 0.18); font-size: 19px; margin-bottom: 12px; }
+.info-card b { display: block; font-size: 15.5px; margin-bottom: 5px; color: var(--text); }
+.info-card p { color: var(--text-2); font-size: 14px; margin: 0; line-height: 1.55; }
+
+/* reassurance list with check marks */
+.guard-list { list-style: none; padding: 0; display: flex; flex-direction: column; gap: 11px; }
+.guard-list li { display: flex; gap: 11px; align-items: flex-start; color: var(--text-2); font-size: 15.5px; margin: 0; }
+.guard-list li::before { content: "\2713"; color: var(--brand); font-weight: 800; flex-shrink: 0; }
+.guard-list strong { color: var(--text); }
+
+/* FAQ accordion (native details/summary) */
+.faq { display: flex; flex-direction: column; gap: 10px; }
+.faq details { background: var(--panel); border: 1px solid var(--line); border-radius: 13px;
+  padding: 0 20px; box-shadow: var(--shadow-card); transition: border-color .15s; }
+.faq details[open] { border-color: var(--line-2); }
+.faq summary { cursor: pointer; list-style: none; padding: 18px 0; font-weight: 600; font-size: 16px;
+  color: var(--text); display: flex; justify-content: space-between; align-items: center; gap: 16px; }
+.faq summary::-webkit-details-marker { display: none; }
+.faq summary::after { content: "+"; color: var(--brand); font-size: 24px; font-weight: 400; line-height: 1;
+  transition: transform .2s; flex-shrink: 0; }
+.faq details[open] summary::after { transform: rotate(45deg); }
+.faq .faq-body { padding: 0 0 18px; color: var(--text-2); font-size: 15px; line-height: 1.6; margin: 0; }
+.faq .faq-body strong { color: var(--text); }
+
+/* contact tiles */
+.contact { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
+.contact-tile { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 22px; box-shadow: var(--shadow-card); display: flex; flex-direction: column; }
+.contact-tile .ic { width: 42px; height: 42px; border-radius: 12px; display: grid; place-items: center;
+  background: var(--brand-wash); border: 1px solid rgba(194, 65, 12, 0.18); font-size: 20px; margin-bottom: 12px; }
+.contact-tile b { font-size: 16px; margin-bottom: 4px; }
+.contact-tile p { color: var(--text-2); font-size: 14px; margin: 0; }
+.contact-tile .act { margin-top: 16px; }
+.contact-tile .act a {
+  display: inline-flex; align-items: center; gap: 6px; background: var(--brand); color: var(--on-brand);
+  font-weight: 600; font-size: 14px; padding: 9px 16px; border-radius: 10px; }
+.contact-tile .act a:hover { background: var(--brand-deep); color: var(--on-brand); }
+
+.doc-foot { display: flex; gap: 20px; flex-wrap: wrap; margin-top: 48px; padding-top: 24px;
+  border-top: 1px solid var(--line); font-weight: 600; }
 
 /* ---------- venues index ---------- */
 .venues-hero { padding-top: 64px; padding-bottom: 56px; position: relative; overflow: hidden; }
@@ -409,6 +470,7 @@ footer a:hover { color: var(--brand); }
   .nav-links { gap: 16px; }
   .nav-links a:not(.nav-cta) { display: none; }
   .venue-grid, .related-grid { grid-template-columns: 1fr; }
+  .info-grid, .contact { grid-template-columns: 1fr; }
   .venue-body { grid-template-columns: 1fr; gap: 30px; }
   .finder-bar { flex-direction: column; }
   .finder-city { min-width: 0; width: 100%; padding: 13px 16px; }
