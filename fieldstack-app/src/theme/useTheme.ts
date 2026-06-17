@@ -1,17 +1,15 @@
-import { useColorScheme } from "react-native";
-
 import { colors, type ThemeColors } from "./tokens";
 
 /**
- * Returns the active color set based on the system color scheme.
+ * Onside ships a single light "Matchday Programme" look: warm paper, ink-navy
+ * masthead, tangerine brand. We deliberately ignore the phone's dark setting so
+ * the app reads the same for everyone (a dark-mode phone used to flip the whole
+ * UI to the night palette). The dark palette stays defined in tokens for a
+ * possible future opt-in toggle.
  *
- * Other tokens (spacing, fontSize, etc.) don't change between light and dark,
- * so import them directly from `./tokens` rather than going through this hook.
- *
- * `useColorScheme()` returns `null` briefly on first render in some setups —
- * fall back to light so we never render unstyled.
+ * Other tokens (spacing, fontSize, etc.) don't change, so import them directly
+ * from `./tokens` rather than through this hook.
  */
 export function useTheme(): ThemeColors {
-  const scheme = useColorScheme();
-  return scheme === "dark" ? colors.dark : colors.light;
+  return colors.light;
 }

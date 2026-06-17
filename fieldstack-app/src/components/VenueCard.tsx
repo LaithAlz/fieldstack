@@ -188,7 +188,7 @@ export const VenueCard = memo(function VenueCard({
       </View>
 
       <View style={styles.body}>
-        <Text size="lg" weight="bold" numberOfLines={1} style={styles.title}>
+        <Text size="xl" weight="bold" font="display" numberOfLines={1} style={styles.title}>
           {venue.name}
         </Text>
         <Text size="sm" variant="secondary" numberOfLines={1} style={styles.subline}>
@@ -227,6 +227,12 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.xl,
     borderWidth: StyleSheet.hairlineWidth,
     overflow: "hidden",
+    // Soft lift off the warm paper page, matching the site's elevated cards.
+    shadowColor: "#1A1D2B",
+    shadowOpacity: 0.08,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 3,
   },
   photoBlock: {
     height: PHOTO_HEIGHT,
@@ -292,7 +298,7 @@ const styles = StyleSheet.create({
     padding: spacing.md,
   },
   title: {
-    letterSpacing: -0.2,
+    letterSpacing: 0.2,
   },
   subline: {
     marginTop: 2,

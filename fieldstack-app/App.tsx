@@ -8,12 +8,11 @@ import {
   Figtree_500Medium,
   Figtree_600SemiBold,
 } from "@expo-google-fonts/figtree";
-import { createNavigationContainerRef, NavigationContainer, DefaultTheme, DarkTheme, type LinkingOptions } from "@react-navigation/native";
+import { createNavigationContainerRef, NavigationContainer, DefaultTheme, type LinkingOptions } from "@react-navigation/native";
 import { useFonts } from "expo-font";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
 import { useEffect, useState } from "react";
-import { useColorScheme } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
@@ -103,7 +102,6 @@ export default function App() {
   const [isReady, setIsReady] = useState(false);
   const [initialIsOnboarded, setInitialIsOnboarded] = useState(false);
   const [fontTimeoutHit, setFontTimeoutHit] = useState(false);
-  const scheme = useColorScheme();
 
   // Figtree (body) + Barlow Condensed (display) — fall back to system font
   // during the brief load. If the font fetch fails (cold install + no
@@ -155,30 +153,19 @@ export default function App() {
   }
 
   // Map our brand tokens into React Navigation's theme so default headers,
-  // backgrounds, and back-button tints come from the same palette.
-  const navTheme = scheme === "dark"
-    ? {
-        ...DarkTheme,
-        colors: {
-          ...DarkTheme.colors,
-          primary: colors.dark.brand,
-          background: colors.dark.surface,
-          card: colors.dark.surface,
-          text: colors.dark.textPrimary,
-          border: colors.dark.border,
-        },
-      }
-    : {
-        ...DefaultTheme,
-        colors: {
-          ...DefaultTheme.colors,
-          primary: colors.light.brand,
-          background: colors.light.surface,
-          card: colors.light.surface,
-          text: colors.light.textPrimary,
-          border: colors.light.border,
-        },
-      };
+  // backgrounds, and back-button tints come from the same palette. The app is
+  // light-only (see useTheme), so this is always the light theme.
+  const navTheme = {
+    ...DefaultTheme,
+    colors: {
+      ...DefaultTheme.colors,
+      primary: colors.light.brand,
+      background: colors.light.surface,
+      card: colors.light.surface,
+      text: colors.light.textPrimary,
+      border: colors.light.border,
+    },
+  };
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
@@ -226,7 +213,7 @@ export default function App() {
                                     rather than the Me tab. */}
                                 <RecoveryRedirectHandler />
                               </NavigationContainer>
-                              <StatusBar style="auto" />
+                              <StatusBar style="dark" />
                             </PersistenceGate>
                           </BlockedUsersProvider>
                         </RecentlyViewedProvider>
