@@ -45,6 +45,7 @@ import {
   useRecentlyViewed,
 } from "./src/lib/recentlyViewed";
 import { SavedVenuesProvider, useSavedVenues } from "./src/lib/savedVenues";
+import { computeAppReady } from "./src/lib/appReady";
 import { getOnboardingComplete } from "./src/lib/storage";
 import { RootNavigator } from "./src/navigation/RootNavigator";
 import { colors } from "./src/theme/tokens";
@@ -68,6 +69,14 @@ if (posthogProvider) setAnalyticsProvider(posthogProvider);
 const navRef = createNavigationContainerRef();
 
 const SPLASH_CAP_MS = 2000;
+
+// Hard safety net for App Store Guideline 2.1: never let the native splash
+// linger. If the readiness gates below somehow never resolve on a given
+// device/OS, force the splash down shortly after the cap so the user always
+// reaches an interactive screen. Hiding an already-hidden splash is a no-op.
+setTimeout(() => {
+  SplashScreen.hideAsync().catch(() => undefined);
+}, SPLASH_CAP_MS + 1500);
 
 // Deep-link / universal-link routing table. The scheme comes from app.json
 // (`"scheme": "onside"`). Each path maps onto the registered screen names
@@ -116,6 +125,14 @@ export default function App() {
   });
   const fontsGateOpen = fontsLoaded || fontError !== null;
 
+  // Single readiness flag that drives BOTH hiding the native splash and
+  // rendering the tree, so the two can never diverge. If the splash were hidden
+  // on a different condition than the one that renders the UI, the splash could
+  // stay up over a mounted app (the stuck-splash bug). Ready means onboarding
+  // state has resolved and the font wait has settled (loaded, errored, or
+  // timed out).
+  const appReady = computeAppReady(isReady, fontsGateOpen, fontTimeoutHit);
+
   useEffect(() => {
     track(EVENT_APP_OPENED);
     initSessionTracking();
@@ -132,13 +149,14 @@ export default function App() {
     };
   }, []);
 
-  // Keep the native splash up until both gates are open. SplashScreen.hideAsync
-  // can reject if already hidden — swallow.
+  // Hide the native splash exactly when we begin rendering the tree (appReady),
+  // so the hide condition and the render condition can never disagree.
+  // hideAsync can reject if already hidden, so swallow.
   useEffect(() => {
-    if (isReady && fontsGateOpen) {
+    if (appReady) {
       SplashScreen.hideAsync().catch(() => undefined);
     }
-  }, [isReady, fontsGateOpen]);
+  }, [appReady]);
 
   // Hard timeout on the font wait — if neither loaded nor errored within the
   // splash cap, fall back to system font rather than orphaning the splash.
@@ -148,7 +166,7 @@ export default function App() {
     return () => clearTimeout(id);
   }, [fontsGateOpen]);
 
-  if (!isReady || (!fontsGateOpen && !fontTimeoutHit)) {
+  if (!appReady) {
     return null;
   }
 
