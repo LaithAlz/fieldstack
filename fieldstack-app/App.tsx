@@ -57,12 +57,22 @@ SplashScreen.preventAutoHideAsync().catch(() => {
   /* no-op: already hidden, fine */
 });
 
-// Crash reporting + analytics — env-gated so dev/preview builds without
-// these secrets still work. Sentry init runs once at module load (must run
-// before any UI for capture to work). PostHog provider swap-in below.
-initSentry();
-const posthogProvider = createPosthogProvider();
-if (posthogProvider) setAnalyticsProvider(posthogProvider);
+// Crash reporting + analytics, env-gated so dev/preview builds without these
+// secrets still work. Sentry init runs once at module load (must run before any
+// UI for capture to work). Wrapped because this runs at import time: a throwing
+// SDK init would crash the whole app before React ever mounts (App Store 2.1).
+// Analytics is best-effort, so a failure here must not stop the app from
+// starting.
+try {
+  initSentry();
+  const posthogProvider = createPosthogProvider();
+  if (posthogProvider) setAnalyticsProvider(posthogProvider);
+} catch (err) {
+  if (__DEV__) {
+    // eslint-disable-next-line no-console
+    console.warn("[startup] analytics init failed", err);
+  }
+}
 
 // Navigation ref used outside the component tree (e.g. RecoveryRedirectHandler)
 // to imperatively navigate as soon as the container is ready.
@@ -134,9 +144,20 @@ export default function App() {
   const appReady = computeAppReady(isReady, fontsGateOpen, fontTimeoutHit);
 
   useEffect(() => {
-    track(EVENT_APP_OPENED);
-    initSessionTracking();
-    initNotifications();
+    // Best-effort startup side effects, guarded so a throw can't block the
+    // readiness path below (which would strand the app the way the splash bug
+    // did). Analytics and notification setup are non-fatal.
+    try {
+      track(EVENT_APP_OPENED);
+      initSessionTracking();
+      initNotifications();
+    } catch (err) {
+      if (__DEV__) {
+        // eslint-disable-next-line no-console
+        console.warn("[startup] non-fatal init failed", err);
+      }
+    }
+
     let cancelled = false;
     (async () => {
       const onboarded = await withTimeout(getOnboardingComplete(), SPLASH_CAP_MS, false);
