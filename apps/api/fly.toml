@@ -19,7 +19,11 @@ primary_region = 'yyz'
   force_https = true
   auto_stop_machines = 'stop'
   auto_start_machines = true
-  min_machines_running = 0
+  # Keep one machine always running so the first request after idle never pays a
+  # cold start (the app's API client times out at 10s; a cold start during App
+  # Store review would show an empty venue list). Revert to 0 to save cost once
+  # traffic is steady.
+  min_machines_running = 1
 
   [[http_service.checks]]
     interval = '30s'
