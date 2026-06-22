@@ -16,6 +16,8 @@
       "channel": "preview",
       "env": {
         "EXPO_PUBLIC_API_URL": "https://api-staging.getonside.ca",
+        "EXPO_PUBLIC_SUPABASE_URL": "https://hjvaoshvvjfygfeuzrfh.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhqdmFvc2h2dmpmeWdmZXV6cmZoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcwNzYzMDMsImV4cCI6MjA5MjY1MjMwM30.Jz1yA9X0Q2GiA9c7PNsQkGrxKPUPio8SXTWXCG7tqpU",
         "EXPO_PUBLIC_POSTHOG_KEY": "REPLACE_WITH_POSTHOG_PROJECT_KEY",
         "SENTRY_DISABLE_AUTO_UPLOAD": "true"
       }
@@ -25,6 +27,8 @@
       "channel": "production",
       "env": {
         "EXPO_PUBLIC_API_URL": "https://api.getonside.ca",
+        "EXPO_PUBLIC_SUPABASE_URL": "https://hjvaoshvvjfygfeuzrfh.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhqdmFvc2h2dmpmeWdmZXV6cmZoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcwNzYzMDMsImV4cCI6MjA5MjY1MjMwM30.Jz1yA9X0Q2GiA9c7PNsQkGrxKPUPio8SXTWXCG7tqpU",
         "EXPO_PUBLIC_POSTHOG_KEY": "phc_zmQ5ovzb8DXrUvBnj66R79MhbEcGq9kxrDFW7WGR7Mwc",
         "SENTRY_DISABLE_AUTO_UPLOAD": "true"
       }

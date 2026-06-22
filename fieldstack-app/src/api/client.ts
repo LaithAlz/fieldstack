@@ -10,12 +10,14 @@
  * parsed body untouched so the caller can pull whatever extra fields it needs.
  */
 
-const BASE_URL = process.env.EXPO_PUBLIC_API_URL;
+// Fall back to the production API rather than throwing at import. A missing env
+// here would otherwise crash the whole app at launch (stuck on the splash). In
+// a correctly configured build EXPO_PUBLIC_API_URL is always set (eas.json).
+const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? "https://api.getonside.ca";
 
-if (!BASE_URL) {
-  // Fail loud at import time — a missing API URL is a config error, not a
-  // runtime condition we should defer.
-  throw new Error("EXPO_PUBLIC_API_URL is not set in .env");
+if (!process.env.EXPO_PUBLIC_API_URL && __DEV__) {
+  // eslint-disable-next-line no-console
+  console.warn("[api] EXPO_PUBLIC_API_URL is not set; falling back to production");
 }
 
 const TIMEOUT_MS = 10_000;

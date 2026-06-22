@@ -18,22 +18,30 @@ import "react-native-url-polyfill/auto";
 const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL;
 const SUPABASE_ANON_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
 
-if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
-  // Hard fail at import time — without the env vars the auth surface
-  // silently no-ops, which is a much harder bug to track down later.
-  throw new Error(
-    "Missing EXPO_PUBLIC_SUPABASE_URL or EXPO_PUBLIC_SUPABASE_ANON_KEY in .env"
+// Never throw at import. A missing env here would crash the entire app at
+// launch (stuck on the native splash) even though only auth needs Supabase.
+// Warn in dev and fall back to placeholders so the app still starts; auth calls
+// then fail gracefully and the user can browse as a guest. Real builds get the
+// values from eas.json.
+if ((!SUPABASE_URL || !SUPABASE_ANON_KEY) && __DEV__) {
+  // eslint-disable-next-line no-console
+  console.warn(
+    "[supabase] EXPO_PUBLIC_SUPABASE_URL / ANON_KEY are not set; auth is disabled"
   );
 }
 
-export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-  auth: {
-    // AsyncStorage is the canonical storage adapter for supabase-js on RN.
-    storage: AsyncStorage,
-    autoRefreshToken: true,
-    persistSession: true,
-    // Disable URL session detection — RN doesn't have window.location and
-    // we don't use magic-link redirects yet.
-    detectSessionInUrl: false,
-  },
-});
+export const supabase = createClient(
+  SUPABASE_URL ?? "https://unconfigured.supabase.co",
+  SUPABASE_ANON_KEY ?? "unconfigured-anon-key",
+  {
+    auth: {
+      // AsyncStorage is the canonical storage adapter for supabase-js on RN.
+      storage: AsyncStorage,
+      autoRefreshToken: true,
+      persistSession: true,
+      // Disable URL session detection. RN has no window.location and we don't
+      // use magic-link redirects yet.
+      detectSessionInUrl: false,
+    },
+  }
+);
