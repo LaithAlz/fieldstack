@@ -143,13 +143,14 @@
           "color": "#C2410C"
         }
       ],
-      "@sentry/react-native"
+      "@sentry/react-native",
+      "expo-font"
     ],
     "experiments": {
       "reactCompiler": true
     },
     "runtimeVersion": {
-      "policy": "fingerprint"
+      "policy": "appVersion"
     },
     "updates": {
       "fallbackToCacheTimeout": 0
