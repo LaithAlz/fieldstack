@@ -153,7 +153,8 @@
       "policy": "appVersion"
     },
     "updates": {
-      "fallbackToCacheTimeout": 0
+      "fallbackToCacheTimeout": 0,
+      "url": "https://u.expo.dev/33ee0cde-86f1-4df9-8b97-97898c3ae7e3"
     },
     "extra": {
       "eas": {
