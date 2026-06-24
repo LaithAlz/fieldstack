@@ -37,14 +37,20 @@ jobs:
         working-directory: fieldstack-app
     steps:
       - uses: actions/checkout@v4
-      - uses: oven-sh/setup-bun@v2
+      # npm (not bun) so CI resolves node_modules the same way EAS does. bun and
+      # npm hoist differently, which previously diverged the build fingerprint
+      # and dropped a hoisted dependency. package-lock.json is the source of
+      # truth for both CI and EAS.
+      - uses: actions/setup-node@v4
         with:
-          bun-version: latest
+          node-version: 20
+          cache: npm
+          cache-dependency-path: fieldstack-app/package-lock.json
       - name: Install dependencies
-        run: bun install --frozen-lockfile
+        run: npm ci
       - name: Typecheck
-        run: bun run typecheck
+        run: npm run typecheck
       - name: Lint
-        run: bun run lint
+        run: npm run lint
       - name: Tests
-        run: bun run test
+        run: npm run test
