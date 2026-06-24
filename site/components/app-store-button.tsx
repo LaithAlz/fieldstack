@@ -1,5 +1,5 @@
-// App Store CTA. Placeholder href until the app is approved — swap the id.
-const APP_STORE_URL = "https://apps.apple.com/app/onside/id000000000";
+// App Store CTA pointing at the live Onside listing.
+const APP_STORE_URL = "https://apps.apple.com/app/onside/id6780034337";
 
 export function AppStoreButton({ label = "Download Onside on the App Store" }: { label?: string }) {
   return (
