@@ -191,7 +191,10 @@ export function FieldDetailScreen({ route }: Props) {
             />
           </Pressable>
 
-          {/* Price */}
+          {/* Price. Roughly 70 GTA operators publish no rates anywhere
+              (in-app booking platforms, quote-only) — an explicit pointer
+              beats a blank that reads as missing data. Only shown when
+              there's actually a booking link to follow. */}
           {priceText ? (
             <View style={styles.priceWrap}>
               <Text
@@ -206,6 +209,12 @@ export function FieldDetailScreen({ route }: Props) {
                   {field.price_note}
                 </Text>
               ) : null}
+            </View>
+          ) : field.booking_url ? (
+            <View style={styles.priceWrap}>
+              <Text size="md" variant="secondary">
+                {"Rates on the operator's booking site"}
+              </Text>
             </View>
           ) : null}
 
