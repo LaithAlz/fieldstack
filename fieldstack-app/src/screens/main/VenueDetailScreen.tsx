@@ -496,6 +496,10 @@ function FieldRow({ field, onCardPress, onBookPress }: FieldRowProps) {
             <Text size="sm" variant="secondary" style={styles.fieldRowPrice}>
               {priceText}
             </Text>
+          ) : field.booking_url ? (
+            <Text size="sm" variant="secondary" style={styles.fieldRowPrice}>
+              Rates on site
+            </Text>
           ) : null}
         </View>
       </View>

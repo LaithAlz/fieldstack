@@ -145,6 +145,11 @@ export function FieldSearchCard({ result, userCoords, isBestPrice, onPress }: Pr
               <Text font="display" size="lg" style={{ color: colors.brand, letterSpacing: 0.3 }}>
                 {priceText}
               </Text>
+            ) : field.booking_url ? (
+              // Deliberately secondary/small — a pointer, not a price.
+              <Text size="xs" variant="secondary">
+                Rates on site
+              </Text>
             ) : null}
           </View>
         </View>
