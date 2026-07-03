@@ -225,3 +225,31 @@ export function priceLabel(f: VenueField): string | null {
   if (f.priceNote) return f.priceNote;
   return null;
 }
+
+// ---------------------------------------------------------------------------
+// City landing pages (/soccer-fields/[city])
+// ---------------------------------------------------------------------------
+
+export type City = {
+  name: string;
+  slug: string;
+  venues: Venue[];
+};
+
+/**
+ * Only cities with enough venues to make a non-thin landing page. Sorted by
+ * venue count so params, sitemap, and footer links all agree on the order.
+ */
+const CITY_PAGE_MIN_VENUES = 3;
+
+export async function getCities(): Promise<City[]> {
+  const byCity = await getVenuesByCity();
+  return byCity
+    .filter(([, vs]) => vs.length >= CITY_PAGE_MIN_VENUES)
+    .map(([name, venues]) => ({ name, slug: slugify(name), venues }));
+}
+
+export async function getCityBySlug(slug: string): Promise<City | undefined> {
+  const cities = await getCities();
+  return cities.find((c) => c.slug === slug);
+}
