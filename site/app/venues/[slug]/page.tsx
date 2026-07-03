@@ -94,6 +94,7 @@ export default async function VenuePage({
     address: { "@type": "PostalAddress", streetAddress: v.address, addressRegion: "ON", addressCountry: "CA" },
     ...(hasCoords ? { geo: { "@type": "GeoCoordinates", latitude: v.lat, longitude: v.lng } } : {}),
     ...(v.bookingUrl ? { sameAs: v.bookingUrl } : {}),
+    ...(v.photos.length ? { image: v.photos } : {}),
     sport: "Soccer",
     ...(v.amenities.length
       ? { amenityFeature: v.amenities.map((a) => ({ "@type": "LocationFeatureSpecification", name: a })) }
@@ -152,6 +153,20 @@ export default async function VenuePage({
 
         <section className="venue-body">
           <div className="venue-main">
+            {v.photos.length > 0 && (
+              <div className="venue-photos">
+                {v.photos.map((src, i) => (
+                  <figure key={src}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={src} alt={`${v.name} — photo ${i + 1}`} loading={i === 0 ? "eager" : "lazy"} />
+                    {v.photoAttributions[i] && (
+                      <figcaption>{v.photoAttributions[i]}</figcaption>
+                    )}
+                  </figure>
+                ))}
+              </div>
+            )}
+
             {embedUrl && (
               <div className="venue-map">
                 <iframe

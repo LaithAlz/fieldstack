@@ -7,6 +7,7 @@ import {
   type NativeScrollEvent,
   type NativeSyntheticEvent,
   StyleSheet,
+  Text as RNText,
   useWindowDimensions,
   View,
 } from "react-native";
@@ -30,6 +31,12 @@ export function useGalleryHeight(): number {
 type Props = {
   photos: string[];
   /**
+   * Author credit for the same-index photo (venues.photo_attributions).
+   * Google Places photos must show attribution wherever they're displayed,
+   * so this renders as a small caption over the photo's bottom edge.
+   */
+  attributions?: string[] | null;
+  /**
    * Venue location. With no photos but a location, the hero renders a
    * satellite view of the pitch instead of the flat illustration — an
    * honest, licence-free "photo" of the actual field (Apple Maps imagery,
@@ -44,7 +51,7 @@ type Props = {
  * view of the venue (when coords are known), then to a tinted "soccer
  * field" illustration so the slot never appears blank.
  */
-export function PhotoGallery({ photos, coords }: Props) {
+export function PhotoGallery({ photos, attributions, coords }: Props) {
   const colors = useTheme();
   const { width } = useWindowDimensions();
   const [page, setPage] = useState(0);
@@ -91,6 +98,7 @@ export function PhotoGallery({ photos, coords }: Props) {
             tint={colors.brand + "14"}
             iconColor={colors.brand}
             accessibilityLabel={`Venue photo ${index + 1} of ${photos.length}`}
+            attribution={attributions?.[index] ?? null}
           />
         )}
       />
@@ -112,6 +120,7 @@ type GalleryItemProps = {
   tint: string;
   iconColor: string;
   accessibilityLabel: string;
+  attribution?: string | null;
 };
 
 function GalleryItem({
@@ -121,6 +130,7 @@ function GalleryItem({
   tint,
   iconColor,
   accessibilityLabel,
+  attribution,
 }: GalleryItemProps) {
   const [failed, setFailed] = useState(false);
 
@@ -146,6 +156,11 @@ function GalleryItem({
         cachePolicy="memory-disk"
         onError={() => setFailed(true)}
       />
+      {attribution ? (
+        <RNText style={styles.attribution} numberOfLines={1}>
+          {attribution}
+        </RNText>
+      ) : null}
     </View>
   );
 }
@@ -289,6 +304,20 @@ const styles = StyleSheet.create({
   fallback: {
     alignItems: "center",
     justifyContent: "center",
+  },
+  // Google-required photo credit. Sits above the dots row (which is centered)
+  // in the photo's bottom-left corner; scrim keeps it legible on any photo.
+  attribution: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    paddingHorizontal: spacing.sm,
+    paddingTop: 10,
+    paddingBottom: 3,
+    fontSize: 10,
+    color: "rgba(255, 255, 255, 0.92)",
+    backgroundColor: "rgba(26, 29, 43, 0.35)",
   },
   dotsRow: {
     position: "absolute",

@@ -49,3 +49,19 @@ jobs:
             exit 0
           fi
           bun scripts/scrape/run.ts all
+
+      # Weekly photo refresh is NOT optional freshness polish: the stored
+      # googleusercontent URIs are short-lived per Google's terms, so if this
+      # stops running, venue photos rot into broken images (clients then fall
+      # back to the satellite hero).
+      - name: Enrich venue photos (Google Places)
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          GOOGLE_PLACES_API_KEY: ${{ secrets.GOOGLE_PLACES_API_KEY }}
+        run: |
+          if [ -z "$GOOGLE_PLACES_API_KEY" ] || [ -z "$SUPABASE_SERVICE_ROLE_KEY" ]; then
+            echo "::notice::Skipping photo enrichment — set GOOGLE_PLACES_API_KEY (plus Supabase secrets) to enable."
+            exit 0
+          fi
+          bun scripts/scrape/enrichPhotos.ts

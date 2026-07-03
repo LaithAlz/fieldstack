@@ -137,6 +137,14 @@ export function FieldDetailScreen({ route }: Props) {
         <View>
           <PhotoGallery
             photos={resolveFieldPhotos(field.photos, venue.photos)}
+            // Attributions align index-for-index with venue.photos, so only
+            // pass them when the fallback actually rendered venue photos —
+            // a field with its own gallery has no stored credits.
+            attributions={
+              field.photos && field.photos.length > 0
+                ? null
+                : venue.photo_attributions
+            }
             coords={
               venue.lat !== null && venue.lng !== null
                 ? { lat: venue.lat, lng: venue.lng }
