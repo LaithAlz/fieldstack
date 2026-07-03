@@ -470,7 +470,7 @@ type FieldRowProps = {
 function FieldRow({ field, onCardPress, onBookPress }: FieldRowProps) {
   const colors = useTheme();
   const priceText =
-    field.price_per_hour !== null ? `$${Math.round(field.price_per_hour)}/hr` : null;
+    field.price_per_hour !== null ? `From $${Math.round(field.price_per_hour)}/hr` : null;
   return (
     <Pressable
       onPress={onCardPress}

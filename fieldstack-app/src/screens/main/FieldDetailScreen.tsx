@@ -198,6 +198,14 @@ export function FieldDetailScreen({ route }: Props) {
           {priceText ? (
             <View style={styles.priceWrap}>
               <Text
+                size="xs"
+                weight="medium"
+                variant="secondary"
+                style={styles.startingAt}
+              >
+                STARTING AT
+              </Text>
+              <Text
                 size="xxxl"
                 font="display"
                 style={{ color: colors.brand, letterSpacing: 0.4 }}
@@ -381,6 +389,12 @@ const styles = StyleSheet.create({
   priceNote: {
     marginTop: spacing.xs,
     lineHeight: 20,
+  },
+  // Uppercase micro-label above the price — prices are cheapest-rate, so the
+  // qualifier is structural, not decorative.
+  startingAt: {
+    letterSpacing: 1.5,
+    marginBottom: 2,
   },
   section: {
     marginTop: spacing.xl,

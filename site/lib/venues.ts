@@ -229,7 +229,7 @@ export const surfaceLabel = (s: string) => SURFACE_LABEL[s] ?? s;
 export const sizeLabel = (s: string) => SIZE_LABEL[s] ?? s;
 
 export function priceLabel(f: VenueField): string | null {
-  if (f.pricePerHour != null) return `$${f.pricePerHour}/hr`;
+  if (f.pricePerHour != null) return `From $${f.pricePerHour}/hr`;
   if (f.priceNote) return f.priceNote;
   return null;
 }

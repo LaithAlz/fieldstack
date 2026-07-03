@@ -57,7 +57,7 @@ export function FieldSearchCard({ result, userCoords, isBestPrice, onPress }: Pr
       : null;
 
   const priceText =
-    field.price_per_hour !== null ? `$${Math.round(field.price_per_hour)}/hr` : null;
+    field.price_per_hour !== null ? `From $${Math.round(field.price_per_hour)}/hr` : null;
 
   // Single combined a11y label so the card reads as one unit.
   const a11yLabel = [
