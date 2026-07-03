@@ -186,7 +186,14 @@ export function VenueDetailScreen({ route }: Props) {
         showsVerticalScrollIndicator={false}
       >
         <View>
-          <PhotoGallery photos={venue.photos} />
+          <PhotoGallery
+            photos={venue.photos}
+            coords={
+              venue.lat !== null && venue.lng !== null
+                ? { lat: venue.lat, lng: venue.lng }
+                : null
+            }
+          />
           <FloatingTopBar
           onBack={() => nav.goBack()}
           insets={insets}

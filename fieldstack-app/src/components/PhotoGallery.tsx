@@ -10,6 +10,7 @@ import {
   useWindowDimensions,
   View,
 } from "react-native";
+import MapView from "react-native-maps";
 
 import { spacing } from "../theme/tokens";
 import { useTheme } from "../theme/useTheme";
@@ -28,15 +29,22 @@ export function useGalleryHeight(): number {
 
 type Props = {
   photos: string[];
+  /**
+   * Venue location. With no photos but a location, the hero renders a
+   * satellite view of the pitch instead of the flat illustration — an
+   * honest, licence-free "photo" of the actual field (Apple Maps imagery,
+   * so no API keys and no scraping-ToS exposure).
+   */
+  coords?: { lat: number; lng: number } | null;
 };
 
 /**
  * Full-width 16:9 photo carousel for the Venue Detail header. Dots only
- * render with 2+ photos. A failed photo or an empty `photos` array falls
- * back to a tinted "soccer field" illustration so the slot never appears
- * blank.
+ * render with 2+ photos. An empty `photos` array falls back to a satellite
+ * view of the venue (when coords are known), then to a tinted "soccer
+ * field" illustration so the slot never appears blank.
  */
-export function PhotoGallery({ photos }: Props) {
+export function PhotoGallery({ photos, coords }: Props) {
   const colors = useTheme();
   const { width } = useWindowDimensions();
   const [page, setPage] = useState(0);
@@ -45,6 +53,11 @@ export function PhotoGallery({ photos }: Props) {
   const itemHeight = width / ASPECT_RATIO;
 
   if (photos.length === 0) {
+    if (coords && typeof coords.lat === "number" && typeof coords.lng === "number") {
+      return (
+        <SatelliteHero width={itemWidth} height={itemHeight} coords={coords} />
+      );
+    }
     return (
       <Fallback
         width={itemWidth}
@@ -132,6 +145,57 @@ function GalleryItem({
         transition={150}
         cachePolicy="memory-disk"
         onError={() => setFailed(true)}
+      />
+    </View>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Internal: satellite hero for photo-less venues
+// ---------------------------------------------------------------------------
+
+// Tight enough that a full-size pitch fills most of the frame; wide enough
+// that the surrounding block gives context. ~0.0025° ≈ 275 m of latitude.
+const SATELLITE_DELTA = 0.0025;
+
+function SatelliteHero({
+  width,
+  height,
+  coords,
+}: {
+  width: number;
+  height: number;
+  coords: { lat: number; lng: number };
+}) {
+  return (
+    <View
+      style={{ width, height }}
+      // Static imagery, not a map to interact with: block all touches so the
+      // ScrollView underneath keeps scrolling naturally over the hero.
+      pointerEvents="none"
+      accessibilityRole="image"
+      accessibilityLabel="Satellite view of this venue"
+    >
+      <MapView
+        style={StyleSheet.absoluteFill}
+        mapType="satellite"
+        initialRegion={{
+          latitude: coords.lat,
+          longitude: coords.lng,
+          latitudeDelta: SATELLITE_DELTA,
+          longitudeDelta: SATELLITE_DELTA,
+        }}
+        // Every interaction off — this renders once and behaves like a photo.
+        scrollEnabled={false}
+        zoomEnabled={false}
+        rotateEnabled={false}
+        pitchEnabled={false}
+        toolbarEnabled={false}
+        showsUserLocation={false}
+        showsPointsOfInterest={false}
+        // iOS: rasterize to a static snapshot after load — a detail screen
+        // hero shouldn't keep a live map surface alive.
+        cacheEnabled
       />
     </View>
   );

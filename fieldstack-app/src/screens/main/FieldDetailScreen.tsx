@@ -135,7 +135,14 @@ export function FieldDetailScreen({ route }: Props) {
         showsVerticalScrollIndicator={false}
       >
         <View>
-          <PhotoGallery photos={resolveFieldPhotos(field.photos, venue.photos)} />
+          <PhotoGallery
+            photos={resolveFieldPhotos(field.photos, venue.photos)}
+            coords={
+              venue.lat !== null && venue.lng !== null
+                ? { lat: venue.lat, lng: venue.lng }
+                : null
+            }
+          />
           <FloatingBack onBack={() => nav.goBack()} insets={insets} />
         </View>
 
