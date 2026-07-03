@@ -1,8 +1,14 @@
+import type { Metadata } from "next";
+
 import { Nav } from "@/components/nav";
 import { Footer } from "@/components/footer";
 import { AppStoreButton } from "@/components/app-store-button";
 import { PitchLines } from "@/components/pitch-lines";
 import { getAllVenues, getVenuesByCity } from "@/lib/venues";
+
+// Title/description inherit from the root layout; this only pins the
+// homepage canonical.
+export const metadata: Metadata = { alternates: { canonical: "/" } };
 
 const FEATURES = [
   { ic: "⚽", h: "Every field, one map", p: "Indoor domes, outdoor turf, grass parks, and futsal courts across the GTA, as a list or a live map." },

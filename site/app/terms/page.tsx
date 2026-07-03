@@ -7,6 +7,7 @@ export const metadata: Metadata = {
   title: "Terms of Service | Onside",
   description:
     "The terms for using the Onside soccer-field app. Onside is a directory; bookings happen on each operator's own site.",
+  alternates: { canonical: "/terms" },
 };
 
 export default function Terms() {
