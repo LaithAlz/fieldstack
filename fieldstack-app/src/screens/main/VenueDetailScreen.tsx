@@ -188,6 +188,7 @@ export function VenueDetailScreen({ route }: Props) {
         <View>
           <PhotoGallery
             photos={venue.photos}
+            attributions={venue.photo_attributions}
             coords={
               venue.lat !== null && venue.lng !== null
                 ? { lat: venue.lat, lng: venue.lng }

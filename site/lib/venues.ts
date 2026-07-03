@@ -32,6 +32,10 @@ export type Venue = {
   lat: number | null;
   lng: number | null;
   amenities: string[];
+  /** Google Places photo URIs (keyless, refreshed weekly by the scraper). */
+  photos: string[];
+  /** Author credit for the same-index photo — Google terms require display. */
+  photoAttributions: string[];
   venueType: string | null;
   operatorName: string | null;
   operatorWebsite: string | null;
@@ -83,6 +87,8 @@ type Row = {
   lat: number | null;
   lng: number | null;
   amenities: string[] | null;
+  photos: string[] | null;
+  photo_attributions: string[] | null;
   venue_type: string | null;
   booking_notes: string | null;
   operator: { name: string | null; website: string | null } | null;
@@ -123,7 +129,7 @@ async function loadVenues(): Promise<Venue[]> {
   const { data, error } = await supabase
     .from("venues")
     .select(
-      "id, name, address, lat, lng, amenities, venue_type, booking_notes, " +
+      "id, name, address, lat, lng, amenities, photos, photo_attributions, venue_type, booking_notes, " +
         "operator:operators(name, website), " +
         "fields(id, name, surface, size, price_per_hour, price_note, booking_url, is_active)"
     )
@@ -162,6 +168,8 @@ async function loadVenues(): Promise<Venue[]> {
       lat: r.lat,
       lng: r.lng,
       amenities: r.amenities ?? [],
+      photos: r.photos ?? [],
+      photoAttributions: r.photo_attributions ?? [],
       venueType: r.venue_type,
       operatorName: r.operator?.name ?? null,
       operatorWebsite: r.operator?.website ?? null,

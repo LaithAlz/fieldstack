@@ -22,6 +22,11 @@ export type Venue = {
   lat: number | null;
   lng: number | null;
   photos: string[];
+  // Migration 022 — author credit for the same-index photo. Google Places
+  // photos require attribution wherever they're displayed; PhotoGallery
+  // overlays photo_attributions[i] on photos[i]. Optional so pre-022 API
+  // responses still satisfy the type.
+  photo_attributions?: string[] | null;
   amenities: string[];
   website: string | null;
   is_active: boolean;
