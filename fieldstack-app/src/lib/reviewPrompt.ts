@@ -24,6 +24,7 @@
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Linking from "expo-linking";
+import * as StoreReview from "expo-store-review";
 import { Alert, AppState } from "react-native";
 
 import {
@@ -135,6 +136,25 @@ export async function maybePromptForReview(): Promise<void> {
       promptCount: state.promptCount + 1,
       lastPromptAt: Date.now(),
     });
+
+    // Prefer the native SKStoreReview sheet (rate without leaving the app —
+    // converts far better). isAvailableAsync is false in unsupported
+    // contexts, where we fall back to the alert + App Store deep link. The
+    // OS applies its own 3-per-365-days throttle on top of ours and may
+    // silently not show the sheet; there's no accept/dismiss signal, so we
+    // only log `shown` for the request.
+    try {
+      if (await StoreReview.isAvailableAsync()) {
+        track(EVENT_REVIEW_PROMPT_SHOWN, {
+          prompt_number: state.promptCount + 1,
+          native: true,
+        });
+        await StoreReview.requestReview();
+        return;
+      }
+    } catch {
+      // Fall through to the deep-link alert.
+    }
 
     track(EVENT_REVIEW_PROMPT_SHOWN, { prompt_number: state.promptCount + 1 });
     Alert.alert(
