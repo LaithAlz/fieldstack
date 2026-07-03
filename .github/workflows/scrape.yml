@@ -65,3 +65,19 @@ jobs:
             exit 0
           fi
           bun scripts/scrape/enrichPhotos.ts
+
+      # Cross-source dedup after every scrape: a weekly OSM/Google run can
+      # re-introduce a row for a venue another source already carries. Only
+      # the conservative AUTO tier applies unattended (cross-source, near-
+      # identical name, co-located — see lib/dedupe.ts); REVIEW candidates
+      # are printed into the job log for a human.
+      - name: Deduplicate venues (auto tier)
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          if [ -z "$SUPABASE_SERVICE_ROLE_KEY" ] || [ -z "$SUPABASE_URL" ]; then
+            echo "::notice::Skipping dedup — Supabase secrets not set."
+            exit 0
+          fi
+          bun scripts/scrape/dedupe.ts --apply
