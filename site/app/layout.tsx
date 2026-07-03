@@ -32,6 +32,14 @@ export const metadata: Metadata = {
     url: "https://getonside.ca",
     type: "website",
   },
+  // Card type only — the image itself comes from app/opengraph-image.tsx via
+  // the file convention (Twitter/X falls back to the OG image).
+  twitter: {
+    card: "summary_large_image",
+    title: "Onside: Every soccer field in the GTA",
+    description:
+      "Every field in the GTA on one map — turf, indoor, outdoor. Free on iPhone.",
+  },
 };
 
 export const viewport: Viewport = { themeColor: "#f7f2e8" };

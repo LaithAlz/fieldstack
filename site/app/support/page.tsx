@@ -8,6 +8,7 @@ export const metadata: Metadata = {
   title: "Support | Onside",
   description:
     "Help with the Onside soccer-field app: accounts, booking, missing fields, deleting your account, and getting in touch.",
+  alternates: { canonical: "/support" },
 };
 
 const FAQ: { q: string; a: ReactNode }[] = [

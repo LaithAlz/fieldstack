@@ -7,6 +7,7 @@ export const metadata: Metadata = {
   title: "Privacy Policy | Onside",
   description:
     "What Onside collects, why, and the controls you have. We don't sell your data or track you across other apps.",
+  alternates: { canonical: "/privacy" },
 };
 
 const COLLECT = [
