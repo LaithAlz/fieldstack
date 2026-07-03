@@ -27,6 +27,7 @@ import * as Linking from "expo-linking";
 
 import { EVENT_BOOKING_REDIRECT_CONFIRMED, track } from "./analytics";
 import { lightImpact } from "./haptics";
+import { recordReviewValueMoment } from "./reviewPrompt";
 import type { Field, Venue } from "../types/api";
 
 type ToastApi = {
@@ -55,6 +56,10 @@ export async function openOperatorBooking(params: {
   const url = field.booking_url;
   try {
     await Linking.openURL(url);
+    // A booking redirect is the strongest value signal we have — weight 2
+    // reaches the review-prompt threshold alone, so the "back in Onside"
+    // foreground after booking can ask (#430).
+    void recordReviewValueMoment(2);
   } catch {
     // Auto-copy on failure so the user isn't dead-ended.
     try {

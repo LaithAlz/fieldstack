@@ -34,6 +34,7 @@ import {
   useBookingHistory,
 } from "./src/lib/bookingHistory";
 import { initNotifications } from "./src/lib/notifications";
+import { initReviewPrompt } from "./src/lib/reviewPrompt";
 import { initSessionTracking, onScreenChange } from "./src/lib/sessionTracking";
 import { OnboardingProvider, useOnboarding } from "./src/lib/onboardingContext";
 import {
@@ -151,6 +152,7 @@ export default function App() {
       track(EVENT_APP_OPENED);
       initSessionTracking();
       initNotifications();
+      initReviewPrompt();
     } catch (err) {
       if (__DEV__) {
         // eslint-disable-next-line no-console
