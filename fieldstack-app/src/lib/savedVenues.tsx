@@ -28,6 +28,7 @@ import {
 
 import { useToast } from "../components/Toast";
 import { useAuth } from "./auth";
+import { recordReviewValueMoment } from "./reviewPrompt";
 import { supabase } from "./supabase";
 
 /**
@@ -193,6 +194,8 @@ export function SavedVenuesProvider({ children }: { children: ReactNode }) {
       if (wasSaved) optimisticNext.delete(id);
       else optimisticNext.add(id);
       setSaved(optimisticNext);
+      // Saving a venue is a (weak) value signal for the review prompt (#430).
+      if (!wasSaved) void recordReviewValueMoment(1);
       void AsyncStorage.setItem(KEY, JSON.stringify(Array.from(optimisticNext))).catch(
         () => undefined
       );

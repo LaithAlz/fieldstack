@@ -18,6 +18,9 @@ export const EVENT_SEARCH_FILTERED = "search_filtered";
 export const EVENT_SCREEN_VIEWED = "screen_viewed";
 export const EVENT_APP_BACKGROUNDED = "app_backgrounded";
 export const EVENT_APP_FOREGROUNDED = "app_foregrounded";
+// Review prompt (#430) — measure ask volume vs. accepts.
+export const EVENT_REVIEW_PROMPT_SHOWN = "review_prompt_shown";
+export const EVENT_REVIEW_PROMPT_ACCEPTED = "review_prompt_accepted";
 
 export type AnalyticsEvent =
   | typeof EVENT_APP_OPENED
@@ -28,7 +31,9 @@ export type AnalyticsEvent =
   | typeof EVENT_SEARCH_FILTERED
   | typeof EVENT_SCREEN_VIEWED
   | typeof EVENT_APP_BACKGROUNDED
-  | typeof EVENT_APP_FOREGROUNDED;
+  | typeof EVENT_APP_FOREGROUNDED
+  | typeof EVENT_REVIEW_PROMPT_SHOWN
+  | typeof EVENT_REVIEW_PROMPT_ACCEPTED;
 
 export type AnalyticsProperties = Record<string, unknown>;
 
