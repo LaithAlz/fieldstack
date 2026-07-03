@@ -1,4 +1,5 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as Sentry from "@sentry/react-native";
 import * as Clipboard from "expo-clipboard";
 import { Component, type ErrorInfo, type ReactNode } from "react";
 import { Linking, Pressable, Text as RNText, StyleSheet, View } from "react-native";
@@ -23,7 +24,9 @@ type State = {
   feedback: string | null;
 };
 
-const DEFAULT_CONTACT = "support@onside.app";
+// Must match SettingsScreen's SUPPORT_EMAIL — this is the only address that
+// actually receives mail (getonside.ca; onside.app was never provisioned).
+const DEFAULT_CONTACT = "support@getonside.ca";
 // After this many failed reloads we stop offering a plain reload and route
 // the user to a wipe path — the underlying state is almost certainly broken.
 const STUCK_THRESHOLD = 2;
@@ -50,10 +53,21 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
-    // Replace with a real crash reporter (Sentry, Expo Updates' Crashlytics
-    // bridge, etc.) when one lands. Log the structured error for now so it
-    // shows up in Metro and in dev-tooling.
-     
+    // Caught render errors never reach Sentry's automatic instrumentation
+    // (the boundary swallows them), so forward explicitly. captureException
+    // is a safe no-op when Sentry.init didn't run (no DSN in dev/preview);
+    // the guard is for anything else the SDK might throw — the boundary must
+    // never crash while handling a crash.
+    try {
+      Sentry.captureException(error, {
+        contexts: {
+          react: { componentStack: errorInfo.componentStack },
+        },
+      });
+    } catch {
+      // Reporting is best-effort.
+    }
+
     console.error("[ErrorBoundary]", error, errorInfo.componentStack);
     this.setState((prev) => ({
       errorInfo,
