@@ -210,6 +210,7 @@ footer .wrap { display: flex; flex-wrap: wrap; gap: 24px; justify-content: space
 footer a { color: var(--text-2); }
 footer a:hover { color: var(--brand); }
 .foot-links { display: flex; gap: 24px; flex-wrap: wrap; }
+.foot-cities { display: flex; gap: 8px 20px; flex-wrap: wrap; width: 100%; font-size: 14px; padding-bottom: 4px; border-bottom: 1px solid var(--line); }
 .foot-legal { font-size: 13px; width: 100%; color: var(--text-3); padding-top: 10px; line-height: 1.6; }
 
 /* ---------- legal / support docs ---------- */

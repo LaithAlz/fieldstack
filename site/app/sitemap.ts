@@ -1,10 +1,11 @@
 import type { MetadataRoute } from "next";
-import { getAllVenues } from "@/lib/venues";
+import { getAllVenues, getCities } from "@/lib/venues";
 
 const BASE = "https://getonside.ca";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const venues = await getAllVenues();
+  const cities = await getCities();
 
   const staticPages: MetadataRoute.Sitemap = [
     { url: `${BASE}/`, priority: 1, changeFrequency: "weekly" },
@@ -14,11 +15,18 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${BASE}/terms`, priority: 0.2, changeFrequency: "yearly" },
   ];
 
+  // City landing pages rank between the index and individual venues.
+  const cityPages: MetadataRoute.Sitemap = cities.map((c) => ({
+    url: `${BASE}/soccer-fields/${c.slug}`,
+    priority: 0.8,
+    changeFrequency: "weekly",
+  }));
+
   const venuePages: MetadataRoute.Sitemap = venues.map((v) => ({
     url: `${BASE}/venues/${v.slug}`,
     priority: 0.7,
     changeFrequency: "weekly",
   }));
 
-  return [...staticPages, ...venuePages];
+  return [...staticPages, ...cityPages, ...venuePages];
 }
