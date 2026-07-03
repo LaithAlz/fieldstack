@@ -4,6 +4,7 @@ import { Nav } from "@/components/nav";
 import { Footer } from "@/components/footer";
 import { AppStoreButton } from "@/components/app-store-button";
 import { PitchLines } from "@/components/pitch-lines";
+import { WaitlistForm } from "@/components/waitlist-form";
 import { getAllVenues, getVenuesByCity } from "@/lib/venues";
 
 // Title/description inherit from the root layout; this only pins the
@@ -116,6 +117,13 @@ export default async function Home() {
           <h2 className="display">Get on the pitch</h2>
           <p>Download Onside and find a field near you in seconds.</p>
           <AppStoreButton />
+          <div className="band-waitlist">
+            <p className="band-waitlist-note">
+              On Android, or not ready yet? Get one email when Onside lands on
+              Android and when new fields drop.
+            </p>
+            <WaitlistForm />
+          </div>
         </div>
       </section>
 
