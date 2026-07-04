@@ -33,10 +33,10 @@ export type ScrapedField = {
   /** Booking URL when the source carries one. */
   bookingUrl?: string | null;
   /**
-   * SCAFFOLDING (docs/scraping.md §3) — not yet consumed by run.ts.
-   * Booking platform for this field, when a platform adapter knows it.
-   * Lets the runner eventually set `fields.booking_platform` instead of
-   * always `'none'`. Defaults to `'none'` semantics when omitted.
+   * Booking platform for this field, when a platform adapter knows it (see
+   * docs/scraping.md §3). Consumed by run.ts's `upsertField`, which sets
+   * `fields.booking_platform` to this value, falling back to `'none'` when
+   * omitted.
    */
   bookingPlatform?: BookingPlatform;
 };

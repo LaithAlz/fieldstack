@@ -25,6 +25,9 @@ export type City = {
   name: string;
   osmRelationId: number;
   wikidata?: string;
+  /** City-centre search coordinate for radius-based sources (Playtomic). */
+  lat: number;
+  lng: number;
 };
 
 type CitiesFile = {
@@ -32,6 +35,8 @@ type CitiesFile = {
     name: string;
     osm_relation_id: number;
     wikidata?: string;
+    lat?: number;
+    lng?: number;
   }>;
 };
 
@@ -41,11 +46,18 @@ export function loadCities(): City[] {
   if (!parsed?.cities || !Array.isArray(parsed.cities)) {
     throw new Error("cities.yaml: expected top-level `cities:` list");
   }
-  return parsed.cities.map((c) => ({
-    name: c.name,
-    osmRelationId: c.osm_relation_id,
-    wikidata: c.wikidata,
-  }));
+  return parsed.cities.map((c) => {
+    if (typeof c.lat !== "number" || typeof c.lng !== "number") {
+      throw new Error(`cities.yaml: "${c.name}" is missing lat/lng`);
+    }
+    return {
+      name: c.name,
+      osmRelationId: c.osm_relation_id,
+      wikidata: c.wikidata,
+      lat: c.lat,
+      lng: c.lng,
+    };
+  });
 }
 
 // ---------------------------------------------------------------------------

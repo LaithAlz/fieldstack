@@ -133,9 +133,15 @@ export function haversineMeters(
   return 2 * R * Math.asin(Math.sqrt(s));
 }
 
-// Manual entries are curated (highest trust); google rows carry the richest
-// detail (photos, hours); OSM is the thinnest.
-const SOURCE_PRIORITY: Record<string, number> = { manual: 2, google: 1, osm: 0 };
+// Manual entries are curated (highest trust). Playtomic outranks google/osm
+// as operator-platform data (docs/scraping.md §4.3 precedence); google rows
+// carry richer detail (photos, hours) than OSM's bare pins.
+const SOURCE_PRIORITY: Record<string, number> = {
+  manual: 3,
+  playtomic: 2,
+  google: 1,
+  osm: 0,
+};
 
 export function sourceOf(v: DedupeVenue): string {
   return v.external_id.split(":")[0] ?? "";

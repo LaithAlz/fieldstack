@@ -2,11 +2,16 @@
 # relation — the scraper does an Overpass `area` query against these,
 # which is how we get clean per-city scopes without bbox leakage.
 #
+# `lat`/`lng` are the city-centre search coordinates used by radius-based
+# sources (Playtomic's `tenants` sweep) — approximate is fine, they only
+# seed a search circle, not a boundary.
+#
 # To add a city:
 #   1. Open nominatim.openstreetmap.org and search for it.
 #   2. Find the result whose type is "boundary" / "administrative".
 #   3. Copy the relation ID from the URL (or the OSM ID column).
 #   4. Verify it's the right Ontario one (Wikidata Q-id is the safest cross-check).
+#   5. Add lat/lng for the city centre (any map's coordinate lookup works).
 #
 # Each city's admin_level is noted because Toronto and Hamilton are
 # admin_level=6 (single-tier municipalities) while the rest are 8.
@@ -17,34 +22,54 @@ cities:
   - name: Hamilton
     osm_relation_id: 7034910
     wikidata: Q133116
+    lat: 43.2557
+    lng: -79.8711
   - name: Burlington
     osm_relation_id: 2407513
     wikidata: Q34218
+    lat: 43.3255
+    lng: -79.7990
   - name: Oakville
     osm_relation_id: 2407500
     wikidata: Q424984
+    lat: 43.4675
+    lng: -79.6877
   - name: Milton
     osm_relation_id: 2414122
     wikidata: Q425057
+    lat: 43.5183
+    lng: -79.8774
 
   # Peel + Toronto
   - name: Mississauga
     osm_relation_id: 1954127
     wikidata: Q50816
+    lat: 43.5890
+    lng: -79.6441
   - name: Brampton
     osm_relation_id: 2407358
     wikidata: Q44198
+    lat: 43.7315
+    lng: -79.7624
   - name: Toronto
     osm_relation_id: 324211
     wikidata: Q172
+    lat: 43.6532
+    lng: -79.3832
 
   # York
   - name: Vaughan
     osm_relation_id: 324212
     wikidata: Q44013
+    lat: 43.8361
+    lng: -79.4983
   - name: Markham
     osm_relation_id: 324213
     wikidata: Q44016
+    lat: 43.8561
+    lng: -79.3370
   - name: Richmond Hill
     osm_relation_id: 2407259
     wikidata: Q52998
+    lat: 43.8828
+    lng: -79.4403

@@ -33,6 +33,7 @@ import { createClient } from "@supabase/supabase-js";
 import { osmAdapter } from "./sources/osm.js";
 import { manualAdapter } from "./sources/manual.js";
 import { googlePlacesAdapter } from "./sources/googlePlaces.js";
+import { playtomicAdapter } from "./sources/playtomic.js";
 import type { ScrapeAdapter, ScrapedField, ScrapedVenue } from "./types.js";
 import {
   loadManualVenues,
@@ -45,6 +46,7 @@ const ADAPTERS: Record<string, ScrapeAdapter> = {
   [osmAdapter.source]: osmAdapter,
   [manualAdapter.source]: manualAdapter,
   [googlePlacesAdapter.source]: googlePlacesAdapter,
+  [playtomicAdapter.source]: playtomicAdapter,
 };
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
@@ -300,7 +302,7 @@ async function upsertField(
       price_per_hour: f.pricePerHour ?? null,
       // Use the field's own URL if present, else inherit from operator.
       booking_url: f.bookingUrl ?? fallbackBookingUrl,
-      booking_platform: "none",
+      booking_platform: f.bookingPlatform ?? "none",
       is_active: true,
     },
     { onConflict: "external_id" }
