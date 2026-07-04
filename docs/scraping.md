@@ -178,7 +178,7 @@ first, then specifics.
 
 | Platform | Public/partner API? | Venue discovery | Resources/fields | Availability | Deep link |
 |---|---|---|---|---|---|
-| **Playtomic** | Official **club API** (read-only, club-scoped creds) + an **internal/undocumented** consumer API used by the app | Internal `tenants` search by coordinate/radius/sport | `availability` returns resources | `GET /v1/availability` (≤25h window, `tenant_id`) | `playtomic.com` tenant page |
+| **Playtomic** | Official **club API** (read-only, club-scoped creds) + an **internal/undocumented** consumer API used by the app | Internal `tenants` search (`api.playtomic.io/v1/tenants`) by coordinate/radius/sport | `availability` returns resources | `GET /v1/availability` (≤25h window, `tenant_id`) | `playtomic.com/clubs/{slug}` |
 | **CourtReserve** | Club-facing web API (HTTPS/JSON), club-authorised; **no public discovery API** | None public — must know the club's `OrgId` | Via club API (authorised) | Via club API / Public Booking page | `app.courtreserve.com/Online/Portal/Index/{OrgId}` |
 | **Amilia (SmartRec)** | REST API v1–v3, **per-organization JWT** (org admin creds) | None public — must know the org | Activities/resources via org API | Via org API (authorised) | `app.amilia.com/store/en/{rewriteUrl}/shop/programs` |
 
@@ -192,16 +192,26 @@ first, then specifics.
   change-notice clause. This is the path to use **once an operator partners with
   us** and shares (or generates for us) credentials.
 - **Internal/undocumented path:** the consumer app calls
-  `https://playtomic.io/api/v1/tenants` (params: `coordinate`, `radius`,
-  `sport_id`, `with_properties`, `size`, …) for **venue discovery by location**,
-  and `GET /v1/availability` (`tenant_id`, `sport_id`, `start_min`/`start_max`,
-  ≤25h per request) for slots. These are **not** a published partner API; they
-  power Playtomic's own site/app. Treat them as **discovery-only, best-effort,
-  rate-limited, and legally cautious** (see §4.4) — useful to *find* which GTA
-  venues are on Playtomic and link out, but never as a guaranteed contract.
-- **Soccer relevance:** Playtomic is padel-dominant but supports a `sport_id`
-  for soccer/football; GTA indoor-soccer presence should be measured before
-  investing (a one-off `tenants` probe around GTA coordinates).
+  `https://api.playtomic.io/v1/tenants` (params: `coordinate`, `radius`,
+  `sport_id`, `size`, …) for **venue discovery by location** — the old
+  `playtomic.io/api/v1/tenants` URL is dead (redirects, 404s). Verified
+  (2026-07): valid soccer sport ids are `FUTSAL` and `FOOTBALL7` only
+  (`SOCCER`/`FOOTBALL`/`FOOTBALL11`/`INDOOR_FOOTBALL` all 400 with
+  `VALIDATION_ERROR`); the server-side `sport_id` filter is loose (returns
+  nearby padel-only tenants too), so client-side filtering on
+  `resources[].sport_id` is mandatory; and the `playtomic.com/clubs/{slug}`
+  deep link only 200s for tenants with `playtomic_status: "ACTIVE"` (others
+  404 and must be dropped). `GET /v1/availability` (`tenant_id`, `sport_id`,
+  `start_min`/`start_max`, ≤25h per request) covers slots but is out of scope
+  for the discovery-only adapter. These are **not** a published partner API;
+  they power Playtomic's own site/app. Treat them as **discovery-only,
+  best-effort, rate-limited, and legally cautious** (see §4.4) — useful to
+  *find* which GTA venues are on Playtomic and link out, but never as a
+  guaranteed contract.
+- **Soccer relevance:** Playtomic is padel-dominant here — measured (2026-07):
+  **0** soccer/futsal tenants within 75km of Toronto. Zero is the expected
+  steady state; the adapter runs every sweep so a future GTA adopter surfaces
+  automatically.
 - **Recommended use:** Tier-1 deep-link to the tenant's `playtomic.com` page now
   (label `booking_platform = 'playtomic'`); pull live resources/availability
   only via the **official club API** under a partnership.
@@ -397,9 +407,11 @@ Minimal, clearly-marked, and non-breaking:
   for future platform adapters (`platform`, `confidence`, `googlePlaceId`,
   per-field `bookingPlatform`). All optional; existing adapters compile
   unchanged.
-- **`apps/api/scripts/scrape/sources/playtomic.ts`** — a **stub** `ScrapeAdapter` that is
-  **not registered** in `run.ts`. It documents the intended discovery flow and
-  throws a clear "not implemented" error if ever run. No live API calls.
+- **`apps/api/scripts/scrape/sources/playtomic.ts`** — **implemented and
+  registered** in `run.ts` (discovery tier only: venue identity + deep link,
+  no availability/price). Sweeps `data/cities.yaml` centres against the live
+  `tenants` API; a **zero-venue result is the expected state today** — see
+  §3.2 for the measured GTA count.
 - **`.github/workflows/scrape.yml`** — scheduled (`cron`) + `workflow_dispatch`
   workflow running `bun apps/api/scripts/scrape/run.ts all`, gated on the
   `SUPABASE_SERVICE_ROLE_KEY` secret and skipping with a notice if absent
