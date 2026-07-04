@@ -264,8 +264,12 @@ function Dots({ count, active }: { count: number; active: number }) {
 
 // Single dot — animates width + opacity when its active state flips. Active
 // dot stretches into a small pill (Airbnb/Instagram pattern), inactive ones
-// shrink back to a circle. Width animation isn't native-driver-eligible, so
-// we run opacity separately on the native driver for a smoother feel.
+// shrink back to a circle. BOTH animations must use the JS driver: width
+// isn't native-driver-eligible, and mixing drivers on the same Animated.View
+// crashes on the second animation pass — the native driver claims the node
+// on its first run, then the next JS-driven width update on that node throws
+// (#454; latent until venues had 2+ photos, which is when dots first
+// rendered). Two 220ms JS-driven tweens on 6px dots are imperceptible.
 function Dot({ isActive }: { isActive: boolean }) {
   const width = useRef(
     new Animated.Value(isActive ? DOT_ACTIVE_WIDTH : DOT_DIAMETER)
@@ -282,7 +286,7 @@ function Dot({ isActive }: { isActive: boolean }) {
       Animated.timing(opacity, {
         toValue: isActive ? 1 : 0.5,
         duration: 220,
-        useNativeDriver: true,
+        useNativeDriver: false,
       }),
     ]).start();
   }, [isActive, width, opacity]);
