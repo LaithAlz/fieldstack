@@ -161,11 +161,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // (sign-in or a restored session on launch), reset when they sign out so
   // the next session/guest isn't merged into the previous user. Idempotent
   // re-identify on relaunch is harmless.
+  //
+  // Deliberately no email (or other contact info) in the identify traits —
+  // PostHog only needs the id to tie events to a person. Keeps the "linked"
+  // privacy-label answers from growing without a real analytics need.
   const prevUserIdRef = useRef<string | null>(null);
   useEffect(() => {
     const uid = session?.user?.id ?? null;
     if (uid && uid !== prevUserIdRef.current) {
-      identify(uid, { email: session?.user?.email ?? null });
+      identify(uid);
     } else if (!uid && prevUserIdRef.current) {
       resetAnalytics();
     }

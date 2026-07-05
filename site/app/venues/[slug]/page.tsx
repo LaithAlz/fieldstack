@@ -12,6 +12,7 @@ import {
   surfaceLabel,
   sizeLabel,
   fieldPriceState,
+  slugify,
   type Venue,
 } from "@/lib/venues";
 
@@ -45,6 +46,7 @@ export async function generateMetadata({
     description,
     alternates: { canonical: url },
     openGraph: { title, description, url, type: "website" },
+    twitter: { card: "summary_large_image", title, description },
   };
 }
 
@@ -109,7 +111,12 @@ export default async function VenuePage({
     "@type": "BreadcrumbList",
     itemListElement: [
       { "@type": "ListItem", position: 1, name: "Soccer fields", item: "https://getonside.ca/venues" },
-      { "@type": "ListItem", position: 2, name: v.city, item: `https://getonside.ca/venues` },
+      {
+        "@type": "ListItem",
+        position: 2,
+        name: v.city,
+        item: `https://getonside.ca/soccer-fields/${slugify(v.city)}`,
+      },
       { "@type": "ListItem", position: 3, name: v.name, item: `https://getonside.ca/venues/${v.slug}` },
     ],
   };
@@ -124,7 +131,7 @@ export default async function VenuePage({
         <nav className="crumbs">
           <Link href="/venues">Find fields</Link>
           <span>›</span>
-          <span>{v.city}</span>
+          <Link href={`/soccer-fields/${slugify(v.city)}`}>{v.city}</Link>
         </nav>
 
         <header className="venue-head">

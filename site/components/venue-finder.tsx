@@ -1,8 +1,10 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState } from "react";
 
 import { VenueCard, type VenueCardData } from "@/components/venue-card";
+import { slugify } from "@/lib/venues";
 
 /** Slim, serializable venue shape the finder needs for cards + filtering. */
 export type FinderVenue = VenueCardData;
@@ -131,7 +133,8 @@ export function VenueFinder({
           byCity.map(([c, vs]) => (
             <div className="city-block" key={c}>
               <h2 className="sub">
-                Soccer fields in {c} <span className="count">{vs.length}</span>
+                <Link href={`/soccer-fields/${slugify(c)}`}>Soccer fields in {c}</Link>{" "}
+                <span className="count">{vs.length}</span>
               </h2>
               <div className="venue-grid">
                 {vs.map((v) => (

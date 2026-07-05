@@ -7,6 +7,7 @@ import {
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 
 import { FieldSearchProvider } from "../hooks/useFieldSearch";
+import { BlockedUsersScreen } from "../screens/main/BlockedUsersScreen";
 import { ExploreScreen } from "../screens/main/ExploreScreen";
 import { FieldDetailScreen } from "../screens/main/FieldDetailScreen";
 import { ProfileScreen } from "../screens/main/ProfileScreen";
@@ -46,6 +47,7 @@ export type SavedStackParamList = {
 export type MeStackParamList = {
   Profile: undefined;
   Settings: undefined;
+  BlockedUsers: undefined;
   SignIn: undefined;
   SetNewPassword: undefined;
   VenueDetail: { venueId: string };
@@ -80,6 +82,7 @@ function tabBarStyleFor(
     focused === "VenueDetail" ||
     focused === "FieldDetail" ||
     focused === "Settings" ||
+    focused === "BlockedUsers" ||
     focused === "SignIn" ||
     focused === "SetNewPassword"
   ) {
@@ -120,6 +123,7 @@ function MeStackNavigator() {
     <MeStack.Navigator screenOptions={{ headerShown: false }}>
       <MeStack.Screen name="Profile" component={ProfileScreen} />
       <MeStack.Screen name="Settings" component={SettingsScreen} />
+      <MeStack.Screen name="BlockedUsers" component={BlockedUsersScreen} />
       <MeStack.Screen name="SignIn" component={SignInScreen} />
       <MeStack.Screen name="SetNewPassword" component={SetNewPasswordScreen} />
       <MeStack.Screen name="VenueDetail" component={VenueDetailScreen} />

@@ -1,21 +1,42 @@
 import { ImageResponse } from "next/og";
 
+import tokens from "../lib/tokens.generated.json";
+
 // Default social card for every route that doesn't define its own.
 // Built with the site palette (warm cream + tangerine + navy ink) so shares
 // in iMessage/WhatsApp/Slack read unmistakably as Onside. Rendered once at
 // build — no runtime cost.
+//
+// Colors pull from design/tokens.json (the single source of truth shared
+// with the app) rather than hand-copied hexes, so this can't drift from the
+// rest of the site the way the old inline values had.
 
 export const alt = "Onside: every soccer field in the GTA, on one map";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
-const BG = "#f7f2e8";
-const INK = "#1a1d2b";
-const INK_2 = "#555a6b";
-const BRAND = "#c2410c";
-const ON_BRAND = "#fff8f2";
+// #RRGGBB -> rgba(r, g, b, alpha), so the pitch-line strokes can reuse a
+// solid token color at reduced opacity without hand-picking a new hex.
+function hexToRgba(hex: string, alpha: number): string {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+const { light } = tokens.color;
+
+const BG = light.surface;
+const INK = light.textPrimary;
+const INK_2 = light.textSecondary;
+const BRAND = light.brand;
+const ON_BRAND = light.onBrand;
+// The pitch illustration's green is decorative-only and has no equivalent
+// in the shared token set (there's no "pitch green" token), so it stays a
+// local constant. The line strokes are derived from the onBrand token so
+// they track the same near-white rather than a second hand-picked hex.
 const PITCH = "#2f7d43";
-const LINE = "rgba(255, 248, 242, 0.9)";
+const LINE = hexToRgba(ON_BRAND, 0.9);
 
 export default function OgImage() {
   return new ImageResponse(

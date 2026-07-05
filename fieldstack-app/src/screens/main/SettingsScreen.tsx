@@ -195,6 +195,11 @@ export function SettingsScreen() {
               </Text>
             </View>
             <Row
+              icon="ban-outline"
+              label="Blocked users"
+              onPress={() => nav.navigate("BlockedUsers")}
+            />
+            <Row
               icon="log-out-outline"
               label="Sign out"
               destructive

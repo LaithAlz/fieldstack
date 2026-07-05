@@ -96,6 +96,20 @@ ${colorVars(color.light, "  ")}
 `;
   const outPath = path.join(repoRoot, "site/app/tokens.css");
   writeFileSync(outPath, out);
+
+  // JSON copy inside site/ so site code (the OG image) can import token
+  // values without reaching outside Vercel's project root.
+  writeFileSync(
+    path.join(repoRoot, "site/lib/tokens.generated.json"),
+    JSON.stringify(
+      {
+        note: "GENERATED from design/tokens.json via design/generate.mjs. Do not edit.",
+        color: tokens.color,
+      },
+      null,
+      2
+    ) + "\n"
+  );
   return outPath;
 }
 

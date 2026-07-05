@@ -7,11 +7,25 @@ import { PitchLines } from "@/components/pitch-lines";
 import { VenueFinder, type FinderVenue } from "@/components/venue-finder";
 import { getAllVenues, getVenuesByCity, surfaceLabel, sizeLabel, venuePriceState } from "@/lib/venues";
 
+const VENUES_TITLE = "Find Soccer Fields in the GTA: Indoor, Turf & Futsal | Onside";
+const VENUES_DESCRIPTION =
+  "Search and filter every soccer field in the Greater Toronto Area: indoor domes, turf, futsal, and outdoor pitches across Toronto, Mississauga, Brampton, Vaughan, Markham, Hamilton, and more. Free on Onside.";
+
 export const metadata: Metadata = {
-  title: "Find Soccer Fields in the GTA: Indoor, Turf & Futsal | Onside",
-  description:
-    "Search and filter every soccer field in the Greater Toronto Area: indoor domes, turf, futsal, and outdoor pitches across Toronto, Mississauga, Brampton, Vaughan, Markham, Hamilton, and more. Free on Onside.",
+  title: VENUES_TITLE,
+  description: VENUES_DESCRIPTION,
   alternates: { canonical: "https://getonside.ca/venues" },
+  openGraph: {
+    title: "Find your next pitch",
+    description: "Search and filter every soccer field across the GTA, then book direct with the operator. Free on iPhone.",
+    url: "https://getonside.ca/venues",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Find your next pitch",
+    description: "Search and filter every soccer field across the GTA, then book direct with the operator. Free on iPhone.",
+  },
 };
 
 export default async function VenuesIndex() {
