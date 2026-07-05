@@ -1,5 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useNavigation } from "@react-navigation/native";
+import { CommonActions, useNavigation } from "@react-navigation/native";
 import type {
   NativeStackNavigationProp,
   NativeStackScreenProps,
@@ -11,6 +11,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { AmenityChip } from "../../components/AmenityChip";
 import { Badge } from "../../components/Badge";
+import { BookingRequestSheet } from "../../components/BookingRequestSheet";
 import { EmptyState } from "../../components/EmptyState";
 import { FieldDetailSkeleton } from "../../components/FieldDetailSkeleton";
 import { FreeBadge } from "../../components/FreeBadge";
@@ -25,8 +26,11 @@ import {
   EVENT_FIELD_VIEWED,
   track,
 } from "../../lib/analytics";
+import { useAuth } from "../../lib/auth";
+import { reserveBarActionLabel, resolveBookingAction } from "../../lib/bookingAction";
 import { useBookingHistory } from "../../lib/bookingHistory";
 import { formatSlotRange } from "../../lib/datetime";
+import { useFlag } from "../../lib/featureFlags";
 import { resolveFieldPhotos } from "../../lib/fieldPhotos";
 import { openOperatorBooking } from "../../lib/openBooking";
 import { preferredSlotDate, usePreferredSlot } from "../../lib/preferredSlot";
@@ -69,7 +73,10 @@ export function FieldDetailScreen({ route }: Props) {
   const toast = useToast();
   const { slot } = usePreferredSlot();
   const { record } = useBookingHistory();
+  const { user } = useAuth();
+  const inAppBookingFlag = useFlag("in_app_booking");
   const slotSheetRef = useRef<BottomSheetModal>(null);
+  const bookingRequestSheetRef = useRef<BottomSheetModal>(null);
   // Guards against a fast double-tap firing openOperatorBooking twice (which
   // would log two booking-history rows and schedule two reminders for one
   // tap's worth of intent). Reset in `finally` so a failed/cancelled redirect
@@ -97,6 +104,35 @@ export function FieldDetailScreen({ route }: Props) {
     } finally {
       setBookingInFlight(false);
     }
+  };
+
+  // Jump to the Me tab's SignIn screen regardless of which stack this screen
+  // is mounted under — same CommonActions.navigate + params.screen
+  // traversal as ReviewSection's / VenueDetailScreen's sign-in prompt.
+  const goToSignIn = () => {
+    nav.getParent()?.dispatch(
+      CommonActions.navigate({
+        name: "MeTab",
+        params: { screen: "SignIn" },
+      })
+    );
+  };
+
+  // Reserve bar's primary action, resolved through the flag + auth state.
+  // Flag OFF always falls into the "redirect" branch below, unconditionally
+  // on sign-in state — see lib/bookingAction.ts's own tests for that
+  // invariant in isolation.
+  const handleBookOrRequest = () => {
+    const decision = resolveBookingAction({ flagOn: inAppBookingFlag, signedIn: Boolean(user) });
+    if (decision.type === "redirect") {
+      void handleBookPress();
+      return;
+    }
+    if (decision.type === "sign_in") {
+      goToSignIn();
+      return;
+    }
+    bookingRequestSheetRef.current?.present();
   };
 
   // ---- Loading -----------------------------------------------------------
@@ -181,8 +217,8 @@ export function FieldDetailScreen({ route }: Props) {
         priceLabel={priceLabel}
         subline={subline}
         onPress={() => slotSheetRef.current?.present()}
-        actionLabel="Book"
-        onActionPress={() => void handleBookPress()}
+        actionLabel={reserveBarActionLabel(inAppBookingFlag)}
+        onActionPress={handleBookOrRequest}
         loading={bookingInFlight}
       />
     );
@@ -350,6 +386,18 @@ export function FieldDetailScreen({ route }: Props) {
       <WhenPickerSheet
         ref={slotSheetRef}
         getOpenHours={(date) => getDayHours(venue.hours, date)}
+      />
+      <BookingRequestSheet
+        ref={bookingRequestSheetRef}
+        venue={venue}
+        field={field}
+        slot={slot}
+        userId={user?.id ?? null}
+        onEditSlot={() => slotSheetRef.current?.present()}
+        onBookOnOperatorSite={() => {
+          bookingRequestSheetRef.current?.dismiss();
+          void handleBookPress();
+        }}
       />
     </View>
   );

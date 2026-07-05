@@ -1,5 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useNavigation } from "@react-navigation/native";
+import { CommonActions, useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp, NativeStackScreenProps } from "@react-navigation/native-stack";
 import {
   BottomSheetBackdrop,
@@ -20,6 +20,7 @@ import { Linking, Pressable, ScrollView, Share, StyleSheet, View } from "react-n
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { AmenityChip } from "../../components/AmenityChip";
+import { BookingRequestSheet } from "../../components/BookingRequestSheet";
 import { EmptyState } from "../../components/EmptyState";
 import { FreeBadge } from "../../components/FreeBadge";
 import { PhotoGallery } from "../../components/PhotoGallery";
@@ -32,9 +33,12 @@ import { WhenPickerSheet } from "../../components/WhenPicker";
 import { useLocation } from "../../hooks/useLocation";
 import { useVenue } from "../../hooks/useVenue";
 import { useVenueReviews } from "../../hooks/useVenueReviews";
+import { useAuth } from "../../lib/auth";
+import { reserveBarActionLabel, resolveBookingAction } from "../../lib/bookingAction";
 import { useBookingHistory } from "../../lib/bookingHistory";
 import { formatEndTime, formatSlotRange, formatTime12h } from "../../lib/datetime";
 import { openDirections } from "../../lib/directions";
+import { useFlag } from "../../lib/featureFlags";
 import { formatScrapedAgo } from "../../lib/freshness";
 import { openOperatorBooking } from "../../lib/openBooking";
 import { priceDisplayFor } from "../../lib/priceDisplay";
@@ -73,9 +77,16 @@ export function VenueDetailScreen({ route }: Props) {
   const nav = useNavigation<Nav>();
   const { slot } = usePreferredSlot();
   const { record } = useBookingHistory();
+  const { user } = useAuth();
+  const inAppBookingFlag = useFlag("in_app_booking");
   const toast = useToast();
   const slotSheetRef = useRef<BottomSheetModal>(null);
   const fieldPickerRef = useRef<BottomSheetModal>(null);
+  const bookingRequestSheetRef = useRef<BottomSheetModal>(null);
+  // Which field the booking-request sheet is open for. Only relevant for
+  // multi-field venues, where the field picker resolves this after the fact;
+  // single-bookable-field venues set it straight from reserveField.
+  const [requestField, setRequestField] = useState<Field | null>(null);
   // Guards against a fast double-tap firing openOperatorBooking twice (which
   // would log two booking-history rows and schedule two reminders for one
   // tap's worth of intent). Reset in `finally` so a failed/cancelled redirect
@@ -146,6 +157,36 @@ export function VenueDetailScreen({ route }: Props) {
     } finally {
       setBookingInFlight(false);
     }
+  };
+
+  // Jump to the Me tab's SignIn screen regardless of which stack this screen
+  // is mounted under. Same CommonActions.navigate + params.screen traversal
+  // as ReviewSection's sign-in prompt.
+  const goToSignIn = () => {
+    nav.getParent()?.dispatch(
+      CommonActions.navigate({
+        name: "MeTab",
+        params: { screen: "SignIn" },
+      })
+    );
+  };
+
+  // Reserve bar's primary action, resolved through the flag + auth state.
+  // Flag OFF always falls into the "redirect" branch below, unconditionally
+  // on sign-in state — see lib/bookingAction.ts's own tests for that
+  // invariant in isolation.
+  const handleBookOrRequest = (field: Field) => {
+    const decision = resolveBookingAction({ flagOn: inAppBookingFlag, signedIn: Boolean(user) });
+    if (decision.type === "redirect") {
+      void handleBook(field);
+      return;
+    }
+    if (decision.type === "sign_in") {
+      goToSignIn();
+      return;
+    }
+    setRequestField(field);
+    bookingRequestSheetRef.current?.present();
   };
 
   // ---- Loading -----------------------------------------------------------
@@ -272,12 +313,12 @@ export function VenueDetailScreen({ route }: Props) {
         priceLabel={priceLabel}
         subline={subline}
         onPress={() => slotSheetRef.current?.present()}
-        actionLabel="Book"
+        actionLabel={reserveBarActionLabel(inAppBookingFlag)}
         onActionPress={() => {
           if (bookableFields.length > 1) {
             fieldPickerRef.current?.present();
           } else {
-            void handleBook(reserveField);
+            handleBookOrRequest(reserveField);
           }
         }}
         loading={bookingInFlight}
@@ -487,7 +528,19 @@ export function VenueDetailScreen({ route }: Props) {
         venueType={venue.venue_type}
         onSelect={(field) => {
           fieldPickerRef.current?.dismiss();
-          void handleBook(field);
+          handleBookOrRequest(field);
+        }}
+      />
+      <BookingRequestSheet
+        ref={bookingRequestSheetRef}
+        venue={venue}
+        field={requestField}
+        slot={slot}
+        userId={user?.id ?? null}
+        onEditSlot={() => slotSheetRef.current?.present()}
+        onBookOnOperatorSite={() => {
+          bookingRequestSheetRef.current?.dismiss();
+          if (requestField) void handleBook(requestField);
         }}
       />
     </View>
