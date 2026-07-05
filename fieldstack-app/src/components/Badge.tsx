@@ -5,7 +5,7 @@ import { useTheme } from "../theme/useTheme";
 
 import { Text } from "./Text";
 
-export type BadgeVariant = "neutral" | "brand" | "success";
+export type BadgeVariant = "neutral" | "brand" | "success" | "amber" | "tertiary";
 
 type Props = {
   label: string;
@@ -21,9 +21,14 @@ export function Badge({ label, variant = "neutral" }: Props) {
 
   const tintMap = {
     neutral: { bg: colors.surfaceSecondary, fg: colors.textSecondary },
-    // ~16% opacity tint of brand/success on the surface — works in both schemes.
+    // ~16% opacity tint of brand/success/amber on the surface — works in
+    // both schemes.
     brand: { bg: colors.brand + "29", fg: colors.brand },
     success: { bg: colors.success + "29", fg: colors.success },
+    amber: { bg: colors.amber + "29", fg: colors.amber },
+    // Muted/inactive status (declined, cancelled) — no tint, just secondary
+    // ink on the neutral surface so it visually recedes vs. the live states.
+    tertiary: { bg: colors.surfaceSecondary, fg: colors.textTertiary },
   } as const;
 
   const { bg, fg } = tintMap[variant];

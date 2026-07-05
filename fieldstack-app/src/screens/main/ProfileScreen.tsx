@@ -7,6 +7,7 @@ import { useEffect, useMemo, useRef } from "react";
 import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { BookingRequestsSection } from "../../components/BookingRequestsSection";
 import { GoalNet } from "../../components/GoalNet";
 import { MyReviewsSection } from "../../components/MyReviewsSection";
 import { Text } from "../../components/Text";
@@ -17,6 +18,7 @@ import { useVenues } from "../../hooks/useVenues";
 import { useAuth } from "../../lib/auth";
 import { useBookingHistory, type BookingAttempt } from "../../lib/bookingHistory";
 import { formatEndTime, formatTime12h } from "../../lib/datetime";
+import { useFlag } from "../../lib/featureFlags";
 import {
   preferredSlotDate,
   usePreferredSlot,
@@ -52,6 +54,7 @@ export function ProfileScreen() {
   const { recent: recentIds } = useRecentlyViewed();
   const { attempts } = useBookingHistory();
   const { user, pendingRecovery, clearPendingRecovery } = useAuth();
+  const inAppBookingFlag = useFlag("in_app_booking");
 
   // Fallback redirect for recovery deep-links in case the app-level
   // RecoveryRedirectHandler in App.tsx fires before the nav container is fully
@@ -380,6 +383,14 @@ export function ProfileScreen() {
                 </Pressable>
               ))}
             </View>
+          </View>
+        ) : null}
+
+        {/* ---- Booking requests (in_app_booking flag) ---- */}
+        {user && inAppBookingFlag ? (
+          <View style={styles.sectionSpacer}>
+            <SectionHeader>Booking requests</SectionHeader>
+            <BookingRequestsSection userId={user.id} />
           </View>
         ) : null}
 
