@@ -21,9 +21,9 @@ The pipeline (`apps/api/scripts/scrape/`) is a single idempotent runner:
   upserts venues + fields keyed on `external_id` (`onConflict: external_id`, so
   re-runs update rather than duplicate).
 - Sources: `osm.ts` (Overpass `area` queries per city from `data/cities.yaml`),
-  `osmGta.ts` (older Halton/Hamilton variant — **not registered** in `run.ts`),
-  `mississauga.ts` (ArcGIS open-data GeoJSON — **also not registered** in
-  `run.ts`), `manual.ts` (reads `data/manual-venues.yaml`).
+  `mississauga.ts` (ArcGIS open-data GeoJSON), `manual.ts` (reads
+  `data/manual-venues.yaml`), `googlePlaces.ts` (private/indoor discovery),
+  `playtomic.ts` (platform tenant discovery). All registered in `run.ts`.
 - Schema (`supabase/migrations/`): `operators` (with `integration_type` enum
   `none|playtomic|courtreserve|amilia`), `venues` (unique `external_id`,
   `data_source`, `last_scraped_at`, `venue_type`, `hours`, PostGIS `location`),
@@ -32,10 +32,9 @@ The pipeline (`apps/api/scripts/scrape/`) is a single idempotent runner:
 - Run: `bun apps/api/scripts/scrape/run.ts <source>` with `SUPABASE_SERVICE_ROLE_KEY`.
   **Today it is run by hand.**
 
-> Note: `run.ts`'s `ADAPTERS` map currently registers only `osm` and `manual`.
-> `mississauga` and `osm-halton-hamilton` exist as files but aren't wired in.
-> Re-registering Mississauga is a one-line, zero-risk win and is called out in
-> the build order.
+> Note: every source file is registered in `run.ts`'s `ADAPTERS` map. The old
+> `osmGta.ts` (Halton/Hamilton bbox variant) was superseded by `osm.ts` +
+> `data/cities.yaml` and has been deleted.
 
 ### Limitations this doc addresses
 
@@ -70,8 +69,8 @@ as the priority gap. Each source is its own `ScrapeAdapter` with a namespaced
 
 ### 1.2 Municipal open data (next, cheap)
 
-Mississauga already works via ArcGIS GeoJSON (`mississauga.ts`) — it's just not
-registered in `run.ts`. The same pattern generalises:
+Mississauga already works via ArcGIS GeoJSON (`mississauga.ts`, registered).
+The same pattern generalises:
 
 - **Toronto** — Open Data portal + the city ArcGIS feature server. The PFR Sport
   Field layer (`gis.toronto.ca/arcgis/.../FeatureServer/54`) exposes a "Soccer
