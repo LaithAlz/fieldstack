@@ -88,11 +88,10 @@ a:hover { color: var(--brand-deep); }
 .muted-note { color: var(--text-2); }
 
 .eyebrow {
-  display: inline-flex; align-items: center; gap: var(--space-sm);
+  display: inline-flex; align-items: center;
   font-size: 12.5px; letter-spacing: 2px; text-transform: uppercase;
   color: var(--brand); font-weight: 700;
 }
-.eyebrow::before { content: ""; width: 22px; height: 2px; background: var(--brand); display: inline-block; }
 
 /* ---------- nav ---------- */
 .nav {
