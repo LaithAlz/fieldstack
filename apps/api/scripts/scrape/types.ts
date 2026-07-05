@@ -60,11 +60,11 @@ export type ScrapedVenue = {
   bookingNotes?: string | null;
   cancellationPolicy?: string | null;
   /**
-   * SCAFFOLDING (docs/scraping.md §1.3) — not yet consumed by run.ts.
-   * Google Place ID. The one Places field we're allowed to store durably
-   * (Places *content* must be fetched at display time, never cached). A
-   * future enrichment adapter resolves + stores this so we can re-hydrate
-   * photos/hours/phone on demand.
+   * Google Place ID (docs/scraping.md §1.3). The one Places field we're
+   * allowed to store durably (Places *content* must be fetched at display
+   * time, never cached). Persisted to `venues.google_place_id` by the
+   * runner when present; consumed and back-filled by enrichPhotos.ts so
+   * weekly photo refreshes can skip a paid Text Search re-resolution.
    */
   googlePlaceId?: string | null;
   /**

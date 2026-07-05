@@ -103,7 +103,10 @@ Two roles:
 hours, photos, ratings — **may not be cached or stored** beyond short-lived
 session use. The **Place ID is the one exception**: it can be stored
 indefinitely. So:
-- Store only `google_place_id` on the venue (durable, allowed).
+- Store only `google_place_id` on the venue (durable, allowed) — persisted
+  by the google scrape source and back-filled by `enrichPhotos.ts`'s
+  resolution write-back, so the weekly photo refresh can check the stored
+  id first and skip a paid Text Search re-resolution.
 - Re-fetch Places *content* at display time, or refresh on a short TTL
   consistent with Google's terms — do **not** treat scraped Places fields as
   permanent rows.
