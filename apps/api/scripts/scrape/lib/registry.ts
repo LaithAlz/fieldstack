@@ -76,6 +76,12 @@ export type Operator = {
   bookingUrl?: string;
   integrationType: IntegrationType;
   aliases: string[];
+  /** CourtReserve numeric OrgId — see data/operators.yaml header. */
+  courtreserveOrgId?: number;
+  /** Amilia storefront slug — see data/operators.yaml header. */
+  amiliaRewriteUrl?: string;
+  /** Playtomic club slug — see data/operators.yaml header. */
+  playtomicSlug?: string;
 };
 
 type OperatorsFile = {
@@ -85,6 +91,9 @@ type OperatorsFile = {
     booking_url?: string;
     integration_type?: IntegrationType;
     aliases?: string[];
+    courtreserve_org_id?: number;
+    amilia_rewrite_url?: string;
+    playtomic_slug?: string;
   }>;
 };
 
@@ -94,13 +103,37 @@ export function loadOperators(): Operator[] {
   if (!parsed?.operators || !Array.isArray(parsed.operators)) {
     throw new Error("operators.yaml: expected top-level `operators:` list");
   }
-  return parsed.operators.map((o) => ({
-    name: o.name,
-    website: o.website || undefined,
-    bookingUrl: o.booking_url || undefined,
-    integrationType: o.integration_type ?? "none",
-    aliases: o.aliases ?? [],
-  }));
+  return parsed.operators.map((o) => {
+    const integrationType = o.integration_type ?? "none";
+    // Half-filled entries (a platform set without its id key) must be
+    // visible, not silent — the operator still loads, but a deep link
+    // can never be built for it until the id is filled in.
+    if (integrationType === "courtreserve" && o.courtreserve_org_id == null) {
+      console.warn(
+        `[registry] operator "${o.name}" is integration_type: courtreserve but has no courtreserve_org_id`
+      );
+    }
+    if (integrationType === "amilia" && !o.amilia_rewrite_url) {
+      console.warn(
+        `[registry] operator "${o.name}" is integration_type: amilia but has no amilia_rewrite_url`
+      );
+    }
+    if (integrationType === "playtomic" && !o.playtomic_slug) {
+      console.warn(
+        `[registry] operator "${o.name}" is integration_type: playtomic but has no playtomic_slug`
+      );
+    }
+    return {
+      name: o.name,
+      website: o.website || undefined,
+      bookingUrl: o.booking_url || undefined,
+      integrationType,
+      aliases: o.aliases ?? [],
+      courtreserveOrgId: o.courtreserve_org_id ?? undefined,
+      amiliaRewriteUrl: o.amilia_rewrite_url || undefined,
+      playtomicSlug: o.playtomic_slug || undefined,
+    };
+  });
 }
 
 // ---------------------------------------------------------------------------
