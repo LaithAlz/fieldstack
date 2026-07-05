@@ -14,9 +14,40 @@
 #                      Defaults to 'none'. Set when the operator uses a
 #                      known booking platform — lets us deep-link
 #                      with pre-filled date/time when we want to.
+#   courtreserve_org_id — (courtreserve only) numeric OrgId from the
+#                      club's CourtReserve Public Booking portal
+#                      (app.courtreserve.com/Online/Portal/Index/{OrgId}).
+#                      No GTA/Hamilton soccer facility has been found on
+#                      CourtReserve yet, so this key ships unused —
+#                      the enum path exists for when one is.
+#   amilia_rewrite_url — (amilia only) the org's storefront slug from
+#                      app.amilia.com/store/en/{rewriteUrl}/shop/programs.
+#                      The two GTA domes with an Amilia storefront use it
+#                      for youth-program signup only — their hourly
+#                      rentals go through CatchCorner, so they carry a
+#                      plain booking_url instead (see the Amilia comments
+#                      on Markham Sports Dome / Woodbridge Sports Dome
+#                      below rather than this key).
+#   playtomic_slug     — (playtomic only) the club slug from
+#                      playtomic.com/clubs/{slug}. Usually auto-discovered
+#                      by sources/playtomic.ts; set explicitly here only
+#                      to force-link a club by hand.
 #   aliases       — alternate names that scraped venues might appear as.
 #                   Case-insensitive substring match. Add a new alias when
 #                   you see a venue that should be linked but isn't.
+#
+# Exactly one of courtreserve_org_id / amilia_rewrite_url / playtomic_slug
+# should be set per operator, matching its integration_type, e.g.:
+#
+#   - name: Example Club
+#     integration_type: courtreserve
+#     courtreserve_org_id: 12345        # number
+#   # or
+#     integration_type: amilia
+#     amilia_rewrite_url: example-club  # string
+#   # or
+#     integration_type: playtomic
+#     playtomic_slug: example-club      # string
 #
 # Booking URL TODOs: many operators here have website set but
 # booking_url missing or pointing at the homepage. Fill in real
@@ -41,9 +72,11 @@ operators:
 
   - name: The Soccer Centre
     website: https://thesoccercentre.com
-    booking_url: https://thesoccercentre.com
+    booking_url: https://www.catchcorner.com/facility-page/embedded/rental/ontario-soccer-zanchin-automotive-soccer-centre
     aliases:
       - The Soccer Centre
+      - Ontario Soccer Centre
+      - Zanchin Automotive Soccer Centre
 
   - name: Brampton Soccer Centre
     website: https://www.brampton.ca/EN/residents/Recreation/Locations/Pages/Brampton-Soccer-Centre.aspx
@@ -54,7 +87,7 @@ operators:
   # ===== Toronto / Scarborough =====
   - name: Toronto Soccerplex
     website: https://torontosoccerplex.ca
-    booking_url: https://torontosoccerplex.ca
+    booking_url: https://www.catchcorner.com/facility-page/torontosoccerplex/home
     aliases:
       - Toronto Soccerplex
       - Soccerplex
@@ -71,12 +104,65 @@ operators:
     aliases:
       - Toronto City Sports Centre
 
+  - name: Downsview Park Sports Centre
+    website: https://downsviewpark.ca
+    booking_url: https://www.catchcorner.com/facility-page/downsview-park/home
+    aliases:
+      - The Hangar
+      - Downsview Park
+
+  - name: Monarch Park Stadium
+    website: ""
+    booking_url: https://www.catchcorner.com/monarchparkstadium
+    aliases:
+      - Monarch Park Stadium
+
+  - name: Ballsports Polson Pier
+    website: ""
+    booking_url: https://www.catchcorner.com/facility-page/ballsportspolsonpier/home
+    aliases:
+      - Polson Pier
+      - JAM Sportsplex Polson Pier
+      - Soccerworld Polson Pier
+
+  - name: Socceroof Toronto
+    website: https://www.socceroof.com
+    booking_url: https://www.socceroof.com/en/book/club/toronto-etobicoke/activity/rent-a-field/
+    aliases:
+      - Socceroof
+
   # ===== York region =====
   - name: Milliken Mills Soccer Dome
     website: https://www.markham.ca/wps/portal/home/recreation/recreation-facilities/milliken-mills-park
     booking_url: https://www.markham.ca/wps/portal/home/recreation/recreation-facilities/milliken-mills-park
     aliases:
       - Milliken Mills Soccer Dome
+
+  - name: Markham Sports Dome
+    website: https://www.markhamsportsdome.com
+    booking_url: https://www.catchcorner.com/facility-page/549/home
+    # Amilia program store exists at app.amilia.com/store/en/mt-joy-sports-dome
+    # — youth-program signup only, not hourly rentals; do not set
+    # amilia_rewrite_url here (a "Book" CTA must hit the hourly-rental flow).
+    aliases:
+      - Mount Joy Sports Dome
+      - Markham Sports Dome
+
+  - name: Woodbridge Sports Dome
+    website: https://woodbridgesportsdome.com
+    booking_url: https://www.catchcorner.com/facility-page/548/home
+    # Amilia program store exists at app.amilia.com/store/en/woodbridgesportsdome
+    # — youth-program signup only, not hourly rentals; do not set
+    # amilia_rewrite_url here (a "Book" CTA must hit the hourly-rental flow).
+    aliases:
+      - Woodbridge Sports Dome
+
+  - name: Vaughan Sportsplex
+    website: ""
+    booking_url: https://www.catchcorner.com/facility-page/embedded/rental/vaughan-sportsplex
+    aliases:
+      - Vaughan Sportsplex
+      - GTA Sportsplex
 
   # ===== Hamilton =====
   - name: Soccer World
@@ -97,3 +183,22 @@ operators:
     booking_url: ""
     aliases:
       - Sherwood Forest Park Field
+
+  # ===== Other GTA =====
+  - name: 360 Soccer Centre
+    website: ""
+    booking_url: https://www.catchcorner.com/facility-page/embedded/rental/360-soccer-centre
+    aliases:
+      - 360 Soccer Centre
+
+  - name: La Liga Sports Complex
+    website: ""
+    booking_url: https://www.catchcorner.com/facility-page/la-liga-sports-complex/home
+    aliases:
+      - La Liga Sports Complex
+
+  - name: GTA Soccer Club
+    website: https://www.gta-soccer.com
+    booking_url: https://www.gta-soccer.com/field-rental/
+    aliases:
+      - GTA Soccer Club

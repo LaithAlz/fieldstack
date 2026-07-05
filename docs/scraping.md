@@ -229,9 +229,10 @@ first, then specifics.
   the club's unique numeric id.
 - **Recommended use:** discover CourtReserve clubs **manually** (their site links
   to the portal, or "Reserve with Google"); record the `OrgId` in
-  `operators.yaml`; deep-link to the Public Booking portal as Tier-1
-  (`booking_platform = 'courtreserve'`). Pull live resources/availability only via
-  the authorised club API under a partnership.
+  `operators.yaml` (as `courtreserve_org_id` — the runner now builds the deep
+  link + sets `booking_platform` from it); deep-link to the Public Booking
+  portal as Tier-1 (`booking_platform = 'courtreserve'`). Pull live
+  resources/availability only via the authorised club API under a partnership.
 
 #### Amilia (SmartRec)
 
@@ -245,9 +246,11 @@ first, then specifics.
 - **Storefront deep link:** `https://app.amilia.com/store/en/{rewriteUrl}/shop/programs`.
   Amilia is widely used by Canadian **municipal rec depts and clubs**, so several
   GTA community-centre / club soccer programs and field rentals live here.
-- **Recommended use:** record `rewriteUrl` in `operators.yaml`; deep-link to the
-  store as Tier-1 (`booking_platform = 'amilia'`); pull activities/resources via
-  the org API once an operator grants integration credentials.
+- **Recommended use:** record `rewriteUrl` in `operators.yaml` (as
+  `amilia_rewrite_url` — the runner now builds the deep link + sets
+  `booking_platform` from it); deep-link to the store as Tier-1
+  (`booking_platform = 'amilia'`); pull activities/resources via the org API
+  once an operator grants integration credentials.
 
 ### 3.3 The honest conclusion
 
@@ -400,7 +403,8 @@ Ordered by payoff-to-effort. Each step is independently shippable.
    build deep links from the known URL templates (CourtReserve `OrgId`, Amilia
    `rewriteUrl`, Playtomic tenant page) via `operators.yaml`. Optionally a
    discovery-only Playtomic `tenants` probe to find GTA venues. *Effort: medium.
-   Payoff: real Tier-1 deep links with zero API auth.*
+   Payoff: real Tier-1 deep links with zero API auth.* (mechanism shipped; add
+   operator ids as they're found)
 5. **Cross-source dedup + confidence** — canonical-venue resolution +
    field-level precedence (§4.3). Needed before running many overlapping sources
    at full coverage. *Effort: medium–high. Payoff: data quality at scale.*

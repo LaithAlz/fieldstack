@@ -17,8 +17,10 @@
  *        operator "Scraped (unclaimed)"
  *      - For manual venues, the YAML's explicit `operator:` field
  *        overrides name-matching
- *      - Inherit booking_url from the matched operator when the
- *        venue/field doesn't carry one
+ *      - Resolve each field's booking_url/booking_platform via
+ *        lib/platformLinks.ts: the field's own values win, else the
+ *        operator's platform deep link (docs/scraping.md §3.2/§3.3),
+ *        else its plain booking_url/website
  *      - Upsert venue (idempotent on external_id)
  *   4. Upsert each field under its venue.
  *
@@ -35,13 +37,19 @@ import { manualAdapter } from "./sources/manual.js";
 import { googlePlacesAdapter } from "./sources/googlePlaces.js";
 import { playtomicAdapter } from "./sources/playtomic.js";
 import { mississaugaAdapter } from "./sources/mississauga.js";
-import type { ScrapeAdapter, ScrapedField, ScrapedVenue } from "./types.js";
+import type {
+  BookingPlatform,
+  ScrapeAdapter,
+  ScrapedField,
+  ScrapedVenue,
+} from "./types.js";
 import {
   loadManualVenues,
   loadOperators,
   type Operator,
 } from "./lib/registry.js";
 import { findOperator } from "./lib/operatorMatcher.js";
+import { resolveFieldBooking } from "./lib/platformLinks.js";
 import {
   sourcePrefixCounts,
   zeroRegressions,
@@ -147,10 +155,12 @@ async function main() {
         const venueId = await upsertVenue(v, operatorId);
         if (!venueId) continue;
         venuesUpserted++;
-        // Inherit booking URL from operator if field doesn't carry one.
-        const fallbackUrl = operator?.bookingUrl ?? operator?.website ?? null;
+        // Inherit booking url/platform from the operator when the field
+        // doesn't carry its own (resolveFieldBooking: field wins, then the
+        // operator's platform deep link, then its plain booking_url/website).
         for (const f of v.fields) {
-          const ok = await upsertField(venueId, f, fallbackUrl);
+          const booking = resolveFieldBooking(f, operator);
+          const ok = await upsertField(venueId, f, booking);
           if (ok) fieldsUpserted++;
         }
       }
@@ -390,7 +400,7 @@ async function upsertVenue(
 async function upsertField(
   venueId: string,
   f: ScrapedField,
-  fallbackBookingUrl: string | null
+  booking: { bookingUrl: string | null; bookingPlatform: BookingPlatform }
 ): Promise<boolean> {
   const { error } = await supabase.from("fields").upsert(
     {
@@ -400,9 +410,8 @@ async function upsertField(
       surface: f.surface,
       size: f.size,
       price_per_hour: f.pricePerHour ?? null,
-      // Use the field's own URL if present, else inherit from operator.
-      booking_url: f.bookingUrl ?? fallbackBookingUrl,
-      booking_platform: f.bookingPlatform ?? "none",
+      booking_url: booking.bookingUrl,
+      booking_platform: booking.bookingPlatform,
       is_active: true,
     },
     { onConflict: "external_id" }
