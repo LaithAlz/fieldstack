@@ -5,7 +5,7 @@ import type {
   NativeStackScreenProps,
 } from "@react-navigation/native-stack";
 import { BottomSheetModal } from "@gorhom/bottom-sheet";
-import { useEffect, useRef, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Linking, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -70,6 +70,11 @@ export function FieldDetailScreen({ route }: Props) {
   const { slot } = usePreferredSlot();
   const { record } = useBookingHistory();
   const slotSheetRef = useRef<BottomSheetModal>(null);
+  // Guards against a fast double-tap firing openOperatorBooking twice (which
+  // would log two booking-history rows and schedule two reminders for one
+  // tap's worth of intent). Reset in `finally` so a failed/cancelled redirect
+  // doesn't leave the Book button stuck spinning.
+  const [bookingInFlight, setBookingInFlight] = useState(false);
 
   const { data: field, isLoading, error } = useField(fieldId);
 
@@ -79,14 +84,19 @@ export function FieldDetailScreen({ route }: Props) {
     if (loadedFieldId) track(EVENT_FIELD_VIEWED, { field_id: loadedFieldId });
   }, [loadedFieldId]);
 
-  const handleBookPress = () => {
-    if (!field) return;
+  const handleBookPress = async () => {
+    if (!field || bookingInFlight) return;
     track(EVENT_BOOKING_CTA_TAPPED, {
       field_id: field.id,
       venue_id: field.venue.id,
       operator_id: field.venue.operator_id,
     });
-    void openOperatorBooking({ field, venue: field.venue, toast, slot, record });
+    setBookingInFlight(true);
+    try {
+      await openOperatorBooking({ field, venue: field.venue, toast, slot, record });
+    } finally {
+      setBookingInFlight(false);
+    }
   };
 
   // ---- Loading -----------------------------------------------------------
@@ -172,7 +182,8 @@ export function FieldDetailScreen({ route }: Props) {
         subline={subline}
         onPress={() => slotSheetRef.current?.present()}
         actionLabel="Book"
-        onActionPress={handleBookPress}
+        onActionPress={() => void handleBookPress()}
+        loading={bookingInFlight}
       />
     );
   } else if (venue.website) {

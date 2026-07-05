@@ -87,6 +87,7 @@ export function VenueFinder({
                 key={s}
                 type="button"
                 className={`chip ${surface === s ? "on" : ""}`}
+                aria-pressed={surface === s}
                 onClick={() => setSurface(surface === s ? null : s)}
               >
                 {s}
@@ -100,6 +101,7 @@ export function VenueFinder({
                 key={s}
                 type="button"
                 className={`chip ${size === s ? "on" : ""}`}
+                aria-pressed={size === s}
                 onClick={() => setSize(size === s ? null : s)}
               >
                 {s}

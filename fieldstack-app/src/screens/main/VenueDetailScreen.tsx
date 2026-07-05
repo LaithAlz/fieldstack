@@ -7,7 +7,15 @@ import {
   BottomSheetModal,
   BottomSheetScrollView,
 } from "@gorhom/bottom-sheet";
-import { forwardRef, useCallback, useEffect, useMemo, useRef, type ReactNode } from "react";
+import {
+  forwardRef,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { Linking, Pressable, ScrollView, Share, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -68,6 +76,11 @@ export function VenueDetailScreen({ route }: Props) {
   const toast = useToast();
   const slotSheetRef = useRef<BottomSheetModal>(null);
   const fieldPickerRef = useRef<BottomSheetModal>(null);
+  // Guards against a fast double-tap firing openOperatorBooking twice (which
+  // would log two booking-history rows and schedule two reminders for one
+  // tap's worth of intent). Reset in `finally` so a failed/cancelled redirect
+  // doesn't leave the Book button stuck spinning.
+  const [bookingInFlight, setBookingInFlight] = useState(false);
 
   const { data: venue, isLoading, error } = useVenue(venueId);
   const { coords } = useLocation();
@@ -120,14 +133,19 @@ export function VenueDetailScreen({ route }: Props) {
     return formatDistance(haversineKm(coords, { lat: venue.lat, lng: venue.lng }));
   }, [coords, venue]);
 
-  const handleBook = (field: Field) => {
-    if (!venue) return;
+  const handleBook = async (field: Field) => {
+    if (!venue || bookingInFlight) return;
     track(EVENT_BOOKING_CTA_TAPPED, {
       field_id: field.id,
       venue_id: venue.id,
       operator_id: venue.operator_id,
     });
-    void openOperatorBooking({ field, venue, toast, slot, record });
+    setBookingInFlight(true);
+    try {
+      await openOperatorBooking({ field, venue, toast, slot, record });
+    } finally {
+      setBookingInFlight(false);
+    }
   };
 
   // ---- Loading -----------------------------------------------------------
@@ -259,9 +277,10 @@ export function VenueDetailScreen({ route }: Props) {
           if (bookableFields.length > 1) {
             fieldPickerRef.current?.present();
           } else {
-            handleBook(reserveField);
+            void handleBook(reserveField);
           }
         }}
+        loading={bookingInFlight}
       />
     );
   } else if (venue.website) {
@@ -468,7 +487,7 @@ export function VenueDetailScreen({ route }: Props) {
         venueType={venue.venue_type}
         onSelect={(field) => {
           fieldPickerRef.current?.dismiss();
-          handleBook(field);
+          void handleBook(field);
         }}
       />
     </View>

@@ -11,6 +11,9 @@ const PIN_ICON_SIZE = 32;
 const PRICE_HEIGHT = 30;
 const SELECTED_SIZE = 46;
 const FREE_DOT_SIZE = 14;
+// REQ-F0.2 — minimum touch target. The dot itself stays its small visual
+// size; only the invisible hit area around it grows.
+const FREE_HIT_AREA_SIZE = 44;
 
 type CountProps = {
   mode: "count";
@@ -139,14 +142,18 @@ export function VenuePin(props: Props) {
       <View
         accessibilityRole="button"
         accessibilityLabel={a11y}
-        style={[
-          styles.freeDot,
-          {
-            backgroundColor: colors.success,
-            borderColor: colors.surfaceElevated,
-          },
-        ]}
-      />
+        style={styles.freeHitArea}
+      >
+        <View
+          style={[
+            styles.freeDot,
+            {
+              backgroundColor: colors.success,
+              borderColor: colors.surfaceElevated,
+            },
+          ]}
+        />
+      </View>
     );
   }
 
@@ -187,6 +194,18 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     shadowOpacity: 0.22,
     elevation: 4,
+  },
+  // Transparent 44x44 hit area, dot bottom-centered inside it. Markers
+  // anchor at bottom-center by default (see VenueMarkerSlot) — centering the
+  // dot vertically in a taller box would shift the visible dot away from the
+  // pin's actual map coordinate, so it's pinned to the bottom edge instead:
+  // same visual position as the old bare 14x14 dot, just a bigger invisible
+  // pressable frame around it.
+  freeHitArea: {
+    width: FREE_HIT_AREA_SIZE,
+    height: FREE_HIT_AREA_SIZE,
+    alignItems: "center",
+    justifyContent: "flex-end",
   },
   freeDot: {
     width: FREE_DOT_SIZE,

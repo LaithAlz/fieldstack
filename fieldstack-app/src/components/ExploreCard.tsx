@@ -3,9 +3,9 @@ import { Image } from "expo-image";
 import { useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 
-import { isFreeVenue } from "../lib/filters";
 import { formatDistance, haversineKm } from "../lib/distance";
 import type { Coords } from "../lib/location";
+import { venuePriceSummary } from "../lib/priceDisplay";
 import { isOpenNow } from "../lib/venueHours";
 import { borderRadius, spacing } from "../theme/tokens";
 import { useTheme } from "../theme/useTheme";
@@ -66,8 +66,7 @@ export function ExploreCard({ group, userCoords, onPress }: Props) {
       ? formatDistance(haversineKm(userCoords, { lat: venue.lat, lng: venue.lng }))
       : null;
 
-  const minPrice = buildMinPrice(fields);
-  const isFree = isFreeVenue(venue.venue_type, minPrice);
+  const priceSummary = venuePriceSummary(fields, venue.venue_type);
   const hasBookingUrl = fields.some((f) => f.booking_url);
   const meta = buildMeta(fields);
 
@@ -80,7 +79,11 @@ export function ExploreCard({ group, userCoords, onPress }: Props) {
 
   const a11yLabel = [
     venue.name,
-    isFree ? "Free to play" : minPrice !== null ? `from $${Math.round(minPrice)} per hour` : null,
+    priceSummary.kind === "free"
+      ? "Free to play"
+      : priceSummary.kind === "from"
+        ? `from $${Math.round(priceSummary.price)} per hour`
+        : null,
     openNow ? "Open now" : null,
     distance ? `${distance} away` : null,
     meta,
@@ -152,11 +155,11 @@ export function ExploreCard({ group, userCoords, onPress }: Props) {
             <View />
           )}
 
-          {isFree ? (
+          {priceSummary.kind === "free" ? (
             <FreeBadge />
-          ) : minPrice !== null ? (
+          ) : priceSummary.kind === "from" ? (
             <Text font="display" size="lg" style={{ color: colors.brand, letterSpacing: 0.3 }}>
-              {`$${Math.round(minPrice)}/hr`}
+              {`$${Math.round(priceSummary.price)}/hr`}
             </Text>
           ) : hasBookingUrl ? (
             <Text size="xs" variant="secondary">
@@ -173,14 +176,6 @@ export function ExploreCard({ group, userCoords, onPress }: Props) {
       </View>
     </Pressable>
   );
-}
-
-function buildMinPrice(fields: Field[]): number | null {
-  const priced = fields
-    .map((f) => f.price_per_hour)
-    .filter((p): p is number => p !== null);
-  if (priced.length === 0) return null;
-  return Math.min(...priced);
 }
 
 function buildMeta(fields: Field[]): string {

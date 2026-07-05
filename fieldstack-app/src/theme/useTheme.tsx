@@ -23,6 +23,15 @@ type ThemeContextValue = {
   setPreference: (next: ThemePreference) => void;
   /** The resolved scheme actually in effect right now. */
   active: ActiveScheme;
+  /**
+   * False until the AsyncStorage preference read resolves (including on read
+   * failure — the "system" default is a valid resolution too). App.tsx's
+   * PersistenceGate blocks first render on this so the very first visible
+   * frame already reflects the persisted scheme, instead of flashing the
+   * default "system" resolution for one frame and then snapping to the
+   * user's saved light/dark choice.
+   */
+  hydrated: boolean;
 };
 
 const ThemeContext = createContext<ThemeContextValue | null>(null);
@@ -46,6 +55,7 @@ function isThemePreference(value: unknown): value is ThemePreference {
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const systemScheme = useColorScheme();
   const [preference, setPreferenceState] = useState<ThemePreference>("system");
+  const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -56,7 +66,11 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
           setPreferenceState(raw);
         }
       } catch {
-        // Read failure is fine — fall back to the "system" default.
+        // Read failure is fine — fall back to the "system" default. Still
+        // counts as hydrated: there's no pending read left to flash a
+        // different scheme in once it resolves.
+      } finally {
+        if (!cancelled) setHydrated(true);
       }
     })();
     return () => {
@@ -73,8 +87,8 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     preference === "system" ? (systemScheme === "dark" ? "dark" : "light") : preference;
 
   const value = useMemo<ThemeContextValue>(
-    () => ({ preference, setPreference, active }),
-    [preference, setPreference, active]
+    () => ({ preference, setPreference, active, hydrated }),
+    [preference, setPreference, active, hydrated]
   );
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;

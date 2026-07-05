@@ -17,6 +17,13 @@ type Props = {
   onPress?: () => void;
   actionLabel: string;
   onActionPress: () => void;
+  /**
+   * True while `onActionPress`'s booking redirect is in flight. Shows the
+   * primary action's spinner and disables it — without this, a fast double
+   * tap fires `openOperatorBooking` twice, which logs two booking-history
+   * rows and schedules two reminders for what was one tap's worth of intent.
+   */
+  loading?: boolean;
 };
 
 /**
@@ -26,7 +33,14 @@ type Props = {
  * FieldDetail (a single field) so the pattern, and its safe-area handling,
  * stays identical everywhere it appears.
  */
-export function ReserveBar({ priceLabel, subline, onPress, actionLabel, onActionPress }: Props) {
+export function ReserveBar({
+  priceLabel,
+  subline,
+  onPress,
+  actionLabel,
+  onActionPress,
+  loading = false,
+}: Props) {
   const colors = useTheme();
   const insets = useSafeAreaInsets();
 
@@ -57,7 +71,12 @@ export function ReserveBar({ priceLabel, subline, onPress, actionLabel, onAction
           </Text>
         ) : null}
       </Pressable>
-      <Button label={actionLabel} onPress={onActionPress} style={styles.action} />
+      <Button
+        label={actionLabel}
+        onPress={onActionPress}
+        loading={loading}
+        style={styles.action}
+      />
     </View>
   );
 }
