@@ -42,6 +42,14 @@ import {
   type Operator,
 } from "./lib/registry.js";
 import { findOperator } from "./lib/operatorMatcher.js";
+import {
+  sourcePrefixCounts,
+  zeroRegressions,
+  type SourceRunResult,
+} from "./lib/monitor.js";
+
+/** Freshness-summary window (docs/scraping.md §4.5). */
+const FRESHNESS_DAYS = 14;
 
 const ADAPTERS: Record<string, ScrapeAdapter> = {
   [osmAdapter.source]: osmAdapter,
@@ -112,42 +120,127 @@ async function main() {
     process.exit(1);
   }
 
+  // Snapshot of active-venue counts per source prefix, taken before this
+  // run touches anything — the zero-rows guard below compares each
+  // source's fetch against what the DB already held for it.
+  const priorCounts = await fetchPriorSourceCounts();
+
   let totalVenues = 0;
   let totalFields = 0;
+  const results: SourceRunResult[] = [];
   for (const adapter of sourcesToRun) {
     console.log(`[scrape] Running ${adapter.label}…`);
     const t0 = Date.now();
-    const venues = await adapter.run();
-    console.log(
-      `[scrape] ${adapter.source}: fetched ${venues.length} venues in ${Date.now() - t0}ms`
-    );
+    try {
+      const venues = await adapter.run();
+      console.log(
+        `[scrape] ${adapter.source}: fetched ${venues.length} venues in ${Date.now() - t0}ms`
+      );
 
-    let venuesUpserted = 0;
-    let fieldsUpserted = 0;
-    for (const v of venues) {
-      const operator = resolveOperator(v, operators);
-      const operatorId = operator
-        ? operatorIdsByName.get(operator.name.toLowerCase()) ?? placeholderId
-        : placeholderId;
-      const venueId = await upsertVenue(v, operatorId);
-      if (!venueId) continue;
-      venuesUpserted++;
-      // Inherit booking URL from operator if field doesn't carry one.
-      const fallbackUrl = operator?.bookingUrl ?? operator?.website ?? null;
-      for (const f of v.fields) {
-        const ok = await upsertField(venueId, f, fallbackUrl);
-        if (ok) fieldsUpserted++;
+      let venuesUpserted = 0;
+      let fieldsUpserted = 0;
+      for (const v of venues) {
+        const operator = resolveOperator(v, operators);
+        const operatorId = operator
+          ? operatorIdsByName.get(operator.name.toLowerCase()) ?? placeholderId
+          : placeholderId;
+        const venueId = await upsertVenue(v, operatorId);
+        if (!venueId) continue;
+        venuesUpserted++;
+        // Inherit booking URL from operator if field doesn't carry one.
+        const fallbackUrl = operator?.bookingUrl ?? operator?.website ?? null;
+        for (const f of v.fields) {
+          const ok = await upsertField(venueId, f, fallbackUrl);
+          if (ok) fieldsUpserted++;
+        }
       }
+      console.log(
+        `[scrape] ${adapter.source}: upserted ${venuesUpserted} venues, ${fieldsUpserted} fields`
+      );
+      totalVenues += venuesUpserted;
+      totalFields += fieldsUpserted;
+      results.push({
+        source: adapter.source,
+        fetched: venues.length,
+        venuesUpserted,
+        fieldsUpserted,
+      });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error(`[scrape] ${adapter.source}: FAILED — ${msg}`);
+      results.push({
+        source: adapter.source,
+        fetched: null,
+        venuesUpserted: 0,
+        fieldsUpserted: 0,
+        error: msg,
+      });
     }
-    console.log(
-      `[scrape] ${adapter.source}: upserted ${venuesUpserted} venues, ${fieldsUpserted} fields`
-    );
-    totalVenues += venuesUpserted;
-    totalFields += fieldsUpserted;
   }
 
   console.log(`[scrape] Done: ${totalVenues} venues, ${totalFields} fields total`);
-  process.exit(0);
+
+  await printRunSummary(results);
+
+  const regressions = zeroRegressions(results, priorCounts);
+  for (const reg of regressions) {
+    console.error(
+      `[scrape] ZERO-ROWS GUARD: ${reg.source} returned 0 venues but DB has ${priorCounts.get(reg.source) ?? 0} — source may have broken silently`
+    );
+  }
+
+  const anyErrored = results.some((r) => r.fetched === null);
+  process.exit(anyErrored || regressions.length > 0 ? 1 : 0);
+}
+
+// ---------------------------------------------------------------------------
+// Monitoring (docs/scraping.md §4.5): prior-count snapshot, run summary,
+// freshness check, zero-rows guard.
+// ---------------------------------------------------------------------------
+
+/** Active venues per source prefix, queried before this run starts. */
+async function fetchPriorSourceCounts(): Promise<Map<string, number>> {
+  const { data, error } = await supabase
+    .from("venues")
+    .select("external_id")
+    .eq("is_active", true)
+    .limit(5000);
+  if (error) {
+    console.warn(`[scrape] prior-count query failed: ${error.message}`);
+    return new Map();
+  }
+  return sourcePrefixCounts((data ?? []).map((r) => r.external_id as string));
+}
+
+/** Print the per-source summary block + freshness count (§4.5). */
+async function printRunSummary(results: SourceRunResult[]): Promise<void> {
+  console.log("[scrape] ── run summary ──────────────────────────");
+  for (const r of results) {
+    const label = r.source.padEnd(13);
+    if (r.fetched === null) {
+      console.log(`[scrape] ${label}FAILED — ${r.error}`);
+    } else {
+      console.log(
+        `[scrape] ${label}fetched ${String(r.fetched).padEnd(4)} upserted ${r.venuesUpserted} venues / ${r.fieldsUpserted} fields`
+      );
+    }
+  }
+
+  const cutoff = new Date(
+    Date.now() - FRESHNESS_DAYS * 24 * 60 * 60 * 1000
+  ).toISOString();
+  const { count, error } = await supabase
+    .from("venues")
+    .select("id", { count: "exact", head: true })
+    .eq("is_active", true)
+    .lt("last_scraped_at", cutoff);
+  if (error) {
+    console.warn(`[scrape] freshness query failed: ${error.message}`);
+    return;
+  }
+  console.log(
+    `[scrape] freshness: ${count ?? 0} active venues not rescraped in ${FRESHNESS_DAYS}+ days`
+  );
 }
 
 // ---------------------------------------------------------------------------

@@ -360,11 +360,21 @@ Proposed approach (design, not yet built):
 
 - The runner already logs per-source counts + timings. In the scheduled workflow,
   a failed run shows red in Actions.
-- Cheap next step: after each run, log/emit `venues upserted`, `fields upserted`,
-  and a freshness summary (count of venues not refreshed in N days). Alert (even
-  just a failing job) if a source returns **zero** rows when it historically
-  returned many — the classic "source changed its schema and we silently went
-  empty" failure (the same failure mode migration 019's CI guard was added for).
+- **Shipped:** each source's adapter run + upsert loop is wrapped in a
+  try/catch (`run.ts`) so one bad adapter no longer kills the rest of an
+  `all` run — it's recorded as a failure and the next source still runs.
+  After all sources finish, `run.ts` prints a summary block (fetched /
+  upserted venues+fields per source, or `FAILED — <error>`) plus a freshness
+  count (active venues with `last_scraped_at` older than 14 days). A
+  zero-rows guard (`scripts/scrape/lib/monitor.ts`, unit-tested in
+  `tests/monitor.test.ts`) compares each source's fetch count against active
+  venues already in the DB for that source's `external_id` prefix — if a
+  source that already had ≥5 active venues returns `[]`, that's flagged as
+  `ZERO-ROWS GUARD` and the run exits non-zero, the classic "source changed
+  its schema and we silently went empty" failure (the same failure mode
+  migration 019's CI guard was added for). Adapter errors and zero-rows
+  regressions both make the process exit 1, so the scheduled workflow shows
+  red with the reason in the log — no workflow changes needed.
 
 ---
 
