@@ -145,7 +145,7 @@ export function ReviewSection({
       <View style={styles.summary}>
         <StarRating value={avgRating} />
         <Text size="md" weight="bold">
-          {reviewCount > 0 ? avgRating.toFixed(1) : "–"}
+          {reviewCount > 0 ? avgRating.toFixed(1) : "New"}
         </Text>
         <Text size="sm" variant="secondary">
           ({reviewCount} {reviewCount === 1 ? "review" : "reviews"})

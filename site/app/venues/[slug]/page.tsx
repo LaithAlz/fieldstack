@@ -162,7 +162,7 @@ export default async function VenuePage({
                 {v.photos.map((src, i) => (
                   <figure key={src}>
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={src} alt={`${v.name} — photo ${i + 1}`} loading={i === 0 ? "eager" : "lazy"} />
+                    <img src={src} alt={`${v.name} photo ${i + 1}`} loading={i === 0 ? "eager" : "lazy"} />
                     {v.photoAttributions[i] && (
                       <figcaption>{v.photoAttributions[i]}</figcaption>
                     )}

@@ -58,5 +58,5 @@ export function formatSlotRange(
   durationHours: number,
   now?: Date
 ): string {
-  return `${formatRelativeDateLabel(date, now)} · ${formatTime12h(startTime)} – ${formatEndTime(startTime, durationHours)}`;
+  return `${formatRelativeDateLabel(date, now)} · ${formatTime12h(startTime)} to ${formatEndTime(startTime, durationHours)}`;
 }

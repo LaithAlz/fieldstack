@@ -53,7 +53,7 @@ export type PriceBucket = "any" | "under80" | "to120" | "120plus";
 export const PRICE_OPTIONS: FilterOption<PriceBucket>[] = [
   { id: "any", label: "Any price" },
   { id: "under80", label: "Under $80" },
-  { id: "to120", label: "$80–$120" },
+  { id: "to120", label: "$80 to $120" },
   { id: "120plus", label: "$120+" },
 ];
 

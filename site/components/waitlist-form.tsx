@@ -42,7 +42,7 @@ export function WaitlistForm() {
   if (status === "done") {
     return (
       <p className="waitlist-done" role="status">
-        You&apos;re on the list — we&apos;ll email you when it&apos;s your turn to play.
+        You&apos;re on the list. We&apos;ll email you when it&apos;s your turn to play.
       </p>
     );
   }

@@ -202,7 +202,7 @@ function FallbackButton({
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: "#FAF7F2",
+    backgroundColor: "#F5F4EF",
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: spacing.xl,
@@ -230,7 +230,7 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
     color: "#9CA1B2",
     padding: spacing.md,
-    backgroundColor: "#F1ECE2",
+    backgroundColor: "#ECEAE1",
     borderRadius: borderRadius.md,
   },
   actions: {
@@ -248,7 +248,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#C2410C", // tangerine, matches brand light
   },
   btnSecondary: {
-    backgroundColor: "#F1ECE2", // sand
+    backgroundColor: "#ECEAE1", // sand
   },
   btnLabel: {
     fontFamily: fontFamily.medium,
