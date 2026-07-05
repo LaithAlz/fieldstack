@@ -1,0 +1,51 @@
+{
+  "note": "GENERATED from design/tokens.json via design/generate.mjs. Do not edit.",
+  "color": {
+    "light": {
+      "surface": "#F5F4EF",
+      "surfaceSecondary": "#ECEAE1",
+      "surfaceElevated": "#FFFFFF",
+      "textPrimary": "#1A1D2B",
+      "textSecondary": "#565B6E",
+      "textTertiary": "#9CA1B2",
+      "border": "#E4E0D5",
+      "brand": "#C2410C",
+      "brandDark": "#9A3412",
+      "onBrand": "#FFFFFF",
+      "accent": "#0284C7",
+      "onAccent": "#FFFFFF",
+      "amber": "#B26A00",
+      "heroSurface": "#1A1D2B",
+      "onHero": "#F4F1EA",
+      "onHeroMuted": "rgba(244, 241, 234, 0.72)",
+      "success": "#10B981",
+      "danger": "#DC2626",
+      "foilA": "#DCE8D6",
+      "foilB": "#A8BE9F",
+      "onFoil": "#0F2D1C"
+    },
+    "dark": {
+      "surface": "#0E131F",
+      "surfaceSecondary": "#141926",
+      "surfaceElevated": "#171C2C",
+      "textPrimary": "#F4F1EA",
+      "textSecondary": "#A8ADBF",
+      "textTertiary": "#6E7488",
+      "border": "#2A3145",
+      "brand": "#FF6B2C",
+      "brandDark": "#E8551A",
+      "onBrand": "#2A1205",
+      "accent": "#38BDF8",
+      "onAccent": "#082F49",
+      "amber": "#FFB23E",
+      "heroSurface": "#171C2C",
+      "onHero": "#F4F1EA",
+      "onHeroMuted": "rgba(244, 241, 234, 0.7)",
+      "success": "#34D399",
+      "danger": "#F87171",
+      "foilA": "#2A3C2B",
+      "foilB": "#4A5F46",
+      "onFoil": "#DFF0DA"
+    }
+  }
+}

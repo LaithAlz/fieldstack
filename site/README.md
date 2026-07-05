@@ -13,7 +13,7 @@ site/
     support/page.tsx  → /support   (App Store Support URL)
     privacy/page.tsx  → /privacy   (App Store Privacy Policy URL)
     terms/page.tsx    → /terms
-    globals.css       "Night Kickoff" brand styles
+    globals.css       Matchday design system styles, tokens from design/tokens.json
   components/         nav, footer, app-store-button
   public/            mark.svg + app screenshots
 ```
@@ -33,6 +33,9 @@ Monorepo, so point Vercel at the `site/` folder:
 1. Vercel → project → **Settings → Build & Deployment → Root Directory → `site`**.
 2. Framework Preset: **Next.js** (auto-detected). No other config needed.
 3. **Settings → Domains → add `getonside.ca` + `www`** and set the DNS records.
+4. `app/opengraph-image.tsx` imports `../../design/tokens.json` (one level
+   the Root Directory in the Build" option on (it's on by default) or the
+   build will fail to resolve that import.
 
 Analytics: **Settings → Analytics → Enable Web Analytics** and **Speed Insights**
 (the `<Analytics/>` + `<SpeedInsights/>` components are already in the layout).
@@ -40,10 +43,6 @@ Analytics: **Settings → Analytics → Enable Web Analytics** and **Speed Insig
 ## Email
 The site uses `support@getonside.ca`. Set up free forwarding (Cloudflare Email
 Routing, or your registrar) to your inbox.
-
-## After the app is live
-Replace the placeholder App Store URL in `components/app-store-button.tsx`
-(`id000000000`) with the real `https://apps.apple.com/app/onside/id…`.
 
 ## Later: the app on the web
 The phone app (`../fieldstack-app`) can target web via Expo (react-native-web):

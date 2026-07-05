@@ -47,6 +47,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       url: `https://getonside.ca/soccer-fields/${city.slug}`,
       type: "website",
     },
+    twitter: {
+      card: "summary_large_image",
+      title: `Soccer fields in ${city.name}`,
+      description: `Every soccer field in ${city.name} on one map. Free on iPhone.`,
+    },
   };
 }
 
@@ -70,6 +75,7 @@ export default async function CityPage({ params }: Props) {
     .filter((p): p is number => p != null);
   const priceFrom = prices.length ? Math.min(...prices) : null;
   const indoor = countIndoor(venues);
+  const hasFreeVenue = venues.some((v) => venuePriceState(v).kind === "free");
 
   const itemListLd = {
     "@context": "https://schema.org",
@@ -123,6 +129,7 @@ export default async function CityPage({ params }: Props) {
               {indoor > 0 ? `, ${indoor} with indoor or turf fields` : ""}
               {priceFrom != null ? `, from $${priceFrom}/hr` : ""}. Browse
               surfaces, sizes, and prices, then book direct with the operator.
+              {hasFreeVenue ? " Free parks included." : ""}
             </p>
           </div>
         </div>

@@ -74,7 +74,7 @@ jobs:
       - name: Check design tokens are in sync
         run: |
           node design/generate.mjs
-          git diff --exit-code design fieldstack-app/src/theme/palette.ts site/app/tokens.css
+          git diff --exit-code design fieldstack-app/src/theme/palette.ts site/app/tokens.css site/lib/tokens.generated.json
       - name: Build
         working-directory: site
         # No secrets required — the site builds without SUPABASE_URL /

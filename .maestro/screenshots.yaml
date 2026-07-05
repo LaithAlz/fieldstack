@@ -1,8 +1,12 @@
-# App Store screenshot capture. Drives the app (running in Expo Go) through
-# the key marketing screens and saves a PNG per screen. Run with the app
-# already loaded on the Explore tab:
+# App Store screenshot capture. Drives the app through the key marketing
+# screens and saves a PNG per screen.
 #
-#   cd fieldstack-app && bun run start         # Metro, with the project open in Expo Go
+# Requires a DEV BUILD, not Expo Go: Explore is now a single map + bottom
+# sheet surface backed by react-native-maps, which isn't available inside
+# Expo Go. Build + install a development client (see docs/releasing.md),
+# then:
+#
+#   cd fieldstack-app && npm start        # Metro, dev build already installed
 #   maestro test .maestro/screenshots.yaml
 #
 # Screenshots land as <name>.png in the directory you run from. They come out
@@ -11,39 +15,32 @@
 #
 # Navigation avoids the iOS edge-swipe back (unreliable in Maestro): screens
 # are reached via the tab bar and each screen's own labeled back button.
-#
-# Note: the Map screen is intentionally skipped — react-native-maps isn't in
-# Expo Go, so capture that one from a dev build.
 
-appId: host.exp.Exponent
+appId: app.onside.mobile
 ---
-# 1. Explore (the hero list)
-- assertVisible: "VENUES"
+# 1. Explore — map canvas + draggable sheet, "N field(s) near you" header.
+- assertVisible:
+    text: "[0-9]+ fields? near you"
 - takeScreenshot: 01-explore
 
-# 2. Me / Profile — via the tab bar, then back to Explore via the tab.
-- tapOn:
-    text: ".*Me, tab.*"
-- waitForAnimationToEnd:
-    timeout: 5000
-- takeScreenshot: 04-profile
-- tapOn:
-    text: ".*Explore, tab.*"
-- waitForAnimationToEnd
-
-# 3. Field search — open via the Explore link, leave via its back button.
-- tapOn:
-    text: ".*Search fields.*"
-- waitForAnimationToEnd:
-    timeout: 5000
-- takeScreenshot: 03-field-search
-- tapOn: "Back to venues"
-- waitForAnimationToEnd
-
-# 4. Venue detail — tapped last, so no return navigation needed.
+# 2. Tap the first venue card in the sheet list. Distance chip text comes
+#    from live/seed data; matching on "km away" (part of the card's
+#    accessibility label — see ExploreCard.tsx) keeps this seed-stable
+#    instead of asserting a specific venue name.
 - tapOn:
     text: ".*km away.*"
     index: 0
 - waitForAnimationToEnd:
     timeout: 5000
+- assertVisible: "Fields"
 - takeScreenshot: 02-venue-detail
+
+# 3. Back to Explore via the screen's own back button, then to the Me tab.
+- tapOn: "Go back"
+- waitForAnimationToEnd
+- tapOn:
+    text: ".*Me, tab.*"
+- waitForAnimationToEnd:
+    timeout: 5000
+- assertVisible: "Preferred time"
+- takeScreenshot: 03-me
