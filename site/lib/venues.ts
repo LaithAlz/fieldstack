@@ -228,12 +228,6 @@ const SIZE_LABEL: Record<string, string> = {
 export const surfaceLabel = (s: string) => SURFACE_LABEL[s] ?? s;
 export const sizeLabel = (s: string) => SIZE_LABEL[s] ?? s;
 
-export function priceLabel(f: VenueField): string | null {
-  if (f.pricePerHour != null) return `From $${f.pricePerHour}/hr`;
-  if (f.priceNote) return f.priceNote;
-  return null;
-}
-
 // ---------------------------------------------------------------------------
 // Price display state — drives the card grammar's condensed-price / FREE
 // foil / "rates on site" chip. No new fetching: venueType and field prices
@@ -245,19 +239,43 @@ export type PriceState =
   | { kind: "free" }
   | { kind: "onsite" };
 
-/** Per-field price state, for the field rows on a venue's own page. */
+/**
+ * Per-field price state, for the field rows on a venue's own page.
+ *
+ * $0 is checked FIRST, before the park fallback: `pricePerHour != null` used
+ * to gate the whole free/priced decision, so an explicit `pricePerHour: 0`
+ * (a real FREE signal) fell all the way to the priced branch and rendered
+ * "$0/hr" instead of FREE. Order now matches the app's `isFreeVenue`: an
+ * explicit $0 wins regardless of venue type, then a park with no price at
+ * all is FREE, then a real price, then whatever "rates on site" text is
+ * available.
+ */
 export function fieldPriceState(f: VenueField, venueType: string | null): PriceState {
+  if (f.pricePerHour === 0) return { kind: "free" };
+  if (f.pricePerHour == null && venueType === "public_park") return { kind: "free" };
   if (f.pricePerHour != null) return { kind: "price", text: `$${f.pricePerHour}/hr` };
   if (f.priceNote) return { kind: "price", text: f.priceNote };
-  if (venueType === "public_park") return { kind: "free" };
   return { kind: "onsite" };
 }
 
-/** Per-venue price state (lowest field price), for venue cards in listings. */
+/**
+ * Per-venue price state (lowest field price), for venue cards in listings.
+ *
+ * Mirrors the app's `venuePriceSummary` rollup (lib/priceDisplay.ts): the
+ * candidate set is fields with a `bookingUrl` when any exist (an unbookable
+ * field can't back whatever booking action the card links to), else every
+ * field. Same $0-first ordering as `fieldPriceState` above, for the same
+ * reason.
+ */
 export function venuePriceState(v: Pick<Venue, "fields" | "venueType">): PriceState {
-  const prices = v.fields.map((f) => f.pricePerHour).filter((p): p is number => p != null);
-  if (prices.length) return { kind: "price", text: `from $${Math.min(...prices)}/hr` };
-  if (v.venueType === "public_park") return { kind: "free" };
+  const bookable = v.fields.filter((f) => f.bookingUrl);
+  const candidates = bookable.length > 0 ? bookable : v.fields;
+  const prices = candidates.map((f) => f.pricePerHour).filter((p): p is number => p != null);
+  const minPrice = prices.length > 0 ? Math.min(...prices) : null;
+
+  if (minPrice === 0) return { kind: "free" };
+  if (minPrice === null && v.venueType === "public_park") return { kind: "free" };
+  if (minPrice !== null) return { kind: "price", text: `from $${minPrice}/hr` };
   return { kind: "onsite" };
 }
 

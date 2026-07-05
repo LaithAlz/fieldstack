@@ -322,6 +322,11 @@ function PersistenceGate({ children }: { children: React.ReactNode }) {
   const { hydrated: authHydrated } = useAuth();
   const { hydrated: blockedHydrated } = useBlockedUsers();
   const { hydrated: onboardingHydrated } = useOnboarding();
+  // Theme hydration too — otherwise the first frame can render in the
+  // "system" default scheme for one tick before snapping to the user's
+  // persisted light/dark choice (the cold-start flash this gate exists to
+  // prevent for every other piece of persisted state).
+  const { hydrated: themeHydrated } = useThemePreference();
   if (
     !slotHydrated ||
     !savedHydrated ||
@@ -329,7 +334,8 @@ function PersistenceGate({ children }: { children: React.ReactNode }) {
     !recentHydrated ||
     !authHydrated ||
     !blockedHydrated ||
-    !onboardingHydrated
+    !onboardingHydrated ||
+    !themeHydrated
   ) {
     return null;
   }

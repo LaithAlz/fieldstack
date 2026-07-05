@@ -51,11 +51,12 @@ import {
   requestPermission,
 } from "../../lib/location";
 import { getLastRegion, setLastRegion } from "../../lib/mapState";
+import { venuePriceSummary } from "../../lib/priceDisplay";
 import { isOpenNow } from "../../lib/venueHours";
 import type { MainStackParamList } from "../../navigation/MainNavigator";
 import { borderRadius, spacing } from "../../theme/tokens";
 import { useTheme } from "../../theme/useTheme";
-import type { Field, SearchResult } from "../../types/api";
+import type { SearchResult } from "../../types/api";
 
 type Nav = NativeStackNavigationProp<MainStackParamList, "Explore">;
 
@@ -94,13 +95,6 @@ function groupByVenue(results: SearchResult[]): ExploreVenueGroup[] {
   return Array.from(map.values());
 }
 
-function minPriceOf(fields: Field[]): number | null {
-  const priced = fields
-    .map((f) => f.price_per_hour)
-    .filter((p): p is number => p !== null);
-  return priced.length > 0 ? Math.min(...priced) : null;
-}
-
 // ---------------------------------------------------------------------------
 // Map markers
 // ---------------------------------------------------------------------------
@@ -128,8 +122,7 @@ const VenueMarkerSlot = memo(function VenueMarkerSlot({
     [group?.venue.lat, group?.venue.lng]
   );
 
-  const minPrice = group ? minPriceOf(group.fields) : null;
-  const free = group ? isFreeVenue(group.venue.venue_type, minPrice) : false;
+  const priceSummary = group ? venuePriceSummary(group.fields, group.venue.venue_type) : null;
 
   return (
     <Marker
@@ -145,12 +138,12 @@ const VenueMarkerSlot = memo(function VenueMarkerSlot({
       }
       tracksViewChanges={false}
     >
-      {group && free ? (
+      {group && priceSummary?.kind === "free" ? (
         <VenuePin mode="free" fieldCount={group.fields.length} venueName={group.venue.name} />
-      ) : group && minPrice !== null ? (
+      ) : group && priceSummary?.kind === "from" ? (
         <VenuePin
           mode="price"
-          price={minPrice}
+          price={priceSummary.price}
           fieldCount={group.fields.length}
           venueName={group.venue.name}
         />

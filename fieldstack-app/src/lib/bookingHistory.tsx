@@ -167,8 +167,16 @@ export function BookingHistoryProvider({ children }: { children: ReactNode }) {
           }
 
           // Upload local-only entries (those whose ids aren't in cloud).
+          // Cloud-syncable only: `start_time`/`duration` are NOT NULL
+          // (migration 004), so a slot-less row sent verbatim would abort the
+          // WHOLE upsert batch — silently dropping every other local-only
+          // attempt riding along with it. Same guard as record() below; a
+          // slot-less local attempt just stays local instead of poisoning the
+          // batch.
           const cloudIds = new Set(cloudAttempts.map((a) => a.id));
-          const localOnly = prev.filter((a) => !cloudIds.has(a.id));
+          const localOnly = cloudSyncableAttempts(
+            prev.filter((a) => !cloudIds.has(a.id))
+          );
           if (localOnly.length > 0) {
             void supabase
               .from("user_booking_history")
@@ -297,6 +305,22 @@ export function useBookingHistory(): ContextValue {
     );
   }
   return ctx;
+}
+
+/**
+ * The subset of `attempts` that can safely reach the `user_booking_history`
+ * table: `start_time`/`duration` are NOT NULL there (migration 004), so a
+ * slot-less attempt (booked with no preferred time set — see the `startTime`
+ * doc above) would fail that row's insert. Sent as part of a batch `upsert`,
+ * one failing row aborts the WHOLE batch, silently losing every other
+ * local-only attempt merged in the same sign-in — this filter is what keeps
+ * the merge path from re-introducing that bug. Pulled out as a pure function
+ * so it's testable without a Supabase client.
+ */
+export function cloudSyncableAttempts(
+  attempts: readonly BookingAttempt[]
+): BookingAttempt[] {
+  return attempts.filter((a) => a.startTime !== null && a.duration !== null);
 }
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
