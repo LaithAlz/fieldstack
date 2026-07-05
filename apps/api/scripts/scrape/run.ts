@@ -34,6 +34,7 @@ import { osmAdapter } from "./sources/osm.js";
 import { manualAdapter } from "./sources/manual.js";
 import { googlePlacesAdapter } from "./sources/googlePlaces.js";
 import { playtomicAdapter } from "./sources/playtomic.js";
+import { mississaugaAdapter } from "./sources/mississauga.js";
 import type { ScrapeAdapter, ScrapedField, ScrapedVenue } from "./types.js";
 import {
   loadManualVenues,
@@ -47,6 +48,7 @@ const ADAPTERS: Record<string, ScrapeAdapter> = {
   [manualAdapter.source]: manualAdapter,
   [googlePlacesAdapter.source]: googlePlacesAdapter,
   [playtomicAdapter.source]: playtomicAdapter,
+  [mississaugaAdapter.source]: mississaugaAdapter,
 };
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
