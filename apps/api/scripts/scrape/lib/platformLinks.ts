@@ -51,8 +51,14 @@ export function resolveFieldBooking(
   const platformUrl = op ? platformBookingUrl(op) : null;
   const bookingUrl =
     field.bookingUrl ?? platformUrl ?? op?.bookingUrl ?? op?.website ?? null;
+  // A field-supplied platform tag is only trusted alongside the field's own
+  // URL — an adapter that sets the tag but not the link would otherwise get
+  // an inherited generic URL mislabeled as a platform deep link (the app
+  // appends date/time params to playtomic/courtreserve URLs).
+  const fieldPlatform =
+    field.bookingPlatform && field.bookingUrl ? field.bookingPlatform : undefined;
   const bookingPlatform: BookingPlatform =
-    field.bookingPlatform ??
+    fieldPlatform ??
     (bookingUrl !== null && bookingUrl === platformUrl
       ? (op as Operator).integrationType
       : "none");

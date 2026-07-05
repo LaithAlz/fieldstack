@@ -13,7 +13,10 @@
  *      so a name collision across town can't attach the wrong photos). Any
  *      id resolved via the latter two paths is back-filled into
  *      venues.google_place_id alongside the photo update below, so next
- *      week's run hits the stored-id short-circuit instead.
+ *      week's run hits the stored-id short-circuit instead. A stored id
+ *      that 404s (place deleted/merged on Google's side) falls through to
+ *      fresh resolution and is replaced — or cleared, so a dead id is never
+ *      terminal.
  *   2. Place Details (photos field) → photo resource names + author
  *      attributions.
  *   3. Photo media with skipHttpRedirect → a keyless lh3.googleusercontent
@@ -123,8 +126,13 @@ async function resolvePlaceId(v: VenueRow): Promise<string | null> {
   return dist <= MATCH_RADIUS_M ? hit.id : null;
 }
 
-/** Photo resource names + attributions for a place. */
-async function fetchPlacePhotos(placeId: string): Promise<PlacePhoto[]> {
+/**
+ * Photo resource names + attributions for a place. Returns null when the
+ * place id is dead (404 — deleted or merged on Google's side) so the caller
+ * can fall back to fresh resolution instead of retrying it forever;
+ * transient failures (429/5xx) return [] and leave any stored id alone.
+ */
+async function fetchPlacePhotos(placeId: string): Promise<PlacePhoto[] | null> {
   const res = await fetch(
     `https://places.googleapis.com/v1/places/${encodeURIComponent(placeId)}`,
     {
@@ -134,6 +142,7 @@ async function fetchPlacePhotos(placeId: string): Promise<PlacePhoto[]> {
       },
     }
   );
+  if (res.status === 404) return null;
   if (!res.ok) return [];
   const data = (await res.json()) as { photos?: PlacePhoto[] };
   return (data.photos ?? []).slice(0, MAX_PHOTOS);
@@ -155,17 +164,26 @@ async function main() {
   const limitArg = process.argv.indexOf("--limit");
   const limit = limitArg !== -1 ? Number(process.argv[limitArg + 1]) : undefined;
 
-  const { data, error } = await supabase
-    .from("venues")
-    .select("id, name, lat, lng, external_id, google_place_id")
-    .eq("is_active", true)
-    .order("name")
-    .limit(limit ?? 1000);
-  if (error) {
-    console.error("[photos] venue fetch failed:", error.message);
-    process.exit(1);
+  // Page through ALL active venues — a fixed `.limit(N)` with alphabetical
+  // ordering would permanently starve venues sorting after the Nth as the
+  // catalog grows past the cap. `--limit` still short-circuits for testing.
+  const PAGE_SIZE = 1000;
+  const venues: VenueRow[] = [];
+  for (let from = 0; ; from += PAGE_SIZE) {
+    const { data, error } = await supabase
+      .from("venues")
+      .select("id, name, lat, lng, external_id, google_place_id")
+      .eq("is_active", true)
+      .order("name")
+      .range(from, from + (limit ? Math.min(limit, PAGE_SIZE) : PAGE_SIZE) - 1);
+    if (error) {
+      console.error("[photos] venue fetch failed:", error.message);
+      process.exit(1);
+    }
+    venues.push(...((data ?? []) as VenueRow[]));
+    if (!data || data.length < PAGE_SIZE || (limit && venues.length >= limit)) break;
   }
-  const venues = (data ?? []) as VenueRow[];
+  if (limit) venues.length = Math.min(venues.length, limit);
   console.log(`[photos] enriching ${venues.length} active venues`);
 
   let updated = 0;
@@ -177,23 +195,49 @@ async function main() {
 
   for (const v of venues) {
     try {
-      let placeId: string | null = v.google_place_id;
-      if (placeId) {
-        usedStoredId++;
-      } else {
-        placeId = placeIdFromExternalId(v.external_id);
-        if (!placeId) {
-          placeId = await resolvePlaceId(v);
-          if (placeId) usedPaidResolution++;
+      // Cheapest-first place id resolution: stored id, then the id embedded
+      // in a google:* external_id, then paid Text Search. A dead id (404)
+      // falls through to the next candidate instead of being terminal.
+      let placeId: string | null = null;
+      let placePhotos: PlacePhoto[] = [];
+      let storedWasDead = false;
+      for (const candidate of [v.google_place_id, placeIdFromExternalId(v.external_id)]) {
+        if (!candidate) continue;
+        const result = await fetchPlacePhotos(candidate);
+        if (result === null) {
+          if (candidate === v.google_place_id) storedWasDead = true;
+          console.log(`  – ${v.name}: place id ${candidate} is dead on Places`);
+          continue;
         }
+        placeId = candidate;
+        placePhotos = result;
+        if (candidate === v.google_place_id) usedStoredId++;
+        break;
+      }
+      if (!placeId) {
+        const resolved = await resolvePlaceId(v);
+        if (resolved) {
+          usedPaidResolution++;
+          const result = await fetchPlacePhotos(resolved);
+          if (result !== null) {
+            placeId = resolved;
+            placePhotos = result;
+          }
+        }
+      }
+      // A dead stored id we couldn't replace gets cleared — otherwise every
+      // future run short-circuits onto the same dead id forever.
+      if (storedWasDead && placeId !== v.google_place_id) {
+        await supabase
+          .from("venues")
+          .update({ google_place_id: placeId })
+          .eq("id", v.id);
       }
       if (!placeId) {
         noPlace++;
         console.log(`  – ${v.name}: no confident Places match`);
         continue;
       }
-
-      const placePhotos = await fetchPlacePhotos(placeId);
       const photos: string[] = [];
       const attributions: string[] = [];
       for (const p of placePhotos) {

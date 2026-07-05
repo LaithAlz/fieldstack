@@ -54,6 +54,7 @@ import { findOperator } from "./lib/operatorMatcher.js";
 import { resolveFieldBooking } from "./lib/platformLinks.js";
 import {
   sourcePrefixCounts,
+  writeFailures,
   zeroRegressions,
   type SourceRunResult,
 } from "./lib/monitor.js";
@@ -203,8 +204,17 @@ async function main() {
     );
   }
 
+  const unwritten = writeFailures(results);
+  for (const w of unwritten) {
+    console.error(
+      `[scrape] WRITE-FAILURE GUARD: ${w.source} fetched ${w.fetched} venues but upserted 0 — systemic write failure (schema drift? RLS?)`
+    );
+  }
+
   const anyErrored = results.some((r) => r.fetched === null);
-  process.exit(anyErrored || regressions.length > 0 ? 1 : 0);
+  process.exit(
+    anyErrored || regressions.length > 0 || unwritten.length > 0 ? 1 : 0
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -218,6 +228,9 @@ async function fetchPriorSourceCounts(): Promise<Map<string, number>> {
     .from("venues")
     .select("external_id")
     .eq("is_active", true)
+    // Ordered so that if the catalog ever outgrows the cap, which sources
+    // get truncated out of the snapshot is at least deterministic.
+    .order("external_id")
     .limit(5000);
   if (error) {
     console.warn(`[scrape] prior-count query failed: ${error.message}`);

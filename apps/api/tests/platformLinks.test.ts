@@ -149,3 +149,21 @@ describe("resolveFieldBooking", () => {
     });
   });
 });
+
+describe("resolveFieldBooking — field platform tag without field URL", () => {
+  it("ignores a field bookingPlatform when the field carries no URL", () => {
+    const op = {
+      name: "Op",
+      integrationType: "none" as const,
+      aliases: [],
+      website: "https://example.com",
+    };
+    const out = resolveFieldBooking(
+      { externalId: "x:1", name: "F", surface: "grass" as const, size: "7v7" as const, bookingPlatform: "playtomic" as const },
+      op
+    );
+    // Inherited generic website must not be mislabeled as a platform link.
+    expect(out.bookingUrl).toBe("https://example.com");
+    expect(out.bookingPlatform).toBe("none");
+  });
+});

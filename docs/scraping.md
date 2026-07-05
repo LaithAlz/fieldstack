@@ -388,7 +388,9 @@ Proposed approach (design, not yet built):
   its schema and we silently went empty" failure (the same failure mode
   migration 019's CI guard was added for). Adapter errors and zero-rows
   regressions both make the process exit 1, so the scheduled workflow shows
-  red with the reason in the log — no workflow changes needed.
+  red with the reason in the log. The photo-enrichment and dedup steps run
+  with `if: always()` so that red scrape exit can't suppress them (photo
+  URIs are short-lived and must refresh weekly regardless).
 
 ---
 
