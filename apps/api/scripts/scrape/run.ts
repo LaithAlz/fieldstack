@@ -37,6 +37,8 @@ import { manualAdapter } from "./sources/manual.js";
 import { googlePlacesAdapter } from "./sources/googlePlaces.js";
 import { playtomicAdapter } from "./sources/playtomic.js";
 import { mississaugaAdapter } from "./sources/mississauga.js";
+import { torontoAdapter } from "./sources/toronto.js";
+import { bramptonAdapter } from "./sources/brampton.js";
 import type {
   BookingPlatform,
   ScrapeAdapter,
@@ -65,6 +67,8 @@ const ADAPTERS: Record<string, ScrapeAdapter> = {
   [googlePlacesAdapter.source]: googlePlacesAdapter,
   [playtomicAdapter.source]: playtomicAdapter,
   [mississaugaAdapter.source]: mississaugaAdapter,
+  [torontoAdapter.source]: torontoAdapter,
+  [bramptonAdapter.source]: bramptonAdapter,
 };
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
