@@ -6,11 +6,13 @@ import { Nav } from "@/components/nav";
 import { Footer } from "@/components/footer";
 import { AppStoreButton } from "@/components/app-store-button";
 import { PitchLines } from "@/components/pitch-lines";
+import { VenueCard } from "@/components/venue-card";
 import {
   getCities,
   getCityBySlug,
   surfaceLabel,
   sizeLabel,
+  venuePriceState,
   type Venue,
 } from "@/lib/venues";
 
@@ -131,56 +133,27 @@ export default async function CityPage({ params }: Props) {
         <div className="wrap">
           <div className="city-block">
             <div className="venue-grid">
-              {venues.map((v) => {
-                const surfaces = [
-                  ...new Set(v.fields.map((f) => surfaceLabel(f.surface))),
-                ];
-                const sizes = [
-                  ...new Set(v.fields.map((f) => sizeLabel(f.size))),
-                ];
-                const vPrices = v.fields
-                  .map((f) => f.pricePerHour)
-                  .filter((p): p is number => p != null);
-                const from = vPrices.length ? Math.min(...vPrices) : null;
-                return (
-                  <Link
-                    className="venue-card"
-                    href={`/venues/${v.slug}`}
-                    key={v.slug}
-                  >
-                    <div className="vc-top">
-                      <strong>{v.name}</strong>
-                      <span className="vc-city">{v.city}</span>
-                    </div>
-                    {surfaces.length > 0 && (
-                      <div className="vc-badges">
-                        {surfaces.map((s) => (
-                          <span className="badge" key={s}>
-                            {s}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                    <div className="vc-foot">
-                      <span className="vc-meta">
-                        {v.fields.length}{" "}
-                        {v.fields.length === 1 ? "field" : "fields"}
-                        {sizes.length ? ` · ${sizes.join(", ")}` : ""}
-                      </span>
-                      {from != null && (
-                        <span className="vc-price">from ${from}/hr</span>
-                      )}
-                    </div>
-                  </Link>
-                );
-              })}
+              {venues.map((v) => (
+                <VenueCard
+                  key={v.slug}
+                  v={{
+                    slug: v.slug,
+                    name: v.name,
+                    city: v.city,
+                    surfaces: [...new Set(v.fields.map((f) => surfaceLabel(f.surface)))],
+                    sizes: [...new Set(v.fields.map((f) => sizeLabel(f.size)))],
+                    fieldCount: v.fields.length,
+                    price: venuePriceState(v),
+                  }}
+                />
+              ))}
             </div>
           </div>
 
           {others.length > 0 && (
             <div className="city-block">
               <h2 className="sub">Nearby cities</h2>
-              <p style={{ color: "var(--text-2)" }}>
+              <p className="muted-note">
                 {others.map((c, i) => (
                   <span key={c.slug}>
                     {i > 0 ? " · " : ""}

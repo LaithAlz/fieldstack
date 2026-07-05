@@ -5,7 +5,7 @@ import { Footer } from "@/components/footer";
 import { AppStoreButton } from "@/components/app-store-button";
 import { PitchLines } from "@/components/pitch-lines";
 import { VenueFinder, type FinderVenue } from "@/components/venue-finder";
-import { getAllVenues, getVenuesByCity, surfaceLabel, sizeLabel } from "@/lib/venues";
+import { getAllVenues, getVenuesByCity, surfaceLabel, sizeLabel, venuePriceState } from "@/lib/venues";
 
 export const metadata: Metadata = {
   title: "Find Soccer Fields in the GTA: Indoor, Turf & Futsal | Onside",
@@ -18,18 +18,15 @@ export default async function VenuesIndex() {
   const all = await getAllVenues();
   const byCity = await getVenuesByCity();
 
-  const finderVenues: FinderVenue[] = all.map((v) => {
-    const prices = v.fields.map((f) => f.pricePerHour).filter((p): p is number => p != null);
-    return {
-      slug: v.slug,
-      name: v.name,
-      city: v.city,
-      surfaces: [...new Set(v.fields.map((f) => surfaceLabel(f.surface)))],
-      sizes: [...new Set(v.fields.map((f) => sizeLabel(f.size)))],
-      fieldCount: v.fields.length,
-      priceFrom: prices.length ? Math.min(...prices) : null,
-    };
-  });
+  const finderVenues: FinderVenue[] = all.map((v) => ({
+    slug: v.slug,
+    name: v.name,
+    city: v.city,
+    surfaces: [...new Set(v.fields.map((f) => surfaceLabel(f.surface)))],
+    sizes: [...new Set(v.fields.map((f) => sizeLabel(f.size)))],
+    fieldCount: v.fields.length,
+    price: venuePriceState(v),
+  }));
   const cityNames = byCity.map(([c]) => c);
 
   const itemListLd = {
@@ -68,7 +65,7 @@ export default async function VenuesIndex() {
       {all.length === 0 ? (
         <section>
           <div className="wrap">
-            <p style={{ color: "var(--text-2)" }}>Field listings are coming soon.</p>
+            <p className="muted-note">Field listings are coming soon.</p>
           </div>
         </section>
       ) : (

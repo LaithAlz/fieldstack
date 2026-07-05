@@ -11,7 +11,7 @@ import {
   getVenueBySlug,
   surfaceLabel,
   sizeLabel,
-  priceLabel,
+  fieldPriceState,
   type Venue,
 } from "@/lib/venues";
 
@@ -75,13 +75,17 @@ export default async function VenuePage({
   const prices = v.fields.map((f) => f.pricePerHour).filter((p): p is number => p != null);
   const priceFrom = prices.length ? Math.min(...prices) : null;
   const venueTypeLabel =
-    v.venueType === "private" ? "Private facility" : v.venueType === "public" ? "Public park" : null;
+    v.venueType === "private" ? "Private facility" : v.venueType === "public_park" ? "Public park" : null;
 
   const facts: { label: string; value: string }[] = [
     { label: v.fields.length === 1 ? "Field" : "Fields", value: String(v.fields.length) },
     ...(surfaces.length ? [{ label: "Surface", value: surfaces.join(", ") }] : []),
     ...(sizes.length ? [{ label: "Sizes", value: sizes.join(", ") }] : []),
-    ...(priceFrom != null ? [{ label: "From", value: `$${priceFrom}/hr` }] : []),
+    ...(priceFrom != null
+      ? [{ label: "From", value: `$${priceFrom}/hr` }]
+      : v.venueType === "public_park"
+        ? [{ label: "Price", value: "Free" }]
+        : []),
     ...(venueTypeLabel ? [{ label: "Type", value: venueTypeLabel }] : []),
   ];
 
@@ -183,22 +187,27 @@ export default async function VenuePage({
 
             <h2 className="sub">{v.fields.length === 1 ? "Field" : "Fields"} at this venue</h2>
             <div className="field-list">
-              {v.fields.map((f) => (
-                <div className="field-row" key={f.id}>
-                  <div>
-                    <strong>{f.name}</strong>
-                    <span className="field-meta">{surfaceLabel(f.surface)} · {sizeLabel(f.size)}</span>
+              {v.fields.map((f) => {
+                const price = fieldPriceState(f, v.venueType);
+                return (
+                  <div className="field-row" key={f.id}>
+                    <div>
+                      <strong>{f.name}</strong>
+                      <span className="field-meta">{surfaceLabel(f.surface)} · {sizeLabel(f.size)}</span>
+                    </div>
+                    <div className="field-right">
+                      {price.kind === "price" && <span className="field-price">{price.text}</span>}
+                      {price.kind === "free" && <span className="price-free">FREE</span>}
+                      {price.kind === "onsite" && <span className="price-onsite">Rates on site</span>}
+                      {f.bookingUrl && (
+                        <BookButton href={f.bookingUrl} venue={v.name} city={v.city} className="field-book">
+                          Book ↗
+                        </BookButton>
+                      )}
+                    </div>
                   </div>
-                  <div className="field-right">
-                    {priceLabel(f) && <span className="field-price">{priceLabel(f)}</span>}
-                    {f.bookingUrl && (
-                      <BookButton href={f.bookingUrl} venue={v.name} city={v.city} className="field-book">
-                        Book ↗
-                      </BookButton>
-                    )}
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
 
             {v.amenities.length > 0 && (
