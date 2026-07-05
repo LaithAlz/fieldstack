@@ -6,10 +6,14 @@
  *
  * Fills venues.photos + venues.photo_attributions from Google Places:
  *
- *   1. Resolve a place_id — free for google-scraped venues (it's in
- *      external_id), via Text Search with a location bias for the rest
+ *   1. Resolve a place_id — short-circuits on a stored `google_place_id`
+ *      (no Places call at all); else free for google-scraped venues (it's
+ *      in external_id); else Text Search with a location bias for the rest
  *      (accepted only when the hit lands within MATCH_RADIUS_M of our pin,
- *      so a name collision across town can't attach the wrong photos).
+ *      so a name collision across town can't attach the wrong photos). Any
+ *      id resolved via the latter two paths is back-filled into
+ *      venues.google_place_id alongside the photo update below, so next
+ *      week's run hits the stored-id short-circuit instead.
  *   2. Place Details (photos field) → photo resource names + author
  *      attributions.
  *   3. Photo media with skipHttpRedirect → a keyless lh3.googleusercontent
@@ -64,6 +68,7 @@ type VenueRow = {
   lat: number | null;
   lng: number | null;
   external_id: string;
+  google_place_id: string | null;
 };
 
 type PlacePhoto = {
@@ -152,7 +157,7 @@ async function main() {
 
   const { data, error } = await supabase
     .from("venues")
-    .select("id, name, lat, lng, external_id")
+    .select("id, name, lat, lng, external_id, google_place_id")
     .eq("is_active", true)
     .order("name")
     .limit(limit ?? 1000);
@@ -167,10 +172,21 @@ async function main() {
   let noPlace = 0;
   let noPhotos = 0;
   let failed = 0;
+  let usedStoredId = 0;
+  let usedPaidResolution = 0;
 
   for (const v of venues) {
     try {
-      const placeId = placeIdFromExternalId(v.external_id) ?? (await resolvePlaceId(v));
+      let placeId: string | null = v.google_place_id;
+      if (placeId) {
+        usedStoredId++;
+      } else {
+        placeId = placeIdFromExternalId(v.external_id);
+        if (!placeId) {
+          placeId = await resolvePlaceId(v);
+          if (placeId) usedPaidResolution++;
+        }
+      }
       if (!placeId) {
         noPlace++;
         console.log(`  – ${v.name}: no confident Places match`);
@@ -197,7 +213,14 @@ async function main() {
 
       const { error: upErr } = await supabase
         .from("venues")
-        .update({ photos, photo_attributions: attributions })
+        .update({
+          photos,
+          photo_attributions: attributions,
+          // Back-fill when the used id isn't what was already stored, so
+          // next week's run hits the short-circuit above instead of paying
+          // for Text Search again.
+          ...(placeId !== v.google_place_id ? { google_place_id: placeId } : {}),
+        })
         .eq("id", v.id);
       if (upErr) throw upErr;
 
@@ -211,7 +234,7 @@ async function main() {
   }
 
   console.log(
-    `[photos] done — updated ${updated}, no match ${noPlace}, no photos ${noPhotos}, failed ${failed}`
+    `[photos] done — updated ${updated}, no match ${noPlace}, no photos ${noPhotos}, failed ${failed} (stored id: ${usedStoredId}, paid resolution: ${usedPaidResolution})`
   );
 }
 

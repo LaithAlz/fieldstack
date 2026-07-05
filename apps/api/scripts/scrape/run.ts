@@ -370,6 +370,11 @@ async function upsertVenue(
         hours: v.hours ?? null,
         booking_notes: v.bookingNotes ?? null,
         cancellation_policy: v.cancellationPolicy ?? null,
+        // Only set when the adapter provided it, so sources that don't know
+        // it (e.g. osm, manual) can't null out a previously resolved id.
+        ...(v.googlePlaceId !== undefined
+          ? { google_place_id: v.googlePlaceId }
+          : {}),
       },
       { onConflict: "external_id" }
     )
