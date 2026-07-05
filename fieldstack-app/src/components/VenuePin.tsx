@@ -8,9 +8,10 @@ import { useTheme } from "../theme/useTheme";
 import { Text } from "./Text";
 
 const PIN_ICON_SIZE = 32;
+// Smaller than the count pin so free parks read as lightweight markers.
+const FREE_PIN_ICON_SIZE = 24;
 const PRICE_HEIGHT = 30;
 const SELECTED_SIZE = 46;
-const FREE_DOT_SIZE = 14;
 // REQ-F0.2 — minimum touch target. The dot itself stays its small visual
 // size; only the invisible hit area around it grows.
 const FREE_HIT_AREA_SIZE = 44;
@@ -50,8 +51,8 @@ type Props = {
  *     `isFreeVenue` in lib/filters).
  *   - `price`: condensed-numeral pill reading "From $N" — the lowest price
  *     at the venue.
- *   - `free`: a small solid dot in the success-green family, ringed so it
- *     lifts off the map — for venues `isFreeVenue` calls FREE.
+ *   - `free`: a smaller success-green pin glyph — for venues `isFreeVenue`
+ *     calls FREE. Glyph (not a bare dot): see the rasterization note below.
  *   - `selected`: a bold, brand-FILLED disc with a white centre — the
  *     unmistakable "this one" marker. Rendered by a single dedicated
  *     selection marker that's always mounted and only moved/faded, so its
@@ -138,21 +139,17 @@ export function VenuePin(props: Props) {
     ]
       .filter(Boolean)
       .join(", ");
+    // Rendered as a glyph (same structure as the count pin) rather than a
+    // bare tinted View: a tiny dot inside a mostly-transparent 44pt hit area
+    // fails to rasterize under the Fabric interop layer, and MapKit then
+    // falls back to its default red balloon (verified on-simulator).
     return (
       <View
         accessibilityRole="button"
         accessibilityLabel={a11y}
         style={styles.freeHitArea}
       >
-        <View
-          style={[
-            styles.freeDot,
-            {
-              backgroundColor: colors.success,
-              borderColor: colors.surfaceElevated,
-            },
-          ]}
-        />
+        <Ionicons name="location-sharp" size={FREE_PIN_ICON_SIZE} color={colors.success} />
       </View>
     );
   }
@@ -204,19 +201,12 @@ const styles = StyleSheet.create({
   freeHitArea: {
     width: FREE_HIT_AREA_SIZE,
     height: FREE_HIT_AREA_SIZE,
+    // Not decorative: a fully transparent root view rasterizes to an empty
+    // annotation image under the Fabric interop and MapKit falls back to its
+    // default balloon. Any non-zero alpha keeps the snapshot real.
+    backgroundColor: "rgba(0, 0, 0, 0.01)",
     alignItems: "center",
     justifyContent: "flex-end",
-  },
-  freeDot: {
-    width: FREE_DOT_SIZE,
-    height: FREE_DOT_SIZE,
-    borderRadius: FREE_DOT_SIZE / 2,
-    borderWidth: 2,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowRadius: 3,
-    shadowOpacity: 0.25,
-    elevation: 3,
   },
   selected: {
     alignItems: "center",

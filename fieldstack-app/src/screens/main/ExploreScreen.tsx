@@ -99,11 +99,16 @@ function groupByVenue(results: SearchResult[]): ExploreVenueGroup[] {
 // Map markers
 // ---------------------------------------------------------------------------
 
-// tracksViewChanges is permanently false — any flip triggers a shadow-tree
-// commit that corrupts AIRMap's subview index under the Fabric interop layer
-// (see the old MapViewScreen for the full crash history). group=null means
-// the slot is inactive: rendered at null-island with opacity 0, but still
-// MOUNTED (never removed) so the fixed-size Marker pool never changes length.
+// tracksViewChanges is permanently TRUE here, never flipped — flipping it is
+// what corrupts AIRMap's subview index under the Fabric interop layer (see
+// the old MapViewScreen for the crash history), and permanently-false froze
+// each marker's FIRST rasterization: this screen mounts its pool before the
+// search resolves, so every pin stayed a placeholder teardrop, and filter
+// toggles reassigned venues to slots whose stale image then showed the wrong
+// price. Verified on-simulator: permanent-true renders pin content correctly
+// with no flip-crash; the children are memoized so idle cost stays low.
+// group=null means the slot is inactive: rendered at null-island with opacity
+// 0, but still MOUNTED (never removed) so the pool never changes length.
 type VenueMarkerSlotProps = {
   group: ExploreVenueGroup | null;
   onPress: (venueId: string) => void;
@@ -136,7 +141,7 @@ const VenueMarkerSlot = memo(function VenueMarkerSlot({
             }
           : undefined
       }
-      tracksViewChanges={false}
+      tracksViewChanges={true}
     >
       {group && priceSummary?.kind === "free" ? (
         <VenuePin mode="free" fieldCount={group.fields.length} venueName={group.venue.name} />
