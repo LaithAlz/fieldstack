@@ -78,7 +78,7 @@ describe("formatSlotRange", () => {
   it("combines the relative date and the time range", () => {
     const now = new Date(2026, 4, 18, 9, 0);
     expect(formatSlotRange(new Date(2026, 4, 18), "19:00", 1.5, now)).toBe(
-      "Today · 7:00 PM – 8:30 PM"
+      "Today · 7:00 PM to 8:30 PM"
     );
   });
 });

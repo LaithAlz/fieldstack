@@ -39,7 +39,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       city.venues.length === 1 ? "venue" : "venues"
     } in ${city.name}${
       indoor > 0 ? `, including ${indoor} indoor` : ""
-    } — with surfaces, sizes, prices, and direct links to each operator's booking page. Free on Onside.`,
+    }, with surfaces, sizes, prices, and direct links to each operator's booking page. Free on Onside.`,
     alternates: { canonical: `/soccer-fields/${city.slug}` },
     openGraph: {
       title: `Soccer fields in ${city.name}`,
@@ -174,7 +174,7 @@ export default async function CityPage({ params }: Props) {
           <h2 className="display">Playing in {name} tonight?</h2>
           <p>
             Onside maps every field in {name} with live filters for surface,
-            size, and price — free on iPhone.
+            size, and price. Free on iPhone.
           </p>
           <AppStoreButton />
         </div>

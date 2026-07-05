@@ -55,7 +55,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Onside: Every soccer field in the GTA",
     description:
-      "Every field in the GTA on one map — turf, indoor, outdoor. Free on iPhone.",
+      "Every field in the GTA on one map: turf, indoor, outdoor. Free on iPhone.",
   },
 };
 

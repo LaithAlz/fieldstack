@@ -5,7 +5,7 @@ import { ImageResponse } from "next/og";
 // in iMessage/WhatsApp/Slack read unmistakably as Onside. Rendered once at
 // build — no runtime cost.
 
-export const alt = "Onside — every soccer field in the GTA, on one map";
+export const alt = "Onside: every soccer field in the GTA, on one map";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -86,7 +86,7 @@ export default function OgImage() {
             Find your next pitch.
           </div>
           <div style={{ fontSize: 32, color: INK_2, lineHeight: 1.35 }}>
-            Every field in the GTA on one map — turf, indoor, outdoor.
+            Every field in the GTA on one map: turf, indoor, outdoor.
             Free on iPhone.
           </div>
           <div

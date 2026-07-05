@@ -551,7 +551,7 @@ function formatSlotLabel(slot: PreferredSlot): string {
       day: "numeric",
     });
 
-  return `${datePart} · ${formatTime12h(slot.startTime)} – ${formatEndTime(slot.startTime, slot.duration)}`;
+  return `${datePart} · ${formatTime12h(slot.startTime)} to ${formatEndTime(slot.startTime, slot.duration)}`;
 }
 
 function formatAttemptSummary(attempt: {
@@ -571,7 +571,7 @@ function formatAttemptSummary(attempt: {
   });
   if (attempt.startTime === null || attempt.duration === null) return datePart;
   const endLabel = formatEndTime(attempt.startTime, attempt.duration);
-  return `${datePart} · ${formatTime12h(attempt.startTime)} – ${endLabel}`;
+  return `${datePart} · ${formatTime12h(attempt.startTime)} to ${endLabel}`;
 }
 
 // ---------------------------------------------------------------------------

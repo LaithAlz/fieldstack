@@ -756,7 +756,7 @@ function formatShareSlot(slot: PreferredSlot): string {
       month: "short",
       day: "numeric",
     });
-  return `${datePart} ${formatTime12h(slot.startTime)}–${formatEndTime(slot.startTime, slot.duration)}`;
+  return `${datePart} ${formatTime12h(slot.startTime)} to ${formatEndTime(slot.startTime, slot.duration)}`;
 }
 
 /**
