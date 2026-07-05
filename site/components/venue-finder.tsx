@@ -1,18 +1,11 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import Link from "next/link";
+
+import { VenueCard, type VenueCardData } from "@/components/venue-card";
 
 /** Slim, serializable venue shape the finder needs for cards + filtering. */
-export type FinderVenue = {
-  slug: string;
-  name: string;
-  city: string;
-  surfaces: string[]; // display labels, e.g. ["Indoor", "Turf"]
-  sizes: string[]; // display labels, e.g. ["5-a-side"]
-  fieldCount: number;
-  priceFrom: number | null;
-};
+export type FinderVenue = VenueCardData;
 
 const SURFACES = ["Indoor", "Turf", "Grass", "Concrete"];
 const SIZES = ["5-a-side", "7-a-side", "11-a-side", "Futsal", "3v3"];
@@ -140,28 +133,7 @@ export function VenueFinder({
               </h2>
               <div className="venue-grid">
                 {vs.map((v) => (
-                  <Link className="venue-card" href={`/venues/${v.slug}`} key={v.slug}>
-                    <div className="vc-top">
-                      <strong>{v.name}</strong>
-                      <span className="vc-city">{v.city}</span>
-                    </div>
-                    {v.surfaces.length > 0 && (
-                      <div className="vc-badges">
-                        {v.surfaces.map((s) => (
-                          <span className="badge" key={s}>{s}</span>
-                        ))}
-                      </div>
-                    )}
-                    <div className="vc-foot">
-                      <span className="vc-meta">
-                        {v.fieldCount} {v.fieldCount === 1 ? "field" : "fields"}
-                        {v.sizes.length ? ` · ${v.sizes.join(", ")}` : ""}
-                      </span>
-                      {v.priceFrom != null && (
-                        <span className="vc-price">from ${v.priceFrom}/hr</span>
-                      )}
-                    </div>
-                  </Link>
+                  <VenueCard v={v} key={v.slug} />
                 ))}
               </div>
             </div>

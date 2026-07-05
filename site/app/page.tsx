@@ -4,6 +4,7 @@ import { Nav } from "@/components/nav";
 import { Footer } from "@/components/footer";
 import { AppStoreButton } from "@/components/app-store-button";
 import { PitchLines } from "@/components/pitch-lines";
+import { NightMap } from "@/components/night-map";
 import { WaitlistForm } from "@/components/waitlist-form";
 import { getAllVenues, getVenuesByCity } from "@/lib/venues";
 
@@ -41,8 +42,8 @@ export default async function Home() {
           <div>
             <span className="eyebrow rise">Soccer fields · Greater Toronto Area</span>
             <h1 className="display rise d1">
-              Find your<br />
-              <span className="swipe">next pitch.</span>
+              Every field in the GTA.<br />
+              <span className="swipe">Free parks included.</span>
             </h1>
             <p className="lede rise d2">
               Every soccer field in the GTA, in one app. Browse turf, indoor, and outdoor
@@ -61,9 +62,8 @@ export default async function Home() {
               <span className="cta-note">Free · iPhone · No account needed to browse</span>
             </div>
           </div>
-          <div className="hero-art rise d2">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/screens/01-explore.png" alt="Onside app showing soccer venues across the GTA" />
+          <div className="hero-map-wrap rise d2">
+            <NightMap count={count} />
           </div>
         </div>
         <PitchLines className="pitch" />

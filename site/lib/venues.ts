@@ -235,6 +235,33 @@ export function priceLabel(f: VenueField): string | null {
 }
 
 // ---------------------------------------------------------------------------
+// Price display state — drives the card grammar's condensed-price / FREE
+// foil / "rates on site" chip. No new fetching: venueType and field prices
+// are already part of the Venue shape above, this just classifies them.
+// ---------------------------------------------------------------------------
+
+export type PriceState =
+  | { kind: "price"; text: string }
+  | { kind: "free" }
+  | { kind: "onsite" };
+
+/** Per-field price state, for the field rows on a venue's own page. */
+export function fieldPriceState(f: VenueField, venueType: string | null): PriceState {
+  if (f.pricePerHour != null) return { kind: "price", text: `$${f.pricePerHour}/hr` };
+  if (f.priceNote) return { kind: "price", text: f.priceNote };
+  if (venueType === "public_park") return { kind: "free" };
+  return { kind: "onsite" };
+}
+
+/** Per-venue price state (lowest field price), for venue cards in listings. */
+export function venuePriceState(v: Pick<Venue, "fields" | "venueType">): PriceState {
+  const prices = v.fields.map((f) => f.pricePerHour).filter((p): p is number => p != null);
+  if (prices.length) return { kind: "price", text: `from $${Math.min(...prices)}/hr` };
+  if (v.venueType === "public_park") return { kind: "free" };
+  return { kind: "onsite" };
+}
+
+// ---------------------------------------------------------------------------
 // City landing pages (/soccer-fields/[city])
 // ---------------------------------------------------------------------------
 

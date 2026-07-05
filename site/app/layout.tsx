@@ -3,21 +3,38 @@ import { Figtree, Barlow_Condensed } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 
+import "./tokens.css";
 import "./globals.css";
 
+// Figtree = body voice, Barlow Condensed = display voice (headlines + every
+// numeral: prices, counts, stats). Same two faces the app ships, exposed as
+// --font-body / --font-display so both live on the shared token vocabulary.
 const figtree = Figtree({
   subsets: ["latin"],
   weight: ["400", "500", "600"],
-  variable: "--font-figtree",
+  variable: "--font-body",
   display: "swap",
 });
 
 const barlow = Barlow_Condensed({
   subsets: ["latin"],
   weight: ["600", "700"],
-  variable: "--font-barlow",
+  variable: "--font-display",
   display: "swap",
 });
+
+// Runs before paint to apply a saved theme override ahead of the
+// prefers-color-scheme default, so there's no light/dark flash on load.
+const THEME_INIT_SCRIPT = `
+(function () {
+  try {
+    var t = localStorage.getItem("onside-theme");
+    if (t === "light" || t === "dark") {
+      document.documentElement.setAttribute("data-theme", t);
+    }
+  } catch (e) {}
+})();
+`;
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://getonside.ca"),
@@ -46,8 +63,13 @@ export const viewport: Viewport = { themeColor: "#f7f2e8" };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${figtree.variable} ${barlow.variable}`}>
+    <html
+      lang="en"
+      className={`${figtree.variable} ${barlow.variable}`}
+      suppressHydrationWarning
+    >
       <body>
+        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
         {children}
         <Analytics />
         <SpeedInsights />
