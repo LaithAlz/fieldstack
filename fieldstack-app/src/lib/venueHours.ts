@@ -42,6 +42,33 @@ export function getDayHours(
   return parseRange(raw);
 }
 
+// Mirrors the picker's own "no constraint" fallback (see module docstring)
+// so a venue with missing/malformed hours data reads as open during the
+// typical operating window rather than being silently excluded.
+const DEFAULT_OPEN_MINUTES = 6 * 60; // 06:00
+const DEFAULT_CLOSE_MINUTES = 23 * 60; // 23:00
+
+/**
+ * True when `now` falls inside the venue's open/close window for its
+ * weekday. Used by Explore's "Open now" chip.
+ *
+ * When `getDayHours` can't determine a real window (missing, malformed, or
+ * explicitly-closed-today data), this falls back to the same 6 AM–11 PM
+ * default the picker uses for "no constraint" — i.e. it assumes the venue
+ * is open rather than excluding it for a data gap.
+ */
+export function isOpenNow(
+  hours: VenueHoursJson | null | undefined,
+  now: Date = new Date()
+): boolean {
+  const day = getDayHours(hours, now) ?? {
+    openMinutes: DEFAULT_OPEN_MINUTES,
+    closeMinutes: DEFAULT_CLOSE_MINUTES,
+  };
+  const minutesNow = now.getHours() * 60 + now.getMinutes();
+  return minutesNow >= day.openMinutes && minutesNow < day.closeMinutes;
+}
+
 function parseRange(s: string): DayHours | null {
   // Match "HH:mm-HH:mm". Be lenient about surrounding whitespace; reject
   // anything else so a scraper bug doesn't silently grey out the whole day.

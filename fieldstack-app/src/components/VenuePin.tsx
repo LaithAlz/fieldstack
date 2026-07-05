@@ -10,6 +10,7 @@ import { Text } from "./Text";
 const PIN_ICON_SIZE = 32;
 const PRICE_HEIGHT = 30;
 const SELECTED_SIZE = 46;
+const FREE_DOT_SIZE = 14;
 
 type CountProps = {
   mode: "count";
@@ -24,28 +25,41 @@ type PriceProps = {
   fieldCount?: number;
 };
 
+type FreeProps = {
+  mode: "free";
+  /** Used only for the screen-reader label. */
+  fieldCount?: number;
+};
+
 type SelectedProps = {
   mode: "selected";
 };
 
 type Props = {
   venueName: string;
-} & (CountProps | PriceProps | SelectedProps);
+} & (CountProps | PriceProps | FreeProps | SelectedProps);
 
 /**
- * Map pin — three modes:
+ * Map pin — four modes:
  *   - `count`: brand teardrop pin (Ionicons location-sharp). No number;
- *     field count lives in the bottom card after tapping.
- *   - `price`: paper pill showing "$X" (lowest price at the venue).
+ *     field count lives in the bottom card after tapping. Fallback for a
+ *     venue whose pricing is simply unknown (not free, not priced — see
+ *     `isFreeVenue` in lib/filters).
+ *   - `price`: condensed-numeral pill reading "From $N" — the lowest price
+ *     at the venue.
+ *   - `free`: a small solid dot in the success-green family, ringed so it
+ *     lifts off the map — for venues `isFreeVenue` calls FREE.
  *   - `selected`: a bold, brand-FILLED disc with a white centre — the
  *     unmistakable "this one" marker. Rendered by a single dedicated
  *     selection marker that's always mounted and only moved/faded, so its
  *     content never changes and `tracksViewChanges={false}` stays safe.
  *
- * The base price/count pins are intentionally static (no selected styling
- * of their own): repainting a custom-view marker would require flipping
- * tracksViewChanges, which crashes under the Expo Go 54 Fabric interop. The
- * separate filled `selected` marker sits on top of the chosen pin instead.
+ * The base price/free/count pins are intentionally static (no selected
+ * styling of their own): repainting a custom-view marker would require
+ * flipping tracksViewChanges, which crashes under the Expo Go 54 Fabric
+ * interop. The separate filled `selected` marker sits on top of the chosen
+ * pin instead — this is why it can't show the venue's own price digits (its
+ * content must never vary per-selection under a frozen-snapshot marker).
  */
 export function VenuePin(props: Props) {
   const colors = useTheme();
@@ -72,7 +86,7 @@ export function VenuePin(props: Props) {
   }
 
   if (props.mode === "price") {
-    const label = `$${Math.round(props.price)}`;
+    const label = `From $${Math.round(props.price)}`;
     const a11y = [
       props.venueName,
       label + " per hour",
@@ -91,7 +105,7 @@ export function VenuePin(props: Props) {
           {
             height: PRICE_HEIGHT,
             paddingHorizontal: spacing.sm + 2,
-            backgroundColor: colors.surface,
+            backgroundColor: colors.surfaceElevated,
             borderColor: colors.border,
           },
         ]}
@@ -108,6 +122,31 @@ export function VenuePin(props: Props) {
           {label}
         </Text>
       </View>
+    );
+  }
+
+  if (props.mode === "free") {
+    const a11y = [
+      props.venueName,
+      "Free to play",
+      props.fieldCount
+        ? `${props.fieldCount} ${props.fieldCount === 1 ? "field" : "fields"}`
+        : null,
+    ]
+      .filter(Boolean)
+      .join(", ");
+    return (
+      <View
+        accessibilityRole="button"
+        accessibilityLabel={a11y}
+        style={[
+          styles.freeDot,
+          {
+            backgroundColor: colors.success,
+            borderColor: colors.surfaceElevated,
+          },
+        ]}
+      />
     );
   }
 
@@ -140,7 +179,7 @@ const styles = StyleSheet.create({
   pricePill: {
     minWidth: 48,
     borderRadius: 18,
-    borderWidth: 1.5,
+    borderWidth: StyleSheet.hairlineWidth,
     alignItems: "center",
     justifyContent: "center",
     shadowColor: "#000",
@@ -148,6 +187,17 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     shadowOpacity: 0.22,
     elevation: 4,
+  },
+  freeDot: {
+    width: FREE_DOT_SIZE,
+    height: FREE_DOT_SIZE,
+    borderRadius: FREE_DOT_SIZE / 2,
+    borderWidth: 2,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowRadius: 3,
+    shadowOpacity: 0.25,
+    elevation: 3,
   },
   selected: {
     alignItems: "center",

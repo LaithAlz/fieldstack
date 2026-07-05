@@ -34,16 +34,15 @@ type Props = {
   hideWhenEmpty?: boolean;
   /**
    * Prefixed to each tile's accessibilityLabel — e.g. "Recently viewed: ".
-   * Lets RecentlyViewedRow keep its tile-specific SR cue when delegating.
+   * Lets a caller keep its own tile-specific SR cue when delegating.
    */
   tileAccessibilityPrefix?: string;
 };
 
 /**
- * Reusable horizontal scroll row of compact venue tiles. Both
- * `RecentlyViewedRow` (which wraps this) and Profile's "Saved" section
- * render the same tile shape — the only difference is the venue ordering
- * and the section title.
+ * Reusable horizontal scroll row of compact venue tiles — used by Profile's
+ * "Recently viewed" and "Saved" sections. Both render the same tile shape;
+ * the only difference is the venue ordering and the section title.
  *
  * Filters venueIds against `allVenues` so we never render a tile the user
  * can't navigate into (the list shifts with location + filters).

@@ -7,6 +7,7 @@ import type { Coords, PermissionStatus } from "../lib/location";
 import { spacing } from "../theme/tokens";
 import { useTheme } from "../theme/useTheme";
 
+import { SearchInput } from "./SearchInput";
 import { Text } from "./Text";
 
 type LocationOption = {
@@ -33,6 +34,14 @@ type Props = {
   onSelect: (coords: Coords, label: string) => void;
   onUseMyLocation: () => void;
   onRequestPermission: () => void;
+  /**
+   * Free-text geocode input rendered above the presets. Optional — a caller
+   * that doesn't pass `searchValue` gets the sheet exactly as before (presets
+   * + "use my location" only).
+   */
+  searchValue?: string;
+  onSearchChange?: (text: string) => void;
+  onSearchSubmit?: () => void;
 };
 
 /**
@@ -41,7 +50,15 @@ type Props = {
  */
 export const LocationPickerSheet = forwardRef<BottomSheetModal, Props>(
   function LocationPickerSheet(
-    { permissionStatus, onSelect, onUseMyLocation, onRequestPermission },
+    {
+      permissionStatus,
+      onSelect,
+      onUseMyLocation,
+      onRequestPermission,
+      searchValue,
+      onSearchChange,
+      onSearchSubmit,
+    },
     ref
   ) {
     const colors = useTheme();
@@ -75,6 +92,19 @@ export const LocationPickerSheet = forwardRef<BottomSheetModal, Props>(
           <Text size="xl" weight="bold" accessibilityRole="header" style={styles.heading}>
             Browse another area
           </Text>
+
+          {onSearchChange ? (
+            <View style={styles.search}>
+              <SearchInput
+                value={searchValue ?? ""}
+                onChangeText={onSearchChange}
+                onSubmit={onSearchSubmit}
+                placeholder="Search by city, neighbourhood, or postal code"
+                accessibilityLabel="Search location"
+                accessibilityHint="Type a city, neighbourhood, or postal code, then search"
+              />
+            </View>
+          ) : null}
 
           <Pressable
             onPress={myLocationAction}
@@ -124,6 +154,9 @@ const styles = StyleSheet.create({
   heading: {
     marginTop: spacing.sm,
     marginBottom: spacing.lg,
+  },
+  search: {
+    marginBottom: spacing.md,
   },
   row: {
     flexDirection: "row",

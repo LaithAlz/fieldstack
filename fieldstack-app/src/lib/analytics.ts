@@ -21,6 +21,9 @@ export const EVENT_APP_FOREGROUNDED = "app_foregrounded";
 // Review prompt (#430) — measure ask volume vs. accepts.
 export const EVENT_REVIEW_PROMPT_SHOWN = "review_prompt_shown";
 export const EVENT_REVIEW_PROMPT_ACCEPTED = "review_prompt_accepted";
+// Explore rebuild (Matchday PR2) — chip usage and sheet-drag engagement.
+export const EVENT_EXPLORE_CHIP_TOGGLED = "explore_chip_toggled";
+export const EVENT_EXPLORE_SHEET_SNAPPED = "explore_sheet_snapped";
 
 export type AnalyticsEvent =
   | typeof EVENT_APP_OPENED
@@ -33,7 +36,9 @@ export type AnalyticsEvent =
   | typeof EVENT_APP_BACKGROUNDED
   | typeof EVENT_APP_FOREGROUNDED
   | typeof EVENT_REVIEW_PROMPT_SHOWN
-  | typeof EVENT_REVIEW_PROMPT_ACCEPTED;
+  | typeof EVENT_REVIEW_PROMPT_ACCEPTED
+  | typeof EVENT_EXPLORE_CHIP_TOGGLED
+  | typeof EVENT_EXPLORE_SHEET_SNAPPED;
 
 export type AnalyticsProperties = Record<string, unknown>;
 

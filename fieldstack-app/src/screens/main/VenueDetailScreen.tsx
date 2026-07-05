@@ -42,8 +42,8 @@ import type { Field, FieldSize, FieldSurface } from "../../types/api";
 // Honest typing: VenueDetail/FieldDetail live in all three tab stacks
 // (Explore / Saved / Me), and from here we only ever navigate to the other
 // detail screen. DetailParamList captures that subset; using MainStackParamList
-// would falsely typecheck navigate("FieldSearch") / navigate("MapView") when
-// mounted under Saved or Me.
+// would falsely typecheck navigate("Explore") when mounted under Saved or Me,
+// where there's no such route.
 type Props = NativeStackScreenProps<DetailParamList, "VenueDetail">;
 type Nav = NativeStackNavigationProp<DetailParamList>;
 

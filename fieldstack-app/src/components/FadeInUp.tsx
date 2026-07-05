@@ -10,8 +10,8 @@ type Props = {
 /**
  * One-shot mount animation: fades in while drifting up 12pt. Used for
  * staggered list entrances. JS-driver Animated only — no Reanimated, so it's
- * safe anywhere (including screens that host MapView, where Reanimated's
- * native-thread commits crash the Fabric interop layer — see MapViewScreen).
+ * safe anywhere (including screens that host a MapView, where Reanimated's
+ * native-thread commits crash the Fabric interop layer — see ExploreScreen).
  *
  * Respects Reduce Motion: when enabled, content renders immediately with no
  * drift or fade.
