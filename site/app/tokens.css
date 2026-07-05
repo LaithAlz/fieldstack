@@ -1,0 +1,121 @@
+/* GENERATED from design/tokens.json — do not edit by hand; run `node design/generate.mjs`. */
+
+:root {
+  --surface: #F5F4EF;
+  --surface-secondary: #ECEAE1;
+  --surface-elevated: #FFFFFF;
+  --text-primary: #1A1D2B;
+  --text-secondary: #565B6E;
+  --text-tertiary: #9CA1B2;
+  --border: #E4E0D5;
+  --brand: #C2410C;
+  --brand-dark: #9A3412;
+  --on-brand: #FFFFFF;
+  --accent: #0284C7;
+  --on-accent: #FFFFFF;
+  --amber: #B26A00;
+  --hero-surface: #1A1D2B;
+  --on-hero: #F4F1EA;
+  --on-hero-muted: rgba(244, 241, 234, 0.72);
+  --success: #10B981;
+  --danger: #DC2626;
+  --foil-a: #DCE8D6;
+  --foil-b: #A8BE9F;
+  --on-foil: #0F2D1C;
+
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 12px;
+  --space-lg: 16px;
+  --space-xl: 24px;
+  --space-xxl: 32px;
+
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-pill: 999px;
+
+  --font-size-xs: 11px;
+  --font-size-sm: 13px;
+  --font-size-md: 15px;
+  --font-size-lg: 17px;
+  --font-size-xl: 22px;
+  --font-size-xxl: 28px;
+  --font-size-xxxl: 34px;
+  --font-size-scoreboard: 56px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --surface: #0E131F;
+    --surface-secondary: #141926;
+    --surface-elevated: #171C2C;
+    --text-primary: #F4F1EA;
+    --text-secondary: #A8ADBF;
+    --text-tertiary: #6E7488;
+    --border: #2A3145;
+    --brand: #FF6B2C;
+    --brand-dark: #E8551A;
+    --on-brand: #2A1205;
+    --accent: #38BDF8;
+    --on-accent: #082F49;
+    --amber: #FFB23E;
+    --hero-surface: #171C2C;
+    --on-hero: #F4F1EA;
+    --on-hero-muted: rgba(244, 241, 234, 0.7);
+    --success: #34D399;
+    --danger: #F87171;
+    --foil-a: #2A3C2B;
+    --foil-b: #4A5F46;
+    --on-foil: #DFF0DA;
+  }
+}
+
+:root[data-theme="dark"] {
+  --surface: #0E131F;
+  --surface-secondary: #141926;
+  --surface-elevated: #171C2C;
+  --text-primary: #F4F1EA;
+  --text-secondary: #A8ADBF;
+  --text-tertiary: #6E7488;
+  --border: #2A3145;
+  --brand: #FF6B2C;
+  --brand-dark: #E8551A;
+  --on-brand: #2A1205;
+  --accent: #38BDF8;
+  --on-accent: #082F49;
+  --amber: #FFB23E;
+  --hero-surface: #171C2C;
+  --on-hero: #F4F1EA;
+  --on-hero-muted: rgba(244, 241, 234, 0.7);
+  --success: #34D399;
+  --danger: #F87171;
+  --foil-a: #2A3C2B;
+  --foil-b: #4A5F46;
+  --on-foil: #DFF0DA;
+}
+
+:root[data-theme="light"] {
+  --surface: #F5F4EF;
+  --surface-secondary: #ECEAE1;
+  --surface-elevated: #FFFFFF;
+  --text-primary: #1A1D2B;
+  --text-secondary: #565B6E;
+  --text-tertiary: #9CA1B2;
+  --border: #E4E0D5;
+  --brand: #C2410C;
+  --brand-dark: #9A3412;
+  --on-brand: #FFFFFF;
+  --accent: #0284C7;
+  --on-accent: #FFFFFF;
+  --amber: #B26A00;
+  --hero-surface: #1A1D2B;
+  --on-hero: #F4F1EA;
+  --on-hero-muted: rgba(244, 241, 234, 0.72);
+  --success: #10B981;
+  --danger: #DC2626;
+  --foil-a: #DCE8D6;
+  --foil-b: #A8BE9F;
+  --on-foil: #0F2D1C;
+}

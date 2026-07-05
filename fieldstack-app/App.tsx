@@ -8,7 +8,7 @@ import {
   Figtree_500Medium,
   Figtree_600SemiBold,
 } from "@expo-google-fonts/figtree";
-import { createNavigationContainerRef, NavigationContainer, DefaultTheme, type LinkingOptions } from "@react-navigation/native";
+import { createNavigationContainerRef, NavigationContainer, DefaultTheme, DarkTheme, type LinkingOptions } from "@react-navigation/native";
 import { useFonts } from "expo-font";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
@@ -49,7 +49,7 @@ import { SavedVenuesProvider, useSavedVenues } from "./src/lib/savedVenues";
 import { computeAppReady } from "./src/lib/appReady";
 import { getOnboardingComplete } from "./src/lib/storage";
 import { RootNavigator } from "./src/navigation/RootNavigator";
-import { colors } from "./src/theme/tokens";
+import { ThemeProvider, useTheme, useThemePreference } from "./src/theme/useTheme";
 
 // Hold the splash open while we decide which stack to mount. REQ-F1.1 caps
 // this at 2s — if the storage read somehow hangs, the timeout race lets the
@@ -193,81 +193,100 @@ export default function App() {
     return null;
   }
 
-  // Map our brand tokens into React Navigation's theme so default headers,
-  // backgrounds, and back-button tints come from the same palette. The app is
-  // light-only (see useTheme), so this is always the light theme.
-  const navTheme = {
-    ...DefaultTheme,
-    colors: {
-      ...DefaultTheme.colors,
-      primary: colors.light.brand,
-      background: colors.light.surface,
-      card: colors.light.surface,
-      text: colors.light.textPrimary,
-      border: colors.light.border,
-    },
-  };
-
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
         {/* ErrorBoundary sits inside SafeAreaProvider (so the fallback
             respects notches) but outside everything else, so any crash in
             providers / nav / screens lands on the friendly screen instead
-            of a white blank. */}
+            of a white blank. ThemeProvider sits inside it too — the fallback
+            deliberately avoids useTheme() (see ErrorBoundary), so a crash in
+            the theme layer itself still lands on the friendly screen instead
+            of re-throwing. */}
         <ErrorBoundary>
-          <BottomSheetModalProvider>
-            <ToastProvider>
-              <AuthProvider>
-                <OnboardingProvider initialIsOnboarded={initialIsOnboarded} onboardingResolved={isReady}>
-                  <PreferredSlotProvider>
-                    <SavedVenuesProvider>
-                      <BookingHistoryProvider>
-                        <RecentlyViewedProvider>
-                          <BlockedUsersProvider>
-                            {/* Hold render until persisted state has hydrated,
-                                so deep links don't see empty defaults. */}
-                            <PersistenceGate>
-                              <NavigationContainer
-                                ref={navRef}
-                                theme={navTheme}
-                                linking={linking}
-                                // Churn instrumentation: report every route
-                                // transition (deduped inside onScreenChange)
-                                // so exit events know which screen the user
-                                // left from.
-                                // Cast: navRef has no RootParamList generic, so
-                                // getCurrentRoute() types as never. Runtime shape
-                                // is always { name: string } when a route exists.
-                                onReady={() =>
-                                  onScreenChange((navRef.getCurrentRoute() as { name?: string } | undefined)?.name)
-                                }
-                                onStateChange={() =>
-                                  onScreenChange((navRef.getCurrentRoute() as { name?: string } | undefined)?.name)
-                                }
-                              >
-                                <RootNavigator />
-                                {/* Fires as soon as the nav container is ready
-                                    so a cold-start from a recovery deep link
-                                    redirects to SetNewPassword immediately,
-                                    even if the user lands on the Explore tab
-                                    rather than the Me tab. */}
-                                <RecoveryRedirectHandler />
-                              </NavigationContainer>
-                              <StatusBar style="dark" />
-                            </PersistenceGate>
-                          </BlockedUsersProvider>
-                        </RecentlyViewedProvider>
-                      </BookingHistoryProvider>
-                    </SavedVenuesProvider>
-                  </PreferredSlotProvider>
-                </OnboardingProvider>
-              </AuthProvider>
-            </ToastProvider>
-          </BottomSheetModalProvider>
+          <ThemeProvider>
+            <BottomSheetModalProvider>
+              <ToastProvider>
+                <AuthProvider>
+                  <OnboardingProvider initialIsOnboarded={initialIsOnboarded} onboardingResolved={isReady}>
+                    <PreferredSlotProvider>
+                      <SavedVenuesProvider>
+                        <BookingHistoryProvider>
+                          <RecentlyViewedProvider>
+                            <BlockedUsersProvider>
+                              {/* Hold render until persisted state has hydrated,
+                                  so deep links don't see empty defaults. */}
+                              <PersistenceGate>
+                                <NavigationRoot />
+                              </PersistenceGate>
+                            </BlockedUsersProvider>
+                          </RecentlyViewedProvider>
+                        </BookingHistoryProvider>
+                      </SavedVenuesProvider>
+                    </PreferredSlotProvider>
+                  </OnboardingProvider>
+                </AuthProvider>
+              </ToastProvider>
+            </BottomSheetModalProvider>
+          </ThemeProvider>
         </ErrorBoundary>
       </SafeAreaProvider>
     </GestureHandlerRootView>
+  );
+}
+
+/**
+ * Navigation tree + status bar, split out from App() so it can call
+ * useTheme()/useThemePreference() (which require a <ThemeProvider> ancestor)
+ * to follow the active color scheme instead of hardcoding light.
+ */
+function NavigationRoot() {
+  const themeColors = useTheme();
+  const { active } = useThemePreference();
+
+  // Map our brand tokens into React Navigation's theme so default headers,
+  // backgrounds, and back-button tints come from the same palette, on top of
+  // the matching nav theme base (fonts, misc chrome) for the active scheme.
+  const navTheme = {
+    ...(active === "dark" ? DarkTheme : DefaultTheme),
+    colors: {
+      ...(active === "dark" ? DarkTheme : DefaultTheme).colors,
+      primary: themeColors.brand,
+      background: themeColors.surface,
+      card: themeColors.surface,
+      text: themeColors.textPrimary,
+      border: themeColors.border,
+    },
+  };
+
+  return (
+    <>
+      <NavigationContainer
+        ref={navRef}
+        theme={navTheme}
+        linking={linking}
+        // Churn instrumentation: report every route transition (deduped
+        // inside onScreenChange) so exit events know which screen the user
+        // left from.
+        // Cast: navRef has no RootParamList generic, so getCurrentRoute()
+        // types as never. Runtime shape is always { name: string } when a
+        // route exists.
+        onReady={() =>
+          onScreenChange((navRef.getCurrentRoute() as { name?: string } | undefined)?.name)
+        }
+        onStateChange={() =>
+          onScreenChange((navRef.getCurrentRoute() as { name?: string } | undefined)?.name)
+        }
+      >
+        <RootNavigator />
+        {/* Fires as soon as the nav container is ready so a cold-start from
+            a recovery deep link redirects to SetNewPassword immediately,
+            even if the user lands on the Explore tab rather than the Me
+            tab. */}
+        <RecoveryRedirectHandler />
+      </NavigationContainer>
+      <StatusBar style={active === "dark" ? "light" : "dark"} />
+    </>
   );
 }
 
