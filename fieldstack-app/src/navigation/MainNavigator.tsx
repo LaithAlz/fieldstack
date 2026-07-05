@@ -7,16 +7,14 @@ import {
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 
 import { FieldSearchProvider } from "../hooks/useFieldSearch";
+import { ExploreScreen } from "../screens/main/ExploreScreen";
 import { FieldDetailScreen } from "../screens/main/FieldDetailScreen";
-import { FieldSearchScreen } from "../screens/main/FieldSearchScreen";
-import { MapViewScreen } from "../screens/main/MapViewScreen";
 import { ProfileScreen } from "../screens/main/ProfileScreen";
 import { SavedScreen } from "../screens/main/SavedScreen";
 import { SetNewPasswordScreen } from "../screens/main/SetNewPasswordScreen";
 import { SettingsScreen } from "../screens/main/SettingsScreen";
 import { SignInScreen } from "../screens/main/SignInScreen";
 import { VenueDetailScreen } from "../screens/main/VenueDetailScreen";
-import { VenueListScreen } from "../screens/main/VenueListScreen";
 import { fontFamily, fontSize } from "../theme/tokens";
 import { useTheme } from "../theme/useTheme";
 
@@ -24,15 +22,15 @@ import { useTheme } from "../theme/useTheme";
 // Param lists
 // ---------------------------------------------------------------------------
 
-// The Explore tab carries the full venue/field/search/map flow. Kept under
-// the legacy `MainStackParamList` name because every screen imports it for
+// The Explore tab is now a single sheet-over-map screen (map canvas + a
+// draggable bottom sheet carrying the venue list) — the former VenueList /
+// FieldSearch / MapView trio collapsed into one surface. Kept under the
+// legacy `MainStackParamList` name because every screen imports it for
 // typed navigation; renaming would touch ~10 files for no semantic gain.
 export type MainStackParamList = {
-  VenueList: undefined;
+  Explore: undefined;
   VenueDetail: { venueId: string };
   FieldDetail: { fieldId: string };
-  FieldSearch: undefined;
-  MapView: undefined;
 };
 
 // Saved + Me each get their own small stack so detail-screen pushes from
@@ -81,8 +79,6 @@ function tabBarStyleFor(
   if (
     focused === "VenueDetail" ||
     focused === "FieldDetail" ||
-    focused === "FieldSearch" ||
-    focused === "MapView" ||
     focused === "Settings" ||
     focused === "SignIn" ||
     focused === "SetNewPassword"
@@ -100,11 +96,9 @@ const ExploreStack = createNativeStackNavigator<MainStackParamList>();
 function ExploreStackNavigator() {
   return (
     <ExploreStack.Navigator screenOptions={{ headerShown: false }}>
-      <ExploreStack.Screen name="VenueList" component={VenueListScreen} />
+      <ExploreStack.Screen name="Explore" component={ExploreScreen} />
       <ExploreStack.Screen name="VenueDetail" component={VenueDetailScreen} />
       <ExploreStack.Screen name="FieldDetail" component={FieldDetailScreen} />
-      <ExploreStack.Screen name="FieldSearch" component={FieldSearchScreen} />
-      <ExploreStack.Screen name="MapView" component={MapViewScreen} />
     </ExploreStack.Navigator>
   );
 }

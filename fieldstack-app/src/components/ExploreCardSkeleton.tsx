@@ -5,15 +5,15 @@ import { useTheme } from "../theme/useTheme";
 
 import { Skeleton } from "./Skeleton";
 
-const PHOTO_SIZE = 80;
+const PHOTO_SIZE = 84;
 const BADGE_HEIGHT = 18;
 const BADGE_RADIUS = borderRadius.sm;
 
 /**
- * Loading placeholder for `FieldSearchCard`. Mirrors the card's geometry so
- * the swap from skeleton → real data doesn't reflow the layout.
+ * Loading placeholder for `ExploreCard`. Mirrors the card's geometry so the
+ * swap from skeleton → real data doesn't reflow the sheet list.
  */
-export function FieldSearchCardSkeleton() {
+export function ExploreCardSkeleton() {
   const colors = useTheme();
   return (
     <View
@@ -34,13 +34,9 @@ export function FieldSearchCardSkeleton() {
           <View style={styles.spacer} />
           <Skeleton width="45%" height={12} />
         </View>
-        <View style={styles.badges}>
-          <Skeleton width={48} height={BADGE_HEIGHT} borderRadius={BADGE_RADIUS} />
-          <Skeleton width={40} height={BADGE_HEIGHT} borderRadius={BADGE_RADIUS} />
-        </View>
         <View style={styles.metaRow}>
           <Skeleton width={64} height={12} />
-          <Skeleton width={56} height={14} />
+          <Skeleton width={56} height={BADGE_HEIGHT} borderRadius={BADGE_RADIUS} />
         </View>
       </View>
     </View>
@@ -62,11 +58,6 @@ const styles = StyleSheet.create({
   },
   spacer: {
     height: spacing.xs,
-  },
-  badges: {
-    flexDirection: "row",
-    gap: spacing.xs,
-    marginTop: spacing.xs,
   },
   metaRow: {
     flexDirection: "row",

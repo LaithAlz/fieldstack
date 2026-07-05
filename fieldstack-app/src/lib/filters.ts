@@ -1,8 +1,8 @@
 /**
  * Shared filter option lists + bucket helpers used by every surface that
- * exposes the field-search filter UI (FieldSearchScreen, MapViewScreen,
- * FiltersSheet, FilterToolbar). Keeping these in one place means the label
- * "Indoor" or "Under $80" never drifts between screens.
+ * exposes the field-search filter UI (ExploreScreen, FiltersSheet).
+ * Keeping these in one place means the label "Indoor" or "Under $80"
+ * never drifts between screens.
  */
 
 import type { FilterOption } from "../components/FilterBottomSheet";
@@ -70,4 +70,32 @@ export function priceMaxToBucket(priceMax: number | null): PriceBucket {
   if (priceMax === 80) return "under80";
   if (priceMax === 120) return "to120";
   return "any";
+}
+
+/**
+ * The FREE rule for Explore's "Free" chip.
+ *
+ * `field.price_per_hour` is `null` in two very different situations across
+ * the catalog: an operator hasn't published a rate ("Rates on site" — see
+ * ExploreCard), or nobody ever recorded one because the field is an
+ * unbookable public-park pitch that's simply free to walk onto. Treating
+ * every `null` as free would mislabel every private/community-centre field
+ * with an unpublished rate. The honest split:
+ *
+ *   - an explicit `$0` price is an unambiguous FREE signal, on any venue type.
+ *   - a `null` price is FREE only when the venue itself is a `public_park`
+ *     (the null there means "nobody charges," not "ask the operator").
+ *   - a `null` price on a private facility / community centre is NOT free —
+ *     it's unknown pricing.
+ *
+ * `minPrice` is the lowest price across a venue's matching fields (or the
+ * single field's own price when called per-result), mirroring how the map's
+ * venue markers already roll multiple fields up into one price.
+ */
+export function isFreeVenue(
+  venueType: VenueType | null | undefined,
+  minPrice: number | null
+): boolean {
+  if (minPrice === 0) return true;
+  return minPrice === null && venueType === "public_park";
 }

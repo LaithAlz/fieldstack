@@ -27,6 +27,7 @@ import { searchFields, type SearchFieldsResult, type SearchSort } from "../api/s
 import { useLocation } from "./useLocation";
 import { EVENT_SEARCH_FILTERED, track } from "../lib/analytics";
 import type { Coords } from "../lib/location";
+import { getCachedSearchResults, setCachedSearchResults } from "../lib/searchResultsCache";
 import {
   clearLastFilters as clearStoredFilters,
   getLastFilters,
@@ -88,6 +89,8 @@ export type UseFieldSearchResult = {
   location: FieldSearchLocation;
   /** Set when the most recent geocode failed; cleared on the next success. */
   locationError: Error | null;
+  /** True when the visible results came from the offline cache, not the server. */
+  staleFromCache: boolean;
   setFilter: SetFilter;
   clearFilters: () => void;
   loadMore: () => void;
@@ -100,11 +103,12 @@ export type UseFieldSearchResult = {
 };
 
 // ---------------------------------------------------------------------------
-// Provider + context. Hoisted from a per-call hook so FieldSearchScreen and
-// MapViewScreen share one set of filters / results / debounced fetches.
-// Without this both screens would maintain independent state and double the
-// network traffic, and a filter set on Map wouldn't apply when nav-back to
-// the list.
+// Provider + context. Explore (the sheet-over-map screen) is the sole
+// consumer today, but this stays hoisted at the navigator level — the
+// original reason was letting the old VenueList/FieldSearch/MapView trio
+// share one set of filters/results without tripling network traffic, and
+// that "one search, wherever it's mounted" property is exactly what a
+// future screen reusing this context would still want for free.
 // ---------------------------------------------------------------------------
 
 const FieldSearchContext = createContext<UseFieldSearchResult | null>(null);
@@ -117,11 +121,10 @@ export function FieldSearchProvider({ children }: { children: ReactNode }) {
     loading: locationLoading,
   } = useLocation();
 
-  // Seed the search hook's location from useLocation as soon as it resolves.
-  // Previously this lived on FieldSearchScreen, which meant any screen that
-  // mounted MapView directly (without first passing through the list) would
-  // see empty results — the search just never fired. Hoisting here covers
-  // every consumer of useFieldSearch().
+  // Seed the search hook's location from useLocation as soon as it resolves,
+  // so Explore's search fires without needing to be routed through some
+  // other screen first. Hoisting here covers every consumer of
+  // useFieldSearch().
   //
   // `userCoords` may be null when permission is denied; we still seed so the
   // search can fall back to text geocoding or the default downtown area.
@@ -163,6 +166,7 @@ function useFieldSearchState(): UseFieldSearchResult {
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [error, setError] = useState<Error | null>(null);
   const [locationError, setLocationError] = useState<Error | null>(null);
+  const [staleFromCache, setStaleFromCache] = useState(false);
   const offsetRef = useRef(0);
 
   // Becomes true once persisted filters have been read on mount. Stored as
@@ -251,12 +255,27 @@ function useFieldSearchState(): UseFieldSearchResult {
 
       if (result.error) {
         setError(result.error);
+        // Offline fallback — only when there's nothing live on screen yet;
+        // a transient failure on top of an already-good result set shouldn't
+        // yank the user back to a stale snapshot (mirrors useVenues).
+        if (results.length === 0) {
+          const cached = await getCachedSearchResults();
+          if (id !== requestId.current) return;
+          if (cached) {
+            setResults(cached.results);
+            setTotal(cached.results.length);
+            setStaleFromCache(true);
+            offsetRef.current = cached.results.length;
+          }
+        }
       } else {
         const page = result.data ?? [];
         setResults(page);
         setTotal(result.total);
         setError(null);
+        setStaleFromCache(false);
         offsetRef.current = page.length;
+        void setCachedSearchResults(page);
       }
       setIsLoading(false);
 
@@ -340,6 +359,7 @@ function useFieldSearchState(): UseFieldSearchResult {
       filters,
       location,
       locationError,
+      staleFromCache,
       setFilter,
       clearFilters,
       loadMore,
@@ -354,6 +374,7 @@ function useFieldSearchState(): UseFieldSearchResult {
       filters,
       location,
       locationError,
+      staleFromCache,
       setFilter,
       clearFilters,
       loadMore,
