@@ -1,6 +1,7 @@
 import { describe, expect, it } from "bun:test";
 
 import {
+  writeFailures,
   sourcePrefixCounts,
   zeroRegressions,
   ZERO_GUARD_MIN,
@@ -82,5 +83,24 @@ describe("zeroRegressions", () => {
     const prior = new Map([["osm", 2]]);
     expect(zeroRegressions(results, prior, 2)).toHaveLength(1);
     expect(zeroRegressions(results, prior, 3)).toHaveLength(0);
+  });
+});
+
+describe("writeFailures", () => {
+  const base = { venuesUpserted: 0, fieldsUpserted: 0 };
+
+  it("flags a source that fetched rows but upserted none", () => {
+    const out = writeFailures([{ source: "google", fetched: 120, ...base }]);
+    expect(out.map((r) => r.source)).toEqual(["google"]);
+  });
+
+  it("ignores errored, empty, and healthy sources", () => {
+    expect(
+      writeFailures([
+        { source: "a", fetched: null, ...base, error: "boom" },
+        { source: "b", fetched: 0, ...base },
+        { source: "c", fetched: 10, venuesUpserted: 10, fieldsUpserted: 12 },
+      ])
+    ).toEqual([]);
   });
 });

@@ -43,6 +43,10 @@ jobs:
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          # The google source needs this too — omitting it here (while the
+          # enrichment step below has it) made that source fail on every
+          # scheduled run once it was registered in ADAPTERS.
+          GOOGLE_PLACES_API_KEY: ${{ secrets.GOOGLE_PLACES_API_KEY }}
         run: |
           if [ -z "$SUPABASE_SERVICE_ROLE_KEY" ] || [ -z "$SUPABASE_URL" ]; then
             echo "::notice::Skipping scrape — set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY repo secrets to enable the scheduled scraper."
@@ -53,8 +57,11 @@ jobs:
       # Weekly photo refresh is NOT optional freshness polish: the stored
       # googleusercontent URIs are short-lived per Google's terms, so if this
       # stops running, venue photos rot into broken images (clients then fall
-      # back to the satellite hero).
+      # back to the satellite hero). `always()` because the scrape step exits
+      # 1 on a zero-rows guard trip or a failed source — that must not
+      # suppress the photo refresh.
       - name: Enrich venue photos (Google Places)
+        if: ${{ always() }}
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
@@ -70,8 +77,10 @@ jobs:
       # re-introduce a row for a venue another source already carries. Only
       # the conservative AUTO tier applies unattended (cross-source, near-
       # identical name, co-located — see lib/dedupe.ts); REVIEW candidates
-      # are printed into the job log for a human.
+      # are printed into the job log for a human. `always()` so a scrape-step
+      # failure still dedupes whatever the surviving sources upserted.
       - name: Deduplicate venues (auto tier)
+        if: ${{ always() }}
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}

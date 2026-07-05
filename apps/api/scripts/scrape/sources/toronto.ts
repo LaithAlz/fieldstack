@@ -89,6 +89,19 @@ export function mapSize(sizeType: string | null | undefined): FieldSize {
   return "11v11";
 }
 
+/**
+ * Canonical park key: Toronto's PFR layer uses inconsistent ROLLUP_TO
+ * variants for one physical park ("BILL HANCOX PARK" vs "BILL HANCOX PARK
+ * - Sports Field Area", live-confirmed pairs 17-116m apart) — grouping on
+ * the raw string splits one park into two venues, and the variants are far
+ * enough apart in name+distance to evade both dedupe tiers. Strip the
+ * suffix before grouping; it also fixes the address join (the CKAN parks
+ * file only carries the bare park name).
+ */
+export function parkKey(rollupTo: string): string {
+  return rollupTo.replace(/\s*-\s*sports? field area.*$/i, "").trim();
+}
+
 function slug(name: string): string {
   return name
     .toLowerCase()
@@ -117,7 +130,7 @@ export function groupIntoVenues(
 ): ScrapedVenue[] {
   const byPark = new Map<string, TorontoFeature[]>();
   for (const f of features) {
-    const key = f.properties.ROLLUP_TO;
+    const key = parkKey(f.properties.ROLLUP_TO);
     const list = byPark.get(key);
     if (list) list.push(f);
     else byPark.set(key, [f]);
@@ -182,6 +195,8 @@ export const torontoAdapter: ScrapeAdapter = {
       fetchSoccerFields(),
       fetchParkAddresses(),
     ]);
-    return groupIntoVenues(features, parkAddresses);
+    // Drop coordless venues (every member field had null geometry) — a
+    // card with no map pin isn't useful and OSM/municipal peers do the same.
+    return groupIntoVenues(features, parkAddresses).filter((v) => v.lat !== null);
   },
 };

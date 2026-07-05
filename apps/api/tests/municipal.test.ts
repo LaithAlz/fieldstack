@@ -8,6 +8,7 @@ import {
   mapSurface as mapTorontoSurface,
   titleCase,
   type TorontoFeature,
+  parkKey,
 } from "../scripts/scrape/sources/toronto.js";
 import {
   buildParkAddressMap as buildBramptonParkAddressMap,
@@ -258,5 +259,28 @@ describe("brampton: buildParkAddressMap", () => {
     ]);
     expect(map.get("ABRAHAM BLOCK POND")).toBe("10 ELBERN MARKELL DR");
     expect(map.has("ABIGAIL GRACE POND")).toBe(false);
+  });
+});
+
+describe("parkKey", () => {
+  it("strips the '- Sports Field Area' suffix variants", () => {
+    // Live-confirmed duplicate pairs in Toronto's PFR layer.
+    expect(parkKey("BILL HANCOX PARK - Sports Field Area")).toBe("BILL HANCOX PARK");
+    expect(parkKey("WEXFORD HYDRO - Sport Field Area")).toBe("WEXFORD HYDRO");
+    expect(parkKey("FLEMINGDON PARK")).toBe("FLEMINGDON PARK");
+  });
+
+  it("merges suffix variants into one venue", () => {
+    const f = (rollup, id) => ({
+      properties: { ASSET_ID: id, ASSET_NAME: "x - Soccer Field (1)", ROLLUP_TO: rollup },
+      geometry: { type: "Point", coordinates: [-79.2, 43.7] },
+    });
+    const venues = groupIntoVenues(
+      [f("BILL HANCOX PARK", 1), f("BILL HANCOX PARK - Sports Field Area", 2)],
+      new Map([["BILL HANCOX PARK", "101 Bridgeport Dr"]])
+    );
+    expect(venues).toHaveLength(1);
+    expect(venues[0]?.fields).toHaveLength(2);
+    expect(venues[0]?.address).toBe("101 Bridgeport Dr");
   });
 });

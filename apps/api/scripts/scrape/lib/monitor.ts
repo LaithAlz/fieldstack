@@ -46,3 +46,16 @@ export function zeroRegressions(
     (r) => r.fetched === 0 && (priorCounts.get(r.source) ?? 0) >= min
   );
 }
+
+/**
+ * Sources whose adapter fetched rows but persisted none. upsertVenue warns
+ * and continues per row (deliberate, one bad row shouldn't kill a source),
+ * which means a SYSTEMIC write failure — missing column after a lagging
+ * migration, an RLS change — would otherwise exit 0 looking healthy while
+ * writing nothing.
+ */
+export function writeFailures(results: SourceRunResult[]): SourceRunResult[] {
+  return results.filter(
+    (r) => r.fetched !== null && r.fetched > 0 && r.venuesUpserted === 0
+  );
+}

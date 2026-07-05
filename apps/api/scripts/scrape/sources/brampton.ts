@@ -124,6 +124,9 @@ export const bramptonAdapter: ScrapeAdapter = {
   label: "City of Brampton (GeoHub ParkFeatures)",
   async run() {
     const [rows, parkAddresses] = await Promise.all([fetchSoccerRows(), fetchParkAddresses()]);
-    return rows.map((r) => toVenue(r, parkAddresses));
+    // Null-geometry rows explode to zero fields and no pin — drop them.
+    return rows
+      .map((r) => toVenue(r, parkAddresses))
+      .filter((v) => v.fields.length > 0 && v.lat !== null);
   },
 };
