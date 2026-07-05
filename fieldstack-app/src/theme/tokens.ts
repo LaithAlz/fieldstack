@@ -1,33 +1,24 @@
+// Public API for the app's design tokens. Color values and the numeric
+// scales below are sourced from design/tokens.json (single source of truth,
+// shared with the site) via the generated `./palette` — see
+// design/generate.mjs. fontWeight/fontFamily stay hand-written here since
+// font files are app-specific.
+import {
+  darkColors,
+  fontSizeScale,
+  lightColors,
+  radiusScale,
+  spacingScale,
+} from "./palette";
+
 // Spacing — multiples of 4 so layouts align cleanly to a 4pt grid.
-export const spacing = {
-  xs: 4,
-  sm: 8,
-  md: 12,
-  lg: 16,
-  xl: 24,
-  xxl: 32,
-} as const;
+export const spacing = spacingScale;
 export type Spacing = typeof spacing;
 
-export const borderRadius = {
-  sm: 6,
-  md: 8,
-  lg: 12,
-  xl: 16,
-} as const;
+export const borderRadius = radiusScale;
 export type BorderRadius = typeof borderRadius;
 
-export const fontSize = {
-  xs: 11,
-  sm: 13,
-  md: 15,
-  lg: 17,
-  xl: 22,
-  xxl: 28,
-  // Hero size for the condensed display face — screen titles and big
-  // numerals. Condensed type reads narrower, so it earns the extra points.
-  xxxl: 34,
-} as const;
+export const fontSize = fontSizeScale;
 export type FontSize = typeof fontSize;
 
 // React Native typing for fontWeight is a string literal union, so these
@@ -81,6 +72,11 @@ export type ThemeColors = {
   accent: string;
   onAccent: string;
   /**
+   * Open-now / floodlight signal — amber, reserved for the single "open
+   * now" indicator so it doesn't compete with the brand color.
+   */
+  amber: string;
+  /**
    * The marquee block (Explore header, hero moments). Night-sky ink navy in
    * BOTH schemes — in light mode it's the dramatic counterweight to the
    * paper surfaces; in dark mode it's a half-step lighter than the page.
@@ -91,59 +87,25 @@ export type ThemeColors = {
   onHeroMuted: string;
   surface: string;
   surfaceSecondary: string;
+  /**
+   * Cards and sheets that sit above the ground surface — needs its own slot
+   * because dark mode can't just lighten `surface` by a fixed step the way
+   * light mode's plain white card does.
+   */
+  surfaceElevated: string;
   textPrimary: string;
   textSecondary: string;
   textTertiary: string;
   border: string;
   success: string;
   danger: string;
-  overlay: string;
-};
-
-// "Night Kickoff" palettes. Paper, ink, and the orange winter match ball.
-//
-// Light = warm paper surfaces with blue-black ink type and a vivid
-// tangerine brand — editorial, like a printed match programme. Dark = the
-// night game: deep ink-navy sky, the ball-orange brand glowing against it.
-// Green appears nowhere except the semantic `success`.
-const lightColors: ThemeColors = {
-  brand: "#C2410C",            // tangerine — the match ball
-  brandDark: "#9A3412",        // pressed states
-  onBrand: "#FFFFFF",
-  accent: "#0284C7",           // electric sky — broadcast flash
-  onAccent: "#FFFFFF",
-  heroSurface: "#1A1D2B",      // night-sky ink navy
-  onHero: "#F6F2EA",           // paper
-  onHeroMuted: "rgba(246, 242, 234, 0.72)",
-  surface: "#FAF7F2",          // warm paper, not clinical white
-  surfaceSecondary: "#F1ECE2", // sand — grouped sections / cards
-  textPrimary: "#1A1D2B",      // ink navy
-  textSecondary: "#565B6E",
-  textTertiary: "#9CA1B2",
-  border: "#E6E0D4",
-  success: "#10B981",          // emerald, semantic only
-  danger: "#DC2626",
-  overlay: "rgba(16, 18, 28, 0.5)",
-};
-
-const darkColors: ThemeColors = {
-  brand: "#FF6B2C",            // ball orange, bright against the night
-  brandDark: "#E8551A",
-  onBrand: "#2A1205",          // near-black ember ink on the bright fill
-  accent: "#38BDF8",           // sky-400 — the floodlight flash
-  onAccent: "#082F49",
-  heroSurface: "#171C2C",      // a half-step above the page
-  onHero: "#F4F1EA",
-  onHeroMuted: "rgba(244, 241, 234, 0.7)",
-  surface: "#0E131F",          // night sky, not pure black
-  surfaceSecondary: "#181E2E",
-  textPrimary: "#F4F1EA",      // paper
-  textSecondary: "#A8ADBF",
-  textTertiary: "#6E7488",
-  border: "#2A3145",
-  success: "#34D399",
-  danger: "#F87171",
-  overlay: "rgba(6, 8, 14, 0.72)",
+  /**
+   * The FREE badge's foil-gradient trio — `foilA`/`foilB` are the gradient
+   * stops, `onFoil` the ink on top of them.
+   */
+  foilA: string;
+  foilB: string;
+  onFoil: string;
 };
 
 export const colors: { light: ThemeColors; dark: ThemeColors } = {

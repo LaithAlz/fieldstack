@@ -34,6 +34,9 @@ const LINE_HEIGHT_RATIO: Record<TextSize, number> = {
   xl: 1.3,
   xxl: 1.25,
   xxxl: 1.1,
+  // Scoreboard digits are tabular and single-line — the tightest ratio in
+  // the scale, matching how a broadcast scoreboard sets its numerals.
+  scoreboard: 1.05,
 };
 
 /**

@@ -13,7 +13,7 @@ import { useAppReset } from "../../lib/appReset";
 import { useAuth } from "../../lib/auth";
 import type { MeStackParamList } from "../../navigation/MainNavigator";
 import { borderRadius, spacing } from "../../theme/tokens";
-import { useTheme } from "../../theme/useTheme";
+import { useTheme, useThemePreference, type ThemePreference } from "../../theme/useTheme";
 
 type Nav = NativeStackNavigationProp<MeStackParamList, "Settings">;
 
@@ -22,6 +22,12 @@ const PRIVACY_URL = "https://getonside.ca/privacy";
 const TERMS_URL = "https://getonside.ca/terms";
 const SUPPORT_EMAIL = "support@getonside.ca";
 
+const APPEARANCE_OPTIONS: { value: ThemePreference; label: string }[] = [
+  { value: "system", label: "System" },
+  { value: "light", label: "Light" },
+  { value: "dark", label: "Dark" },
+];
+
 export function SettingsScreen() {
   const colors = useTheme();
   const insets = useSafeAreaInsets();
@@ -29,6 +35,7 @@ export function SettingsScreen() {
   const toast = useToast();
   const resetApp = useAppReset();
   const { user, signOut, deleteAccount } = useAuth();
+  const { preference, setPreference } = useThemePreference();
 
   const version = Constants.expoConfig?.version ?? "1.0.0";
 
@@ -215,6 +222,16 @@ export function SettingsScreen() {
           onPress={openNotificationSettings}
         />
 
+        <SectionHeader>Appearance</SectionHeader>
+        {APPEARANCE_OPTIONS.map((option) => (
+          <AppearanceRow
+            key={option.value}
+            label={option.label}
+            selected={preference === option.value}
+            onPress={() => setPreference(option.value)}
+          />
+        ))}
+
         <SectionHeader>Support</SectionHeader>
         <Row icon="mail-outline" label="Contact us" onPress={emailSupport} />
 
@@ -314,6 +331,50 @@ function Row({
         accessibilityElementsHidden
         importantForAccessibility="no-hide-descendants"
       />
+    </Pressable>
+  );
+}
+
+// One row per option (System / Light / Dark), single-select via a trailing
+// checkmark rather than Row's chevron-forward (this isn't a navigation, it's
+// a picker).
+function AppearanceRow({
+  label,
+  selected,
+  onPress,
+}: {
+  label: string;
+  selected: boolean;
+  onPress: () => void;
+}) {
+  const colors = useTheme();
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="radio"
+      accessibilityState={{ checked: selected }}
+      accessibilityLabel={label}
+      style={({ pressed }) => [
+        styles.row,
+        {
+          backgroundColor: colors.surface,
+          borderColor: colors.border,
+          opacity: pressed ? 0.7 : 1,
+        },
+      ]}
+    >
+      <Text size="md" weight="medium" style={styles.rowLabel}>
+        {label}
+      </Text>
+      {selected ? (
+        <Ionicons
+          name="checkmark"
+          size={20}
+          color={colors.brand}
+          accessibilityElementsHidden
+          importantForAccessibility="no-hide-descendants"
+        />
+      ) : null}
     </Pressable>
   );
 }
