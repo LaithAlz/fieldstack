@@ -42,8 +42,21 @@ export type BookingAttempt = {
   attemptedAt: number;
   /** ISO YYYY-MM-DD of the slot they were booking (not the attempt time). */
   date: string;
-  startTime: string;
-  duration: number;
+  /**
+   * Null when the user booked without a preferred slot set — we still log
+   * that they booked (for "recently attempted" badges + the recent-bookings
+   * list) but have no real start time to show. Widened from a required
+   * `string` because openBooking.ts's slot-less path only has "today," never
+   * a real time — lying with a fake time would be worse than admitting we
+   * don't have one.
+   *
+   * The `user_booking_history` table's `start_time`/`duration` columns are
+   * NOT NULL (migration 004), so a slot-less attempt never reaches Supabase —
+   * `record()` below skips the cloud upsert when either is null and the
+   * attempt stays local-only.
+   */
+  startTime: string | null;
+  duration: number | null;
 };
 
 type ContextValue = {
@@ -215,7 +228,10 @@ export function BookingHistoryProvider({ children }: { children: ReactNode }) {
         return [newAttempt, ...filtered].slice(0, MAX_ENTRIES);
       });
 
-      if (user) {
+      // Cloud sync requires a real start_time/duration (NOT NULL columns —
+      // migration 004). A slot-less attempt (booked with no preferred time
+      // set) stays local-only rather than lying with a placeholder time.
+      if (user && newAttempt.startTime !== null && newAttempt.duration !== null) {
         void supabase
           .from("user_booking_history")
           .insert({
@@ -301,11 +317,9 @@ function isBookingAttempt(v: unknown): v is BookingAttempt {
     r.attemptedAt > 0 &&
     typeof r.date === "string" &&
     DATE_RE.test(r.date) &&
-    typeof r.startTime === "string" &&
-    TIME_RE.test(r.startTime) &&
-    typeof r.duration === "number" &&
-    Number.isFinite(r.duration) &&
-    r.duration > 0
+    (r.startTime === null || (typeof r.startTime === "string" && TIME_RE.test(r.startTime))) &&
+    (r.duration === null ||
+      (typeof r.duration === "number" && Number.isFinite(r.duration) && r.duration > 0))
   );
 }
 

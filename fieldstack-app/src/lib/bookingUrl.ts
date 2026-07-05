@@ -9,7 +9,7 @@
 import type { Field } from "../types/api";
 
 export function buildBookingUrl(
-  field: Field,
+  field: Pick<Field, "booking_url" | "booking_platform">,
   date: Date,
   startTime: string,        // "HH:mm" 24h
   durationHours: number

@@ -6,11 +6,13 @@ import { Pressable, StyleSheet, View } from "react-native";
 
 import type { Coords } from "../lib/location";
 import { formatDistance, haversineKm } from "../lib/distance";
+import { isFreeVenue } from "../lib/filters";
 import { borderRadius, spacing } from "../theme/tokens";
 import { useTheme } from "../theme/useTheme";
 import type { Field, FieldSurface, Venue } from "../types/api";
 
 import { Badge } from "./Badge";
+import { FreeBadge } from "./FreeBadge";
 import { GoalNet } from "./GoalNet";
 import { Text } from "./Text";
 
@@ -69,8 +71,12 @@ export const VenueCard = memo(function VenueCard({
   const fields = venue.fields ?? [];
   const summary = fields.length > 0 ? buildFieldSummary(fields) : null;
 
-  // Price range: lowest price across active fields with a price.
-  const priceRange = fields.length > 0 ? buildPriceRange(fields) : null;
+  // Price range: lowest price across active fields with a price. A $0
+  // minimum (or a public-park venue with no priced fields at all) is FREE,
+  // not "from $0/hr" — see isFreeVenue.
+  const minPrice = fields.length > 0 ? minPriceOf(fields) : null;
+  const isFree = isFreeVenue(venue.venue_type, minPrice);
+  const priceRange = !isFree && minPrice !== null ? `from $${Math.round(minPrice)}/hr` : null;
 
   // Surface chips — show up to 2 unique surfaces.
   const uniqueSurfaces = Array.from(new Set(fields.map((f) => f.surface))).slice(0, 2);
@@ -84,7 +90,7 @@ export const VenueCard = memo(function VenueCard({
     recentlyAttempted ? "Booked recently" : null,
     distance ? `${distance} away` : null,
     summary,
-    priceRange,
+    isFree ? "Free to play" : priceRange,
   ]
     .filter(Boolean)
     .join(", ");
@@ -134,7 +140,15 @@ export const VenueCard = memo(function VenueCard({
           </>
         )}
 
-        {priceRange ? (
+        {isFree ? (
+          <View
+            accessibilityElementsHidden
+            importantForAccessibility="no-hide-descendants"
+            style={styles.freeBadgeSlot}
+          >
+            <FreeBadge />
+          </View>
+        ) : priceRange ? (
           <View
             accessibilityElementsHidden
             importantForAccessibility="no-hide-descendants"
@@ -213,13 +227,12 @@ function buildFieldSummary(fields: Field[]): string {
   return surfaceText ? `${count} · ${surfaceText}` : count;
 }
 
-function buildPriceRange(fields: Field[]): string | null {
+function minPriceOf(fields: Field[]): number | null {
   const prices = fields
     .map((f) => f.price_per_hour)
     .filter((p): p is number => p !== null);
   if (prices.length === 0) return null;
-  const min = Math.min(...prices);
-  return `from $${Math.round(min)}/hr`;
+  return Math.min(...prices);
 }
 
 const styles = StyleSheet.create({
@@ -267,6 +280,13 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     shadowOffset: { width: 0, height: 1 },
     elevation: 3,
+  },
+  // Same corner as pricePill, but no background/padding of its own — FreeBadge
+  // already renders its own foil-gradient pill.
+  freeBadgeSlot: {
+    position: "absolute",
+    bottom: spacing.sm,
+    right: spacing.sm,
   },
   recentPill: {
     position: "absolute",
