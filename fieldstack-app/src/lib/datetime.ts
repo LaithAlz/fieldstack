@@ -27,3 +27,36 @@ export function formatDurationHours(hours: number): string {
   if (hours === 1) return "1 hour";
   return `${hours} hours`;
 }
+
+/** "Today" / "Tomorrow" / "Sat, Jul 5" relative to `now` (defaults to real now). */
+export function formatRelativeDateLabel(date: Date, now: Date = new Date()): string {
+  const today = new Date(now);
+  today.setHours(0, 0, 0, 0);
+  const tomorrow = new Date(today);
+  tomorrow.setDate(today.getDate() + 1);
+  const target = new Date(date);
+  target.setHours(0, 0, 0, 0);
+
+  if (target.getTime() === today.getTime()) return "Today";
+  if (target.getTime() === tomorrow.getTime()) return "Tomorrow";
+  return target.toLocaleDateString("en-US", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+  });
+}
+
+/**
+ * Full slot label for reserve-bar sublines, e.g. "Today · 7:00 PM – 8:30 PM".
+ * Both detail screens' reserve bars need this exact "relative date + time
+ * range" shape, so it's hoisted here per this module's own convention (see
+ * file header) rather than duplicated a fourth time.
+ */
+export function formatSlotRange(
+  date: Date,
+  startTime: string,
+  durationHours: number,
+  now?: Date
+): string {
+  return `${formatRelativeDateLabel(date, now)} · ${formatTime12h(startTime)} – ${formatEndTime(startTime, durationHours)}`;
+}

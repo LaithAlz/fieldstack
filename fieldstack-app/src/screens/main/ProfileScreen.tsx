@@ -556,8 +556,10 @@ function formatSlotLabel(slot: PreferredSlot): string {
 
 function formatAttemptSummary(attempt: {
   date: string;
-  startTime: string;
-  duration: number;
+  // Null when the user booked without a preferred slot set (see
+  // bookingHistory.tsx) — the row still shows the date, just no time range.
+  startTime: string | null;
+  duration: number | null;
   attemptedAt: number;
 }): string {
   const [y, m, d] = attempt.date.split("-").map(Number);
@@ -567,6 +569,7 @@ function formatAttemptSummary(attempt: {
     month: "short",
     day: "numeric",
   });
+  if (attempt.startTime === null || attempt.duration === null) return datePart;
   const endLabel = formatEndTime(attempt.startTime, attempt.duration);
   return `${datePart} · ${formatTime12h(attempt.startTime)} – ${endLabel}`;
 }

@@ -4,27 +4,34 @@ import type {
   NativeStackNavigationProp,
   NativeStackScreenProps,
 } from "@react-navigation/native-stack";
-import { useEffect } from "react";
-import { Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { BottomSheetModal } from "@gorhom/bottom-sheet";
+import { useEffect, useRef, type ReactNode } from "react";
+import { Linking, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { AmenityChip } from "../../components/AmenityChip";
 import { Badge } from "../../components/Badge";
-import { Button } from "../../components/Button";
 import { EmptyState } from "../../components/EmptyState";
 import { FieldDetailSkeleton } from "../../components/FieldDetailSkeleton";
+import { FreeBadge } from "../../components/FreeBadge";
 import { PhotoGallery } from "../../components/PhotoGallery";
-import { StickyFooter } from "../../components/StickyFooter";
+import { ReserveBar } from "../../components/ReserveBar";
 import { Text } from "../../components/Text";
 import { useToast } from "../../components/Toast";
+import { WhenPickerSheet } from "../../components/WhenPicker";
 import { useField } from "../../hooks/useField";
 import {
   EVENT_BOOKING_CTA_TAPPED,
   EVENT_FIELD_VIEWED,
   track,
 } from "../../lib/analytics";
+import { useBookingHistory } from "../../lib/bookingHistory";
+import { formatSlotRange } from "../../lib/datetime";
 import { resolveFieldPhotos } from "../../lib/fieldPhotos";
 import { openOperatorBooking } from "../../lib/openBooking";
+import { preferredSlotDate, usePreferredSlot } from "../../lib/preferredSlot";
+import { priceDisplayFor } from "../../lib/priceDisplay";
+import { getDayHours } from "../../lib/venueHours";
 import type { DetailParamList } from "../../navigation/MainNavigator";
 import { borderRadius, spacing } from "../../theme/tokens";
 import { useTheme } from "../../theme/useTheme";
@@ -60,6 +67,9 @@ export function FieldDetailScreen({ route }: Props) {
   const insets = useSafeAreaInsets();
   const nav = useNavigation<Nav>();
   const toast = useToast();
+  const { slot } = usePreferredSlot();
+  const { record } = useBookingHistory();
+  const slotSheetRef = useRef<BottomSheetModal>(null);
 
   const { data: field, isLoading, error } = useField(fieldId);
 
@@ -76,7 +86,7 @@ export function FieldDetailScreen({ route }: Props) {
       venue_id: field.venue.id,
       operator_id: field.venue.operator_id,
     });
-    void openOperatorBooking({ field, venue: field.venue, toast });
+    void openOperatorBooking({ field, venue: field.venue, toast, slot, record });
   };
 
   // ---- Loading -----------------------------------------------------------
@@ -125,13 +135,70 @@ export function FieldDetailScreen({ route }: Props) {
     field.surface === "indoor" ||
     amenities.some((a) => INDOOR_AMENITY_KEYS.has(a.toLowerCase()));
 
-  const priceText =
-    field.price_per_hour !== null ? `$${Math.round(field.price_per_hour)}/hr` : null;
+  const display = priceDisplayFor(venue.venue_type, field);
+
+  const handleViewOperatorInfo = async () => {
+    if (!venue.website) return;
+    try {
+      await Linking.openURL(venue.website);
+    } catch {
+      toast.show("Couldn't open the operator's website.", { type: "error" });
+    }
+  };
+
+  // Same reserve-bar rule as VenueDetail: no dead Book button. A field with
+  // no booking_url falls back to the operator's website, and only goes fully
+  // hidden when there's truly nothing to link to.
+  let reserveBar: ReactNode;
+  if (field.booking_url) {
+    const priceLabel =
+      display.kind === "free" ? (
+        <FreeBadge />
+      ) : display.kind === "priced" ? (
+        <Text font="display" size="xxl" style={{ color: colors.brand, letterSpacing: 0.3 }}>
+          {`$${Math.round(display.amount)}/hr`}
+        </Text>
+      ) : (
+        <Text size="md" variant="secondary">
+          Rates on site
+        </Text>
+      );
+    const subline = slot
+      ? formatSlotRange(preferredSlotDate(slot), slot.startTime, slot.duration)
+      : null;
+    reserveBar = (
+      <ReserveBar
+        priceLabel={priceLabel}
+        subline={subline}
+        onPress={() => slotSheetRef.current?.present()}
+        actionLabel="Book"
+        onActionPress={handleBookPress}
+      />
+    );
+  } else if (venue.website) {
+    reserveBar = (
+      <ReserveBar
+        priceLabel={
+          <Text size="md" variant="secondary">
+            No online booking
+          </Text>
+        }
+        subline={null}
+        actionLabel="View operator info"
+        onActionPress={() => void handleViewOperatorInfo()}
+      />
+    );
+  } else {
+    reserveBar = null;
+  }
 
   return (
     <View style={[styles.root, { backgroundColor: colors.surface }]}>
       <ScrollView
-        contentContainerStyle={[styles.scroll, { paddingBottom: spacing.xl + 80 + insets.bottom }]}
+        contentContainerStyle={[
+          styles.scroll,
+          { paddingBottom: (reserveBar ? spacing.xl + 80 : spacing.xl) + insets.bottom },
+        ]}
         showsVerticalScrollIndicator={false}
       >
         <View>
@@ -194,8 +261,13 @@ export function FieldDetailScreen({ route }: Props) {
           {/* Price. Roughly 70 GTA operators publish no rates anywhere
               (in-app booking platforms, quote-only) — an explicit pointer
               beats a blank that reads as missing data. Only shown when
-              there's actually a booking link to follow. */}
-          {priceText ? (
+              there's actually a booking link to follow (or the field is
+              FREE, which is worth surfacing regardless). */}
+          {display.kind === "free" ? (
+            <View style={styles.priceWrap}>
+              <FreeBadge />
+            </View>
+          ) : display.kind === "priced" ? (
             <View style={styles.priceWrap}>
               <Text
                 size="xs"
@@ -210,7 +282,7 @@ export function FieldDetailScreen({ route }: Props) {
                 font="display"
                 style={{ color: colors.brand, letterSpacing: 0.4 }}
               >
-                {priceText}
+                {`$${Math.round(display.amount)}/hr`}
               </Text>
               {field.price_note ? (
                 <Text size="sm" variant="secondary" style={styles.priceNote}>
@@ -218,7 +290,7 @@ export function FieldDetailScreen({ route }: Props) {
                 </Text>
               ) : null}
             </View>
-          ) : field.booking_url ? (
+          ) : display.kind === "rates_on_site" ? (
             <View style={styles.priceWrap}>
               <Text size="md" variant="secondary">
                 {"Rates on the operator's booking site"}
@@ -230,7 +302,7 @@ export function FieldDetailScreen({ route }: Props) {
           <Text size="lg" weight="bold" font="display" accessibilityRole="header" style={styles.section}>
             Field specs
           </Text>
-          <View style={[styles.specs, { borderColor: colors.border }]}>
+          <View style={[styles.specs, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}>
             <SpecRow label="Surface" value={SURFACE_LABEL[field.surface]} />
             <SpecRow label="Size" value={SIZE_LABEL[field.size]} />
             <SpecRow label="Lighting" value={hasLighting ? "Yes" : "No"} />
@@ -262,13 +334,12 @@ export function FieldDetailScreen({ route }: Props) {
         </View>
       </ScrollView>
 
-      <StickyFooter>
-        <Button
-          label="Book on operator's site"
-          onPress={handleBookPress}
-          accessibilityHint="Opens the operator's website in your browser"
-        />
-      </StickyFooter>
+      {reserveBar}
+
+      <WhenPickerSheet
+        ref={slotSheetRef}
+        getOpenHours={(date) => getDayHours(venue.hours, date)}
+      />
     </View>
   );
 }

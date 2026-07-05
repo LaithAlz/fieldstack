@@ -1,4 +1,4 @@
-import { getDayHours, isOpenNow } from "../venueHours";
+import { getDayHours, isOpenNow, openStatus } from "../venueHours";
 
 const SUN = new Date(2026, 4, 17); // 2026-05-17 — Sunday
 const MON = new Date(2026, 4, 18);
@@ -73,5 +73,37 @@ describe("isOpenNow", () => {
     const daytime = new Date(2026, 4, 17, 14, 0); // Sunday
     expect(isOpenNow({ sun: null }, daytime)).toBe(true);
     expect(isOpenNow({ sun: "not-a-range" }, daytime)).toBe(true);
+  });
+});
+
+describe("openStatus", () => {
+  it("reports open with the closing time", () => {
+    const noonMon = new Date(2026, 4, 18, 12, 0);
+    expect(openStatus({ mon: "06:00-23:00" }, noonMon)).toEqual({
+      open: true,
+      statusLabel: "Open now",
+      timeLabel: "closes 23:00",
+    });
+  });
+
+  it("reports closed with the opening time", () => {
+    const earlyMon = new Date(2026, 4, 18, 5, 0);
+    expect(openStatus({ mon: "09:00-22:30" }, earlyMon)).toEqual({
+      open: false,
+      statusLabel: "Closed",
+      timeLabel: "opens 9:00",
+    });
+  });
+
+  it("formats non-zero minutes", () => {
+    const earlyMon = new Date(2026, 4, 18, 5, 0);
+    expect(openStatus({ mon: "09:30-22:00" }, earlyMon)?.timeLabel).toBe("opens 9:30");
+  });
+
+  it("returns null (hide the line) when there's no real hours data for today", () => {
+    expect(openStatus(null, new Date(2026, 4, 18, 12, 0))).toBeNull();
+    expect(openStatus(undefined, new Date(2026, 4, 18, 12, 0))).toBeNull();
+    expect(openStatus({ mon: null }, new Date(2026, 4, 18, 12, 0))).toBeNull();
+    expect(openStatus({ mon: "not-a-range" }, new Date(2026, 4, 18, 12, 0))).toBeNull();
   });
 });

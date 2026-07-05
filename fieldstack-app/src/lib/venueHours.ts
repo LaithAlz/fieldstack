@@ -69,6 +69,43 @@ export function isOpenNow(
   return minutesNow >= day.openMinutes && minutesNow < day.closeMinutes;
 }
 
+export type OpenStatus = {
+  /** True when the venue is inside today's operating window right now. */
+  open: boolean;
+  /** "Open now" or "Closed". */
+  statusLabel: string;
+  /** "closes 23:00" or "opens 9:00". */
+  timeLabel: string;
+};
+
+/**
+ * Human status line for the venue-detail "Open now · closes 23:00" /
+ * "Closed · opens 9:00" row.
+ *
+ * Unlike `isOpenNow` — which assumes the picker's 6 AM–11 PM default when
+ * today's hours are missing, because Explore's chip needs a yes/no answer
+ * either way — this returns null in that case. The detail screen hides the
+ * whole line rather than asserting a schedule we don't actually have.
+ */
+export function openStatus(
+  hours: VenueHoursJson | null | undefined,
+  now: Date = new Date()
+): OpenStatus | null {
+  const day = getDayHours(hours, now);
+  if (!day) return null;
+  const minutesNow = now.getHours() * 60 + now.getMinutes();
+  const isOpen = minutesNow >= day.openMinutes && minutesNow < day.closeMinutes;
+  return isOpen
+    ? { open: true, statusLabel: "Open now", timeLabel: `closes ${formatClockLabel(day.closeMinutes)}` }
+    : { open: false, statusLabel: "Closed", timeLabel: `opens ${formatClockLabel(day.openMinutes)}` };
+}
+
+function formatClockLabel(minutes: number): string {
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  return `${h}:${String(m).padStart(2, "0")}`;
+}
+
 function parseRange(s: string): DayHours | null {
   // Match "HH:mm-HH:mm". Be lenient about surrounding whitespace; reject
   // anything else so a scraper bug doesn't silently grey out the whole day.

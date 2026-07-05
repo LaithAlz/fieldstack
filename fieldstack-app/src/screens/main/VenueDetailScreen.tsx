@@ -1,31 +1,41 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp, NativeStackScreenProps } from "@react-navigation/native-stack";
-import { useEffect, useMemo } from "react";
-import { Pressable, ScrollView, Share, StyleSheet, View } from "react-native";
+import {
+  BottomSheetBackdrop,
+  type BottomSheetBackdropProps,
+  BottomSheetModal,
+  BottomSheetScrollView,
+} from "@gorhom/bottom-sheet";
+import { forwardRef, useCallback, useEffect, useMemo, useRef, type ReactNode } from "react";
+import { Linking, Pressable, ScrollView, Share, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { AmenityChip } from "../../components/AmenityChip";
-import { Badge } from "../../components/Badge";
-import { Button } from "../../components/Button";
-import { ReviewSection } from "../../components/ReviewSection";
 import { EmptyState } from "../../components/EmptyState";
+import { FreeBadge } from "../../components/FreeBadge";
 import { PhotoGallery } from "../../components/PhotoGallery";
+import { ReserveBar } from "../../components/ReserveBar";
+import { ReviewSection } from "../../components/ReviewSection";
 import { Text } from "../../components/Text";
 import { useToast } from "../../components/Toast";
 import { VenueDetailSkeleton } from "../../components/VenueDetailSkeleton";
+import { WhenPickerSheet } from "../../components/WhenPicker";
 import { useLocation } from "../../hooks/useLocation";
 import { useVenue } from "../../hooks/useVenue";
 import { useVenueReviews } from "../../hooks/useVenueReviews";
-import { formatEndTime, formatTime12h } from "../../lib/datetime";
+import { useBookingHistory } from "../../lib/bookingHistory";
+import { formatEndTime, formatSlotRange, formatTime12h } from "../../lib/datetime";
 import { openDirections } from "../../lib/directions";
 import { formatScrapedAgo } from "../../lib/freshness";
 import { openOperatorBooking } from "../../lib/openBooking";
+import { priceDisplayFor } from "../../lib/priceDisplay";
 import {
   preferredSlotDate,
   usePreferredSlot,
   type PreferredSlot,
 } from "../../lib/preferredSlot";
+import { cheapestBookableField } from "../../lib/reserveField";
 import { useRecentlyViewed } from "../../lib/recentlyViewed";
 import { useSavedVenues } from "../../lib/savedVenues";
 import {
@@ -34,10 +44,11 @@ import {
   track,
 } from "../../lib/analytics";
 import { formatDistance, haversineKm } from "../../lib/distance";
+import { getDayHours, openStatus } from "../../lib/venueHours";
 import type { DetailParamList } from "../../navigation/MainNavigator";
 import { borderRadius, spacing } from "../../theme/tokens";
 import { useTheme } from "../../theme/useTheme";
-import type { Field, FieldSize, FieldSurface } from "../../types/api";
+import type { Field, FieldSize, FieldSurface, VenueType } from "../../types/api";
 
 // Honest typing: VenueDetail/FieldDetail live in all three tab stacks
 // (Explore / Saved / Me), and from here we only ever navigate to the other
@@ -53,7 +64,10 @@ export function VenueDetailScreen({ route }: Props) {
   const insets = useSafeAreaInsets();
   const nav = useNavigation<Nav>();
   const { slot } = usePreferredSlot();
+  const { record } = useBookingHistory();
   const toast = useToast();
+  const slotSheetRef = useRef<BottomSheetModal>(null);
+  const fieldPickerRef = useRef<BottomSheetModal>(null);
 
   const { data: venue, isLoading, error } = useVenue(venueId);
   const { coords } = useLocation();
@@ -84,7 +98,7 @@ export function VenueDetailScreen({ route }: Props) {
           });
         } catch (err) {
           if (__DEV__) {
-             
+
             console.warn("[share] failed", err);
           }
         }
@@ -113,7 +127,7 @@ export function VenueDetailScreen({ route }: Props) {
       venue_id: venue.id,
       operator_id: venue.operator_id,
     });
-    void openOperatorBooking({ field, venue, toast });
+    void openOperatorBooking({ field, venue, toast, slot, record });
   };
 
   // ---- Loading -----------------------------------------------------------
@@ -166,6 +180,22 @@ export function VenueDetailScreen({ route }: Props) {
     .filter(Boolean)
     .join(" · ");
 
+  // "★ 4.6 · 41 reviews · North York" — stars omitted when there are no
+  // reviews yet, locality omitted when the address has no comma-separated
+  // second segment to guess it from.
+  const ratingParts: string[] = [];
+  if (reviewSummary && reviewSummary.reviewCount > 0) {
+    ratingParts.push(`★ ${reviewSummary.avgRating.toFixed(1)}`);
+    ratingParts.push(
+      `${reviewSummary.reviewCount} ${reviewSummary.reviewCount === 1 ? "review" : "reviews"}`
+    );
+  }
+  const locality = addressLocality(venue.address);
+  if (locality) ratingParts.push(locality);
+  const ratingLine = ratingParts.join(" · ");
+
+  const status = openStatus(venue.hours);
+
   const handleDirections = async () => {
     const ok = await openDirections({
       lat: venue.lat,
@@ -176,12 +206,85 @@ export function VenueDetailScreen({ route }: Props) {
     if (!ok) toast.show("Couldn't open maps.", { type: "error" });
   };
 
+  const handleViewOperatorInfo = async () => {
+    if (!venue.website) return;
+    try {
+      await Linking.openURL(venue.website);
+    } catch {
+      toast.show("Couldn't open the operator's website.", { type: "error" });
+    }
+  };
+
+  // ---- Reserve bar --------------------------------------------------------
+  // Multi-field venues anchor the bar on the cheapest *bookable* field; a
+  // field with no booking_url can't back a Book action no matter how cheap.
+  // Zero bookable fields anywhere falls back to the operator's own website,
+  // and only goes fully hidden when there's truly nothing to link — never a
+  // dead Book button that just toasts "no booking link yet" after the tap.
+  const bookableFields = fields.filter((f) => f.booking_url !== null);
+  const reserveField = cheapestBookableField(fields);
+
+  let reserveBar: ReactNode = null;
+  if (reserveField) {
+    const display = priceDisplayFor(venue.venue_type, reserveField);
+    const priceLabel =
+      display.kind === "free" ? (
+        <FreeBadge />
+      ) : display.kind === "priced" ? (
+        <Text font="display" size="xxl" style={{ color: colors.brand, letterSpacing: 0.3 }}>
+          {`$${Math.round(display.amount)}/hr`}
+        </Text>
+      ) : (
+        <Text size="md" variant="secondary">
+          Rates on site
+        </Text>
+      );
+
+    const slotLabel = slot
+      ? formatSlotRange(preferredSlotDate(slot), slot.startTime, slot.duration)
+      : null;
+    const subline = slotLabel
+      ? bookableFields.length > 1
+        ? `${reserveField.name} · ${slotLabel}`
+        : slotLabel
+      : null;
+
+    reserveBar = (
+      <ReserveBar
+        priceLabel={priceLabel}
+        subline={subline}
+        onPress={() => slotSheetRef.current?.present()}
+        actionLabel="Book"
+        onActionPress={() => {
+          if (bookableFields.length > 1) {
+            fieldPickerRef.current?.present();
+          } else {
+            handleBook(reserveField);
+          }
+        }}
+      />
+    );
+  } else if (venue.website) {
+    reserveBar = (
+      <ReserveBar
+        priceLabel={
+          <Text size="md" variant="secondary">
+            No online booking
+          </Text>
+        }
+        subline={null}
+        actionLabel="View operator info"
+        onActionPress={() => void handleViewOperatorInfo()}
+      />
+    );
+  }
+
   return (
     <View style={[styles.root, { backgroundColor: colors.surface }]}>
       <ScrollView
         contentContainerStyle={[
           styles.scroll,
-          { paddingBottom: insets.bottom + spacing.xl },
+          { paddingBottom: insets.bottom + spacing.xl + (reserveBar ? 96 : 0) },
         ]}
         showsVerticalScrollIndicator={false}
       >
@@ -214,6 +317,19 @@ export function VenueDetailScreen({ route }: Props) {
           >
             {venue.name}
           </Text>
+          {ratingLine ? (
+            <Text size="sm" variant="secondary" style={styles.ratingLine}>
+              {ratingLine}
+            </Text>
+          ) : null}
+          {status ? (
+            <View style={styles.openRow}>
+              <Text size="sm" weight="bold" style={{ color: colors.amber }}>
+                {status.statusLabel}
+              </Text>
+              <Text size="sm" variant="secondary">{` · ${status.timeLabel}`}</Text>
+            </View>
+          ) : null}
           {addressLine ? (
             <Pressable
               onPress={() => void handleDirections()}
@@ -270,10 +386,8 @@ export function VenueDetailScreen({ route }: Props) {
                 <FieldRow
                   key={field.id}
                   field={field}
-                  onCardPress={() =>
-                    nav.navigate("FieldDetail", { fieldId: field.id })
-                  }
-                  onBookPress={() => handleBook(field)}
+                  venueType={venue.venue_type}
+                  onPress={() => nav.navigate("FieldDetail", { fieldId: field.id })}
                 />
               ))}
             </View>
@@ -288,7 +402,12 @@ export function VenueDetailScreen({ route }: Props) {
               <Text size="lg" weight="bold" font="display" accessibilityRole="header" style={styles.section}>
                 Booking notes
               </Text>
-              <View style={[styles.notesCard, { borderColor: colors.border }]}>
+              <View
+                style={[
+                  styles.notesCard,
+                  { backgroundColor: colors.surfaceElevated, borderColor: colors.border },
+                ]}
+              >
                 {venue.booking_notes ? (
                   <View style={styles.noteRow}>
                     <Ionicons
@@ -337,6 +456,21 @@ export function VenueDetailScreen({ route }: Props) {
         </View>
       </ScrollView>
 
+      {reserveBar}
+
+      <WhenPickerSheet
+        ref={slotSheetRef}
+        getOpenHours={(date) => getDayHours(venue.hours, date)}
+      />
+      <FieldPickerSheet
+        ref={fieldPickerRef}
+        fields={bookableFields}
+        venueType={venue.venue_type}
+        onSelect={(field) => {
+          fieldPickerRef.current?.dismiss();
+          handleBook(field);
+        }}
+      />
     </View>
   );
 }
@@ -442,8 +576,9 @@ function FloatingTopBar({
 }
 
 // ---------------------------------------------------------------------------
-// Per-field row in the Fields list. Compact card with surface + size badges,
-// optional price, and a Book button that fires the deep-link.
+// Per-field row in the Fields list. Compact card with name + meta on the
+// left and price/FREE/RATES ON SITE on the right — the primary Book action
+// lives in the reserve bar now, not per-row (see the mockup's `.fzfield`).
 // ---------------------------------------------------------------------------
 
 const SURFACE_LABEL: Record<FieldSurface, string> = {
@@ -463,23 +598,22 @@ const SIZE_LABEL: Record<FieldSize, string> = {
 
 type FieldRowProps = {
   field: Field;
-  onCardPress: () => void;
-  onBookPress: () => void;
+  venueType: VenueType | null | undefined;
+  onPress: () => void;
 };
 
-function FieldRow({ field, onCardPress, onBookPress }: FieldRowProps) {
+function FieldRow({ field, venueType, onPress }: FieldRowProps) {
   const colors = useTheme();
-  const priceText =
-    field.price_per_hour !== null ? `From $${Math.round(field.price_per_hour)}/hr` : null;
+  const display = priceDisplayFor(venueType, field);
   return (
     <Pressable
-      onPress={onCardPress}
+      onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={`Open ${field.name}`}
       style={({ pressed }) => [
         styles.fieldRow,
         {
-          backgroundColor: colors.surface,
+          backgroundColor: colors.surfaceElevated,
           borderColor: colors.border,
           opacity: pressed ? 0.85 : 1,
         },
@@ -489,29 +623,100 @@ function FieldRow({ field, onCardPress, onBookPress }: FieldRowProps) {
         <Text size="md" weight="medium" numberOfLines={1}>
           {field.name}
         </Text>
-        <View style={styles.fieldRowBadges}>
-          <Badge label={SURFACE_LABEL[field.surface]} />
-          <Badge label={SIZE_LABEL[field.size]} />
-          {priceText ? (
-            <Text size="sm" variant="secondary" style={styles.fieldRowPrice}>
-              {priceText}
-            </Text>
-          ) : field.booking_url ? (
-            <Text size="sm" variant="secondary" style={styles.fieldRowPrice}>
-              Rates on site
-            </Text>
-          ) : null}
-        </View>
+        <Text size="sm" variant="secondary" numberOfLines={1}>
+          {`${SURFACE_LABEL[field.surface]}, ${SIZE_LABEL[field.size]}`}
+        </Text>
       </View>
-      <Button
-        label="Book"
-        onPress={onBookPress}
-        accessibilityLabel={`Book ${field.name} on operator site`}
-        style={styles.fieldRowButton}
-      />
+      {display.kind === "free" ? (
+        <FreeBadge />
+      ) : display.kind === "priced" ? (
+        <Text font="display" size="lg" style={{ color: colors.brand, letterSpacing: 0.3 }}>
+          {`$${Math.round(display.amount)}/hr`}
+        </Text>
+      ) : display.kind === "rates_on_site" ? (
+        <Text size="xs" weight="medium" variant="tertiary" style={styles.ratesOnSite}>
+          RATES ON SITE
+        </Text>
+      ) : null}
     </Pressable>
   );
 }
+
+// ---------------------------------------------------------------------------
+// Lightweight field-picker sheet — shown when the reserve bar's Book action
+// has more than one bookable field to choose from.
+// ---------------------------------------------------------------------------
+
+type FieldPickerSheetProps = {
+  fields: Field[];
+  venueType: VenueType | null | undefined;
+  onSelect: (field: Field) => void;
+};
+
+const FieldPickerSheet = forwardRef<BottomSheetModal, FieldPickerSheetProps>(
+  function FieldPickerSheet({ fields, venueType, onSelect }, ref) {
+    const colors = useTheme();
+    const snapPoints = useMemo(() => ["50%"], []);
+
+    const renderBackdrop = useCallback(
+      (props: BottomSheetBackdropProps) => (
+        <BottomSheetBackdrop
+          {...props}
+          appearsOnIndex={0}
+          disappearsOnIndex={-1}
+          opacity={0.5}
+        />
+      ),
+      []
+    );
+
+    return (
+      <BottomSheetModal
+        ref={ref}
+        snapPoints={snapPoints}
+        backdropComponent={renderBackdrop}
+        backgroundStyle={{ backgroundColor: colors.surface }}
+        handleIndicatorStyle={{ backgroundColor: colors.border }}
+      >
+        <BottomSheetScrollView contentContainerStyle={pickerStyles.content}>
+          <Text size="lg" weight="bold" accessibilityRole="header" style={pickerStyles.title}>
+            Choose a field
+          </Text>
+          {fields.map((f) => {
+            const display = priceDisplayFor(venueType, f);
+            return (
+              <Pressable
+                key={f.id}
+                onPress={() => onSelect(f)}
+                accessibilityRole="button"
+                accessibilityLabel={`Book ${f.name}`}
+                style={({ pressed }) => [
+                  pickerStyles.row,
+                  { borderColor: colors.border, opacity: pressed ? 0.7 : 1 },
+                ]}
+              >
+                <Text size="md" weight="medium" numberOfLines={1} style={pickerStyles.rowName}>
+                  {f.name}
+                </Text>
+                {display.kind === "free" ? (
+                  <FreeBadge />
+                ) : display.kind === "priced" ? (
+                  <Text font="display" size="md" style={{ color: colors.brand, letterSpacing: 0.3 }}>
+                    {`$${Math.round(display.amount)}/hr`}
+                  </Text>
+                ) : (
+                  <Text size="xs" weight="medium" variant="tertiary">
+                    RATES ON SITE
+                  </Text>
+                )}
+              </Pressable>
+            );
+          })}
+        </BottomSheetScrollView>
+      </BottomSheetModal>
+    );
+  }
+);
 
 // ---------------------------------------------------------------------------
 // Styles
@@ -533,6 +738,20 @@ function formatShareSlot(slot: PreferredSlot): string {
       day: "numeric",
     });
   return `${datePart} ${formatTime12h(slot.startTime)}–${formatEndTime(slot.startTime, slot.duration)}`;
+}
+
+/**
+ * Best-effort "neighbourhood/city" guess from a full street address: the
+ * second comma-separated segment ("123 Main St, North York, ON" → "North
+ * York"). Addresses with no comma (or only one segment) have nothing to
+ * honestly extract, so this returns null and the rating line just omits it.
+ */
+function addressLocality(address: string): string | null {
+  const parts = address
+    .split(",")
+    .map((p) => p.trim())
+    .filter(Boolean);
+  return parts.length >= 2 ? (parts[1] as string) : null;
 }
 
 const styles = StyleSheet.create({
@@ -568,12 +787,20 @@ const styles = StyleSheet.create({
   },
   title: {
     letterSpacing: 0.2,
-    marginBottom: spacing.xs,
+  },
+  ratingLine: {
+    marginTop: spacing.xs,
+  },
+  openRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: spacing.xs,
   },
   addressRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.xs + 2,
+    marginTop: spacing.sm,
   },
   addressText: {
     flexShrink: 1,
@@ -634,21 +861,34 @@ const styles = StyleSheet.create({
   },
   fieldRowMain: {
     flex: 1,
-    gap: spacing.xs,
+    gap: 2,
   },
-  fieldRowBadges: {
-    flexDirection: "row",
-    alignItems: "center",
-    flexWrap: "wrap",
-    gap: spacing.xs,
-  },
-  fieldRowPrice: {
-    marginLeft: spacing.xs,
-  },
-  fieldRowButton: {
-    paddingHorizontal: spacing.md,
+  ratesOnSite: {
+    letterSpacing: 0.6,
   },
   emptyFields: {
     paddingVertical: spacing.lg,
+  },
+});
+
+const pickerStyles = StyleSheet.create({
+  content: {
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.xl,
+  },
+  title: {
+    marginTop: spacing.sm,
+    marginBottom: spacing.md,
+  },
+  row: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: spacing.md,
+    paddingVertical: spacing.md,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  rowName: {
+    flex: 1,
   },
 });
