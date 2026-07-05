@@ -133,12 +133,18 @@ export function haversineMeters(
   return 2 * R * Math.asin(Math.sqrt(s));
 }
 
-// Manual entries are curated (highest trust). Playtomic outranks google/osm
-// as operator-platform data (docs/scraping.md §4.3 precedence); google rows
-// carry richer detail (photos, hours) than OSM's bare pins.
+// Manual entries are curated (highest trust). Playtomic outranks municipal/
+// google/osm as operator-platform data; municipal open data (Mississauga,
+// Toronto, Brampton) is authoritative for public-field identity, ranked
+// above Google/OSM but below platform data (docs/scraping.md §4.3
+// precedence); google rows carry richer detail (photos, hours) than OSM's
+// bare pins.
 const SOURCE_PRIORITY: Record<string, number> = {
-  manual: 3,
-  playtomic: 2,
+  manual: 4,
+  playtomic: 3,
+  mississauga: 2,
+  toronto: 2,
+  brampton: 2,
   google: 1,
   osm: 0,
 };

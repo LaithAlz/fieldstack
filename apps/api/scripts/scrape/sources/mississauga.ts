@@ -10,6 +10,7 @@
 
 import type { ScrapeAdapter, ScrapedField, ScrapedVenue } from "../types.js";
 import type { FieldSize } from "../fieldEnums.js";
+import { fetchGeoJsonFeatures } from "../lib/arcgis.js";
 
 const GEOJSON_URL =
   "https://hub-mississauga.opendata.arcgis.com/datasets/mississauga::city-soccer-fields-1.geojson";
@@ -35,11 +36,6 @@ type ArcGISFeature = {
   type: "Feature";
   properties: ArcGISProps;
   geometry: { type: "Point"; coordinates: [number, number] } | null;
-};
-
-type ArcGISCollection = {
-  type: "FeatureCollection";
-  features: ArcGISFeature[];
 };
 
 /** Map Mississauga's TYPEDESC to our field_size enum. */
@@ -83,17 +79,7 @@ function fieldKey(p: ArcGISProps): string {
 }
 
 async function fetchFeatures(): Promise<ArcGISFeature[]> {
-  const res = await fetch(GEOJSON_URL, {
-    redirect: "follow",
-    headers: {
-      "User-Agent": "FieldStack-scraper/1.0 (https://fieldstack.app)",
-    },
-  });
-  if (!res.ok) {
-    throw new Error(`Mississauga fetch failed: ${res.status} ${res.statusText}`);
-  }
-  const body = (await res.json()) as ArcGISCollection;
-  return body.features ?? [];
+  return (await fetchGeoJsonFeatures(GEOJSON_URL, "mississauga")) as unknown as ArcGISFeature[];
 }
 
 export const mississaugaAdapter: ScrapeAdapter = {

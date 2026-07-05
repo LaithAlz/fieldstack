@@ -67,25 +67,33 @@ as the priority gap. Each source is its own `ScrapeAdapter` with a namespaced
 | **Booking-platform venue directories** (Playtomic) | The exact private/indoor venues we want, *with* the platform identity needed for booking | Private indoor | Medium–High | Per-platform — see §3 |
 | **Manual YAML** (have) | Backfill for anything the above miss | Any | Trivial | n/a |
 
-### 1.2 Municipal open data (next, cheap)
+### 1.2 Municipal open data (shipped for Toronto + Brampton; others open)
 
-Mississauga already works via ArcGIS GeoJSON (`mississauga.ts`, registered).
-The same pattern generalises:
+Mississauga (`mississauga.ts`), Toronto (`toronto.ts`), and Brampton
+(`brampton.ts`) all work via ArcGIS GeoJSON, sharing a small fetch helper
+(`lib/arcgis.ts`):
 
-- **Toronto** — Open Data portal + the city ArcGIS feature server. The PFR Sport
-  Field layer (`gis.toronto.ca/arcgis/.../FeatureServer/54`) exposes a "Soccer
-  Field" feature type queryable as GeoJSON, the same shape `mississauga.ts`
-  already parses.
-- **Brampton** — GeoHub (`geohub.brampton.ca`) publishes open data including
-  field inventories (the city cites 133 outdoor + 7 indoor turf fields).
+- **Toronto** — PFR Sport Field layer, queried live and filtered to
+  `ASSET_TYPE='Soccer Field'`:
+  `gis.toronto.ca/arcgis/rest/services/cot_geospatial13/FeatureServer/54/query`
+  (229 rows, one Point per field; grouped by `ROLLUP_TO` into one venue per
+  park). No address on the layer itself — joined by exact park-name match
+  against the CKAN parks-and-recreation-facilities GeoJSON. **Licence:**
+  OGL-Toronto presumed site-wide (open data built for redistribution), but
+  this specific layer isn't explicitly licence-stamped — confirmation with
+  opendata@toronto.ca outstanding.
+- **Brampton** — GeoHub ParkFeatures layer, queried live and filtered to
+  `ASSET_NAME='SOCCER FIELD'`:
+  `services3.arcgis.com/rl7ACuZkiFsmDA2g/arcgis/rest/services/ParkFeatures/FeatureServer/0/query`
+  (91 rows, each a MultiPoint bundling a park's fields — exploded into one
+  placeholder field per point). Address joined by exact park-name match
+  against the GeoHub ParksPts layer. **Licence:** CC BY 4.0, confirmed on the
+  service item — attribution required.
 - **Others** (Vaughan, Markham, Oakville, Hamilton…) — each has an open-data
   portal; not all expose a clean fields layer. Add them as their data warrants.
 
 These are the *safest* sources: open-data licences exist specifically to permit
 redistribution, and the data is authoritative (it's the city's own inventory).
-Generalise `mississauga.ts` into a small ArcGIS helper parametrised by dataset
-URL + a field-mapping config, then add one thin adapter (or one config row) per
-city.
 
 ### 1.3 Google Places API (New) — enrichment-first
 
@@ -392,9 +400,10 @@ Ordered by payoff-to-effort. Each step is independently shippable.
    One-line `ADAPTERS` re-registration restores a working source; the cron
    workflow (already added here, secret-gated) automates the existing pipeline.
    *Effort: trivial. Payoff: automation + a source that already works.*
-2. **Municipal open-data expansion** — generalise `mississauga.ts` into an
-   ArcGIS helper, add Toronto (PFR Sport Field layer) and Brampton (GeoHub), then
-   others as data allows. *Effort: low. Payoff: authoritative public coverage.*
+2. **Municipal open-data expansion** — ✅ **shipped for Toronto + Brampton**
+   (`toronto.ts`, `brampton.ts`, shared `lib/arcgis.ts` helper); other cities
+   (Vaughan, Markham, Oakville, Hamilton…) still open. *Effort: low. Payoff:
+   authoritative public coverage.*
 3. **Google Places enrichment** — resolve + store `google_place_id`; hydrate
    photos/hours/phone at display time (respecting the no-cache rule). Adds the
    visual polish private listings need. *Effort: medium. Payoff: high listing
