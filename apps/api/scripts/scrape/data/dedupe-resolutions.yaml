@@ -1,0 +1,354 @@
+# Dedupe resolutions registry (issue #495).
+#
+# Human verdicts on cross-source venue dedup REVIEW pairs, so a decision made
+# today doesn't evaporate the next time the weekly scrape's dedupe pass runs.
+# Consumed by apps/api/scripts/scrape/dedupe.ts via lib/dedupe.ts's
+# loadResolutions/applyResolutions.
+#
+# Each entry resolves ONE pair of venues, matched by external_id, unordered
+# (a/b can appear in either order — dedupe.ts's own "keep"/"drop" printout
+# order does not need to match this file).
+#
+# Schema:
+#   a, b     (required) — the two venues' external_id, e.g. "google:ChIJ...".
+#   verdict  (required) — "merge" (same physical venue) or "distinct" (two
+#                          real, different bookables that should both stay).
+#   keep     (required for verdict: merge; forbidden for distinct) — must
+#            equal a or b. The OTHER row is the one dedupe.ts --apply
+#            deactivates (is_active=false, duplicate_of=keep's id), exactly
+#            like an AUTO-tier pair. This OVERRIDES lib/dedupe.ts's own
+#            pickWinner() source-priority pick when the two disagree — a
+#            human verdict wins.
+#   reason   (required) — one line, why. Cite the host facility for a
+#            "distinct: tenant club at a facility" verdict; cite the source
+#            or evidence for a "merge: same facility" verdict.
+#   decided  (required) — YYYY-MM-DD, when the verdict was made.
+#
+# What the runner does with each verdict:
+#   - distinct — the pair is suppressed from REVIEW output entirely (just a
+#                summary count). The tenant/club row is NOT deactivated here;
+#                many of these are club/academy/league noise better handled
+#                by a refine.ts pass (see the follow-up list in issue #495).
+#   - merge    — applied under --apply exactly like an AUTO pair. Printed as
+#                a MERGE line even in a dry run so the plan is visible.
+#
+# A resolution that matches NO pair in the current findDuplicates() output
+# (the underlying venues changed, or the pair was never mechanically
+# detected in the first place — see the Wentworth entry below) prints as a
+# stale info line. Harmless; prune it once it has been stale a while, or
+# leave it as institutional memory for a decision that predates detection.
+#
+# Adjudicated 2026-07-10 against the 59 REVIEW pairs from that day's dry run
+# (issue #495). See the issue/PR for the full evidence per pair. One pair
+# (Erin Mills Twin Arena Grounds vs Erin Mills Twin Arena, ~79m apart) was
+# left OUT of this file deliberately — genuinely unclear whether the google
+# row is an echo of the same soccer field or the (non-soccer) ice arena
+# building on the same site; it still prints as an ordinary REVIEW pair.
+
+resolutions:
+  - a: "google:ChIJRa8k3WlnK4gRYIRlVPAZNc8"
+    b: "google:ChIJq6rWwT-eLIgR2aDlX6jfTa8"
+    verdict: distinct
+    reason: "Two tenant academy programs at one indoor building (1184 Bellview St); neither row is a facility itself"
+    decided: "2026-07-10"
+  - a: "google:ChIJpyKF4-QvK4gR5KJYtNAzFng"
+    b: "google:ChIJXXZKhxMvK4gRDpVxKv82Xy0"
+    verdict: distinct
+    reason: "Allstar Soccer Leagues is a tenant league at 360 Soccer Centre (host facility)"
+    decided: "2026-07-10"
+  - a: "google:ChIJZde1ZDUvK4gRzOgolIHjCDo"
+    b: "google:ChIJXXZKhxMvK4gRDpVxKv82Xy0"
+    verdict: distinct
+    reason: "RRSMG Academy is a tenant academy at 360 Soccer Centre (host facility)"
+    decided: "2026-07-10"
+  - a: "google:ChIJ7VJ9zKovK4gRIzIlUCCadxc"
+    b: "google:ChIJQcNjRYc_K4gRMwCoBSTVg8M"
+    verdict: distinct
+    reason: "Touch of Class Soccer is a tenant program at Infinite Sports | Brampton Indoor Turf (host facility)"
+    decided: "2026-07-10"
+  - a: "google:ChIJ1ZwyknDM1IkRscR6tS-Q8fw"
+    b: "google:ChIJaUR2fXDM1IkRVjfZczuYVF4"
+    verdict: distinct
+    reason: "Two tenant orgs (a league, a club) at 1 Parkmount Rd; the actual facility there is Monarch Park Stadium / Cherry Beach Sports Fields, not represented by either row"
+    decided: "2026-07-10"
+  - a: "google:ChIJQcRp0_kVK4gRCal4YRQLyZQ"
+    b: "google:ChIJ____P4ETK4gRifv1v_D_auc"
+    verdict: distinct
+    reason: "Two tenant academies at one building (10510 Creditview Rd); neither row is a facility itself"
+    decided: "2026-07-10"
+  - a: "google:ChIJpyKF4-QvK4gR5KJYtNAzFng"
+    b: "google:ChIJZde1ZDUvK4gRzOgolIHjCDo"
+    verdict: distinct
+    reason: "Allstar Soccer Leagues and RRSMG Academy are both tenants at 360 Soccer Centre"
+    decided: "2026-07-10"
+  - a: "google:ChIJmcDCVFA_K4gRcJ3XdnnGC9g"
+    b: "google:ChIJ13mRLac_K4gRWctJUEunQOw"
+    verdict: distinct
+    reason: "International Soccer Club Mississauga is a tenant at the Mississauga Sports & Entertainment Centre Sportsplex (confirmed official City of Mississauga facility name)"
+    decided: "2026-07-10"
+  - a: "google:ChIJCz6hRBNBK4gR8lepYvHZwaQ"
+    b: "google:ChIJH6KuhLZBK4gRAoxvn8wARgk"
+    verdict: distinct
+    reason: "Two org listings (an academy office, a football club) at 560 Courtneypark Dr W; neither is a facility"
+    decided: "2026-07-10"
+  - a: "google:ChIJ2adteihHK4gRfOdwwMtLFLQ"
+    b: "google:ChIJzy0USjZHK4gRXeK_VS8y3FA"
+    verdict: distinct
+    reason: "Two tenant orgs (a league, a youth club) at 945 Bloor St; neither row is a facility"
+    decided: "2026-07-10"
+  - a: "google:ChIJ-fdZdyZHK4gRw4mteB7qV9I"
+    b: "google:ChIJVVUVsstGK4gRvGIRkGNCHg0"
+    verdict: distinct
+    reason: "Two tenant academies at one building (3413 Wolfedale Rd); neither row is a facility"
+    decided: "2026-07-10"
+  - a: "google:ChIJabHH0VM_K4gR_hQXIcSX6XA"
+    b: "google:ChIJ13mRLac_K4gRWctJUEunQOw"
+    verdict: distinct
+    reason: "Absolute Soccer and International Soccer Club Mississauga are both tenants at the Mississauga Sports & Entertainment Centre"
+    decided: "2026-07-10"
+  - a: "google:ChIJabHH0VM_K4gR_hQXIcSX6XA"
+    b: "google:ChIJmcDCVFA_K4gRcJ3XdnnGC9g"
+    verdict: distinct
+    reason: "Absolute Soccer is a tenant at the Mississauga Sports & Entertainment Centre Sportsplex (host facility)"
+    decided: "2026-07-10"
+  - a: "google:ChIJZdIGgF0rK4gR6HHBII-_K_k"
+    b: "osm:way/55761002"
+    verdict: merge
+    keep: "google:ChIJZdIGgF0rK4gR6HHBII-_K_k"
+    reason: "Same outdoor turf field 4m apart: google's specific name is the same pitch OSM maps generically as \"West Soccer Field\"; keeping the higher-priority, specifically-named google row"
+    decided: "2026-07-10"
+  - a: "google:ChIJYeNpDAkVK4gRVwx9A4O0duA"
+    b: "google:ChIJM0Ipl28VK4gRc9cuDnMdjn0"
+    verdict: distinct
+    reason: "Brampton Soccer Club and Brams United Soccer Club are two distinct, real soccer organizations (confirmed via web) that happen to share office space at 8950 McLaughlin Rd S Building D"
+    decided: "2026-07-10"
+  - a: "google:ChIJ12x3fSUpK4gR0o0bWGSgeNE"
+    b: "google:ChIJOV-1LK4pK4gRCoMKqRm2-7k"
+    verdict: distinct
+    reason: "Versus Soccer League and Juventus Academy Toronto are both tenants at TRIO Sportsplex (601 Cityview Blvd)"
+    decided: "2026-07-10"
+  - a: "google:ChIJfXRFtV7T1IkROA_VDGOkM5M"
+    b: "google:ChIJsSYF5VnT1IkRSvKpPK-_6OM"
+    verdict: distinct
+    reason: "Thornhill Soccer Club is a tenant at R.J. Clatworthy Arena (host facility)"
+    decided: "2026-07-10"
+  - a: "google:ChIJRe0V1Co5K4gRXNqFrm6GrZo"
+    b: "google:ChIJleyAOIU4K4gRzQuAChv4oRw"
+    verdict: distinct
+    reason: "KS Soccerplex and Kidsports Indoor Playground are different, unrelated businesses sharing a plaza address (4500 Dixie Rd), not the same venue"
+    decided: "2026-07-10"
+  - a: "google:ChIJzbIiOLejLIgRKM7HsKvBato"
+    b: "google:ChIJK2ViAcpGK4gRUbo9umDapQA"
+    verdict: merge
+    keep: "google:ChIJK2ViAcpGK4gRUbo9umDapQA"
+    reason: "Same business (confirmed via web: unitedsoccercentre.com); \"United Soccer Center Hamilton\" is a duplicate Google listing of \"United Soccer Centre\", canonical no-suffix name matches the operator's own domain"
+    decided: "2026-07-10"
+  - a: "google:ChIJKcJFytZvK4gRfrMUnzXVrR0"
+    b: "google:ChIJF_hbjdVpK4gRSfM2fOumpT0"
+    verdict: distinct
+    reason: "Ontario Atletico Soccer Academy and SportStars Youth Soccer Club are two tenant academies at the 1145 Bronte St S Milton sports complex; neither row is the facility"
+    decided: "2026-07-10"
+  - a: "google:ChIJLcRSFZrN1IkRojv4qj1vyNU"
+    b: "google:ChIJG-ZtpJVy3wURf58Hq_0fuIE"
+    verdict: distinct
+    reason: "ACME Soccer Club is a tenant at Toronto Soccerplex (host facility)"
+    decided: "2026-07-10"
+  - a: "toronto:park-remberto-navia-sports-fields"
+    b: "toronto:park-remberto-navia-sport-fields"
+    verdict: merge
+    keep: "toronto:park-remberto-navia-sports-fields"
+    reason: "Same municipal park split into two Toronto rows by a \"Sport\"/\"Sports\" spelling variant in source data; the numbered field names (Soccer Field 1-5) are contiguous across both rows. Keeping the richer 3-field row"
+    decided: "2026-07-10"
+  - a: "toronto:park-linus-park"
+    b: "google:ChIJzX6QM-DT1IkRjjsOMX3-R6c"
+    verdict: distinct
+    reason: "LVLUP Soccer is a private training academy (confirmed via web: lvlupsoccer.ca, programs run at rented gyms, not a fixed facility) registered near Linus Park, a public park with its own outdoor field; not the same venue"
+    decided: "2026-07-10"
+  - a: "google:ChIJrblwav_e1IkRQa_eZfC-2Jg"
+    b: "google:ChIJN1aBZfff1IkRt8cqo-VOGN0"
+    verdict: distinct
+    reason: "Pickering Football Club is a tenant at Pickering Soccer Centre (host facility)"
+    decided: "2026-07-10"
+  - a: "google:ChIJK2ViAcpGK4gRUbo9umDapQA"
+    b: "google:ChIJfQZMoT-iLIgRQGKp3hQmrp0"
+    verdict: merge
+    keep: "google:ChIJK2ViAcpGK4gRUbo9umDapQA"
+    reason: "Same business (confirmed via web: United Soccer Centre operates \"at the old Players Paradise location\", 565 Seaman St); Players Paradise is the retired pre-rebrand name"
+    decided: "2026-07-10"
+  - a: "google:ChIJvxeh0347K4gRmoRgjgdURKI"
+    b: "osm:node/383486484"
+    verdict: distinct
+    reason: "Complex vs member facility (known pattern, venue-data-reference): \"Ontario Soccer Centre Field 1\" is one bookable field inside \"The Soccer Centre\" complex, not a duplicate of the whole complex"
+    decided: "2026-07-10"
+  - a: "google:ChIJ44x2RSfW1IkRUhEoiUzEhjk"
+    b: "google:ChIJpW4pttgp1YkROcxAoVHV_ZU"
+    verdict: distinct
+    reason: "Markham Soccer Club is a tenant club, not the same as Mount Joy Arena (host facility)"
+    decided: "2026-07-10"
+  - a: "google:ChIJI6wGnXcXK4gRuzGcl09Sn0c"
+    b: "google:ChIJEXH7IU8WK4gRncueD_nXOWY"
+    verdict: merge
+    keep: "google:ChIJEXH7IU8WK4gRncueD_nXOWY"
+    reason: "\"Soccer Centre Parking\" is a Google Places POI for Brampton Soccer Centre's parking lot, not a separate bookable venue"
+    decided: "2026-07-10"
+  - a: "toronto:park-ron-watson-park"
+    b: "google:ChIJW2wocwPT1IkRqR7wZf7qYN0"
+    verdict: distinct
+    reason: "Fratria Soccer Club is a tenant club using a field at Ron Watson Park (host park), not the park itself"
+    decided: "2026-07-10"
+  - a: "google:ChIJdY-crj3U1IkRPT1XQtKr144"
+    b: "osm:way/56223412"
+    verdict: distinct
+    reason: "Unionville-Milliken Soccer Club is a tenant club at Milliken Mills Soccer Dome (host facility)"
+    decided: "2026-07-10"
+  - a: "google:ChIJzbIiOLejLIgRKM7HsKvBato"
+    b: "google:ChIJfQZMoT-iLIgRQGKp3hQmrp0"
+    verdict: merge
+    keep: "google:ChIJzbIiOLejLIgRKM7HsKvBato"
+    reason: "Same business as pair 25/19 (confirmed via web); \"United Soccer Center Hamilton\" is the current name, \"Players Paradise\" is the retired pre-rebrand name"
+    decided: "2026-07-10"
+  - a: "google:ChIJ_WsoKopHK4gR8onw1oLKrtg"
+    b: "google:ChIJp_fKtEVDK4gRy6OSZyvgBZM"
+    verdict: distinct
+    reason: "Mississauga Soccer Academy and AZ Soccer Pro are two tenant training programs sharing one building (3545 Odyssey Dr); neither row is a facility"
+    decided: "2026-07-10"
+  - a: "google:ChIJsfJreRAtK4gR-g6aXPQV_aE"
+    b: "google:ChIJ9-Qk7DgvK4gR3815o5sLnPU"
+    verdict: distinct
+    reason: "Elfutsal Soccer Academy and Paris Saint-Germain Academy Toronto are both tenants at Vaughan Sportsplex II (8301 Keele St)"
+    decided: "2026-07-10"
+  - a: "google:ChIJvfQqrqwoK4gRc_mGYdDPZK4"
+    b: "google:ChIJOV-1LK4pK4gRCoMKqRm2-7k"
+    verdict: distinct
+    reason: "Juventus Academy Toronto is a tenant at TRIO Sportsplex (host facility)"
+    decided: "2026-07-10"
+  - a: "google:ChIJmW2h_70_K4gRZQ56fu7_tRM"
+    b: "osm:way/194218131"
+    verdict: merge
+    keep: "google:ChIJmW2h_70_K4gRZQ56fu7_tRM"
+    reason: "Same stadium, cross-source echo (confirmed via web: Victoria Park Stadium, home of Brampton United, capacity 2000); keeping the higher-priority google row"
+    decided: "2026-07-10"
+  - a: "google:ChIJvfQqrqwoK4gRc_mGYdDPZK4"
+    b: "google:ChIJ12x3fSUpK4gR0o0bWGSgeNE"
+    verdict: distinct
+    reason: "Versus Soccer League is a tenant at TRIO Sportsplex (host facility)"
+    decided: "2026-07-10"
+  - a: "google:ChIJN9XbOIxlK4gRKSw4Oxn1S84"
+    b: "google:ChIJ890NIIxlK4gRF3eYpOKNSL0"
+    verdict: distinct
+    reason: "Milton Soccer Dome and Milton Indoor Turf Centre are two distinct real Milton facilities (same pattern documented in apps/api/tests/dedupe.test.ts: \"Milton Sports Dome\" vs \"Milton Sports Centre\" must not be conflated)"
+    decided: "2026-07-10"
+  - a: "google:ChIJacGvKlwoK4gR6lWehaHbeSg"
+    b: "google:ChIJgz-1C_0pK4gRSUn1Rv9YtHo"
+    verdict: distinct
+    reason: "Distinct numbered sub-fields at one park (known pattern, venue-data-reference): North Maple Park Soccer Field #1 and #2 are two different bookable fields"
+    decided: "2026-07-10"
+  - a: "google:ChIJA6B_nm2FLIgRAxD5jxj7Hs8"
+    b: "google:ChIJpz2Me22FLIgR4DUZn0lRGdU"
+    verdict: distinct
+    reason: "Complex vs member facility (confirmed via web: Redeemer Sports Complex has a south indoor domed field and a north outdoor field as two separately bookable parts)"
+    decided: "2026-07-10"
+  - a: "google:ChIJ6QX87B3S1IkRh8qYcGaXW1E"
+    b: "google:ChIJMZ9p9ETO1IkR-TxijlG40TU"
+    verdict: distinct
+    reason: "Toronto Markham Soccer Club is a tenant club at the multi-branded facility \"MLS Arena / Major League Sportsplex / Pure Sports Hockey\" (host facility)"
+    decided: "2026-07-10"
+  - a: "google:ChIJfROdCwA_K4gRvWMoxoURha4"
+    b: "google:ChIJ13mRLac_K4gRWctJUEunQOw"
+    verdict: distinct
+    reason: "International Soccer Club Mississauga is a tenant at the Mississauga Sports & Entertainment Centre (Indoor Soccer Fields)"
+    decided: "2026-07-10"
+  - a: "google:ChIJmcDCVFA_K4gRcJ3XdnnGC9g"
+    b: "google:ChIJfROdCwA_K4gRvWMoxoURha4"
+    verdict: merge
+    keep: "google:ChIJmcDCVFA_K4gRcJ3XdnnGC9g"
+    reason: "Same indoor soccer facility inside the Mississauga Sports & Entertainment Centre, double-listed by Google; \"Sportsplex\" matches the exact official City of Mississauga facility name (mississauga.ca), preferred as more canonical"
+    decided: "2026-07-10"
+  - a: "google:ChIJabHH0VM_K4gR_hQXIcSX6XA"
+    b: "google:ChIJfROdCwA_K4gRvWMoxoURha4"
+    verdict: distinct
+    reason: "Absolute Soccer is a tenant at the Mississauga Sports & Entertainment Centre (Indoor Soccer Fields)"
+    decided: "2026-07-10"
+  - a: "toronto:park-g-ross-lord-park"
+    b: "osm:way/128695801"
+    verdict: merge
+    keep: "toronto:park-g-ross-lord-park"
+    reason: "Same municipal park pitch; OSM's generic echo of the Toronto-mapped G. Ross Lord Park soccer field. Municipal is authoritative for public field identity"
+    decided: "2026-07-10"
+  - a: "google:ChIJd00FFvqELIgR_hd3Olx1_tk"
+    b: "google:ChIJHWdAOfqELIgRBK4msq5qaDk"
+    verdict: distinct
+    reason: "One Touch Soccer Academy is a tenant at Ancaster Sports Centre (host facility)"
+    decided: "2026-07-10"
+  - a: "google:ChIJEU5f7w8d1YkRvq5dZlPTlis"
+    b: "google:ChIJLd49gX0d1YkR18O_QUA2lSI"
+    verdict: distinct
+    reason: "Confirmed via web: Durham Sportsplex (pickleball-focused) and Durham Indoor Soccer Centre are different, independently operated facilities on the same street (Terwillegar Ave, Oshawa)"
+    decided: "2026-07-10"
+  - a: "toronto:park-keele-reservoir"
+    b: "google:ChIJ1yJTbM8zK4gRkfThIylLGLU"
+    verdict: distinct
+    reason: "Toronto Azzurri Soccer Club is the tenant organization for the city-owned field at Keele Reservoir (named \"TORONTO AZZURRI YOUTH SPORT VILLAGE - Soccer Field\" in municipal data), but the club and the park are different rows"
+    decided: "2026-07-10"
+  - a: "google:ChIJQwIxnynP1IkRZJefwhdqnvY"
+    b: "google:ChIJKWPS33nO1IkRLNyewXcZ2-I"
+    verdict: distinct
+    reason: "Canonical tenant-club-vs-facility example (documented in venue-data-reference and dedupe.test.ts): East Toronto Soccer is a tenant at Scarborough Soccer Centre"
+    decided: "2026-07-10"
+  - a: "google:ChIJnU7cp6g7K4gRg7zANzc77uY"
+    b: "osm:node/383486484"
+    verdict: distinct
+    reason: "Complex vs member facility (same pattern as pair 26): \"Ontario Soccer Centre Field 2\" is one bookable field inside \"The Soccer Centre\" complex"
+    decided: "2026-07-10"
+  - a: "google:ChIJJUwBoM9cK4gR4jBfsPPYd3M"
+    b: "google:ChIJOXu8mWZdK4gRvTU32AEhrU0"
+    verdict: distinct
+    reason: "Confirmed via web: Soccer World Warehouse is a retail/sportswear warehouse location of the \"Soccer World\" chain, not a bookable field; genuinely different from Oakville Athletic Academy"
+    decided: "2026-07-10"
+  - a: "google:ChIJsfJreRAtK4gR-g6aXPQV_aE"
+    b: "google:ChIJq6qqOu8uK4gRC8Yb8IJlH-A"
+    verdict: distinct
+    reason: "Elfutsal Soccer Academy is a tenant at Vaughan Sportsplex II (host facility)"
+    decided: "2026-07-10"
+  - a: "google:ChIJ9-Qk7DgvK4gR3815o5sLnPU"
+    b: "google:ChIJq6qqOu8uK4gRC8Yb8IJlH-A"
+    verdict: distinct
+    reason: "Paris Saint-Germain Academy Toronto is a tenant at Vaughan Sportsplex II (host facility)"
+    decided: "2026-07-10"
+  - a: "google:ChIJ44x2RSfW1IkRUhEoiUzEhjk"
+    b: "google:ChIJ-6swCK0p1YkRedokqdqoKwo"
+    verdict: distinct
+    reason: "Markham Soccer Club is a tenant club, not the same as Mount Joy Sports Dome (host facility)"
+    decided: "2026-07-10"
+  - a: "google:ChIJw5WF2qMqK4gRmURH2o9qjvw"
+    b: "google:ChIJZdIGgF0rK4gR6HHBII-_K_k"
+    verdict: distinct
+    reason: "Distinct sub-facilities at the Richmond Green Sports Complex: an indoor dome and a separate outdoor turf field, not the same bookable"
+    decided: "2026-07-10"
+  - a: "google:ChIJKSrx9kdpK4gRjxKKz5lll2c"
+    b: "google:ChIJo6T6e8JpK4gR8QTr0KPd25A"
+    verdict: merge
+    keep: "google:ChIJKSrx9kdpK4gRjxKKz5lll2c"
+    reason: "Same field, seasonal echo (confirmed via web: Mattamy Sports Park's Outdoor Field 1 gets a seasonal dome installed each winter); keeping the base outdoor-field listing"
+    decided: "2026-07-10"
+  - a: "google:ChIJvxeh0347K4gRmoRgjgdURKI"
+    b: "google:ChIJnU7cp6g7K4gRg7zANzc77uY"
+    verdict: distinct
+    reason: "Canonical distinct-sub-facilities example (cited in this issue): Ontario Soccer Centre Field 1 and Field 2 are two different bookable fields inside one complex"
+    decided: "2026-07-10"
+  - a: "google:ChIJN9XbOIxlK4gRKSw4Oxn1S84"
+    b: "google:ChIJF_hbjdVpK4gRSfM2fOumpT0"
+    verdict: distinct
+    reason: "SportStars Youth Soccer Club is a tenant at Milton Soccer Dome (host facility)"
+    decided: "2026-07-10"
+  - a: "brampton:park-206"
+    b: "google:ChIJmW2h_70_K4gRZQ56fu7_tRM"
+    verdict: distinct
+    reason: "Confirmed via web: Victoria Park Soccer Stadium is a specific grandstand stadium (home of Brampton United, capacity 2000) distinct from the municipal Victoria Park row's general playing fields (Soccer Field 1-3)"
+    decided: "2026-07-10"
+  - a: "osm:way/835936954"
+    b: "google:ChIJfZNRDumELIgR330Cp55T2yo"
+    verdict: merge
+    keep: "osm:way/835936954"
+    reason: "Same site rebrand after the 2024 fire (operators.yaml); keeper matches operators.yaml's canonical operator name \"Wentworth Arenas\" (the alias list already covers \"Wentworth Sports Complex\" for matching/booking-link purposes). Not currently detected by findDuplicates -- see file header"
+    decided: "2026-07-10"

@@ -6,7 +6,13 @@
  *
  * AUTO-tier pairs (same name + same spot, see lib/dedupe.ts) are safe to
  * apply unattended and run with --apply in the weekly scrape workflow.
- * REVIEW-tier pairs are only ever printed — a human resolves those.
+ * REVIEW-tier pairs are only ever printed — a human resolves those, unless
+ * data/dedupe-resolutions.yaml (issue #495) already carries a verdict:
+ *   - "distinct" pairs are suppressed from the printed list (summary count
+ *     only); the tenant/club row is NOT deactivated, see docs/scraping.md §4.3.
+ *   - "merge" pairs are applied under --apply exactly like an AUTO pair,
+ *     with the keeper forced from the resolution (overriding pickWinner).
+ * A resolution matching no currently-found pair prints as a stale info line.
  *
  * Applying = the standard soft-delete: is_active=false on the loser plus
  * duplicate_of=keeper.id for auditability. Never deletes, fully reversible.
@@ -14,11 +20,16 @@
  * Auth: service_role key from env (bypasses RLS).
  */
 
+import fs from "node:fs";
+import path from "node:path";
+
 import "dotenv/config";
 
 import { createClient } from "@supabase/supabase-js";
 
-import { findDuplicates, type DedupeVenue } from "./lib/dedupe.js";
+import { applyResolutions, findDuplicates, loadResolutions, type DedupeVenue } from "./lib/dedupe.js";
+
+const RESOLUTIONS_PATH = path.resolve(import.meta.dirname, "data", "dedupe-resolutions.yaml");
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -63,8 +74,38 @@ async function main() {
     return;
   }
 
+  const resolutionsRaw = fs.readFileSync(RESOLUTIONS_PATH, "utf8");
+  const resolutions = loadResolutions(resolutionsRaw);
+  const { suppressed, promoted, unresolved, staleResolutions } = applyResolutions(pairs, resolutions);
+
   let applied = 0;
-  for (const p of pairs) {
+
+  if (suppressed.length > 0) {
+    console.log(
+      `[dedupe] suppressed ${suppressed.length} pair(s) resolved "distinct" in data/dedupe-resolutions.yaml`
+    );
+  }
+
+  for (const { keep, drop, resolution } of promoted) {
+    const line =
+      `MERGE  keep "${keep.name}" (${keep.external_id}) ← drop "${drop.name}" (${drop.external_id})` +
+      ` — resolved: ${resolution.reason}`;
+    console.log(line);
+
+    if (apply) {
+      const { error: upErr } = await supabase
+        .from("venues")
+        .update({ is_active: false, duplicate_of: keep.id })
+        .eq("id", drop.id);
+      if (upErr) {
+        console.warn(`  ✗ apply failed for ${drop.id}:`, upErr.message);
+      } else {
+        applied++;
+      }
+    }
+  }
+
+  for (const p of unresolved) {
     const line =
       `${p.tier.toUpperCase().padEnd(6)} keep "${p.keep.name}" (${p.keep.external_id})` +
       ` ← drop "${p.drop.name}" (${p.drop.external_id}) — ${p.reason}`;
@@ -83,10 +124,19 @@ async function main() {
     }
   }
 
-  const auto = pairs.filter((p) => p.tier === "auto").length;
-  const review = pairs.length - auto;
+  if (staleResolutions.length > 0) {
+    console.log(`\n[dedupe] stale resolutions (no matching pair found this run):`);
+    for (const r of staleResolutions) {
+      console.log(`  info: ${r.a} <-> ${r.b} (${r.verdict}, decided ${r.decided}) — ${r.reason}`);
+    }
+  }
+
+  const autoUnresolved = unresolved.filter((p) => p.tier === "auto").length;
+  const reviewUnresolved = unresolved.length - autoUnresolved;
   console.log(
-    `[dedupe] done — ${auto} auto, ${review} review${apply ? `, ${applied} deactivated` : " (dry run, nothing changed)"}`
+    `\n[dedupe] done — ${autoUnresolved} auto, ${reviewUnresolved} review, ` +
+      `${suppressed.length} resolved-distinct, ${promoted.length} resolved-merge, ${staleResolutions.length} stale` +
+      `${apply ? `, ${applied} deactivated` : " (dry run, nothing changed)"}`
   );
 }
 
