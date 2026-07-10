@@ -56,7 +56,9 @@ yarn-error.*
 # ---------------------------------------------------------------------------
 .DS_Store
 .idea/
-.claude/
+# Claude harness state stays local, but the project skill library is tracked.
+.claude/*
+!.claude/skills/
 .vscode/*
 !.vscode/extensions.json
 !.vscode/settings.json
