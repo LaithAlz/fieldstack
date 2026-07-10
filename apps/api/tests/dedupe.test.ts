@@ -2,11 +2,15 @@ import { describe, expect, it } from "bun:test";
 
 import {
   addressKey,
+  applyResolutions,
   findDuplicates,
   isGenericName,
+  loadResolutions,
   nameSimilarity,
   normalizeName,
   pickWinner,
+  type DedupeResolution,
+  type DuplicatePair,
   type DedupeVenue,
 } from "../scripts/scrape/lib/dedupe.js";
 
@@ -198,5 +202,193 @@ describe("findDuplicates", () => {
     const a = venue({ id: "a", name: "Same Name", lat: null, lng: null });
     const b = venue({ id: "b", name: "Same Name" });
     expect(findDuplicates([a, b])).toHaveLength(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Dedupe resolutions registry (issue #495)
+// ---------------------------------------------------------------------------
+
+describe("loadResolutions", () => {
+  it("parses a well-formed registry", () => {
+    const yaml = `
+resolutions:
+  - a: "google:p1"
+    b: "osm:w1"
+    verdict: distinct
+    reason: "tenant club at a host facility"
+    decided: "2026-07-10"
+  - a: "google:p2"
+    b: "google:p3"
+    verdict: merge
+    keep: "google:p2"
+    reason: "same facility, cross-source echo"
+    decided: "2026-07-10"
+`;
+    const resolutions = loadResolutions(yaml);
+    expect(resolutions).toHaveLength(2);
+    expect(resolutions[0]).toEqual({
+      a: "google:p1",
+      b: "osm:w1",
+      verdict: "distinct",
+      reason: "tenant club at a host facility",
+      decided: "2026-07-10",
+    });
+    expect(resolutions[1]!.keep).toBe("google:p2");
+  });
+
+  it("throws when the top-level `resolutions:` list is missing", () => {
+    expect(() => loadResolutions("not_resolutions: []")).toThrow(/expected top-level/);
+  });
+
+  it("throws when `resolutions:` is not a list", () => {
+    expect(() => loadResolutions("resolutions: {}")).toThrow(/expected top-level/);
+  });
+
+  it("throws on a missing required field (a, b, reason, decided)", () => {
+    const missingA = `resolutions:\n  - b: "osm:w1"\n    verdict: distinct\n    reason: "x"\n    decided: "2026-07-10"\n`;
+    expect(() => loadResolutions(missingA)).toThrow(/missing "a"/);
+
+    const missingReason = `resolutions:\n  - a: "google:p1"\n    b: "osm:w1"\n    verdict: distinct\n    decided: "2026-07-10"\n`;
+    expect(() => loadResolutions(missingReason)).toThrow(/missing "reason"/);
+
+    const missingDecided = `resolutions:\n  - a: "google:p1"\n    b: "osm:w1"\n    verdict: distinct\n    reason: "x"\n`;
+    expect(() => loadResolutions(missingDecided)).toThrow(/missing "decided"/);
+  });
+
+  it("throws on an invalid verdict", () => {
+    const bad = `resolutions:\n  - a: "google:p1"\n    b: "osm:w1"\n    verdict: maybe\n    reason: "x"\n    decided: "2026-07-10"\n`;
+    expect(() => loadResolutions(bad)).toThrow(/invalid "verdict"/);
+  });
+
+  it("throws on a malformed decided date", () => {
+    const bad = `resolutions:\n  - a: "google:p1"\n    b: "osm:w1"\n    verdict: distinct\n    reason: "x"\n    decided: "July 10 2026"\n`;
+    expect(() => loadResolutions(bad)).toThrow(/invalid "decided"/);
+  });
+
+  it("throws on verdict merge without keep", () => {
+    const bad = `resolutions:\n  - a: "google:p1"\n    b: "osm:w1"\n    verdict: merge\n    reason: "x"\n    decided: "2026-07-10"\n`;
+    expect(() => loadResolutions(bad)).toThrow(/missing "keep"/);
+  });
+
+  it("throws when keep matches neither a nor b", () => {
+    const bad = `resolutions:\n  - a: "google:p1"\n    b: "osm:w1"\n    verdict: merge\n    keep: "google:p9"\n    reason: "x"\n    decided: "2026-07-10"\n`;
+    expect(() => loadResolutions(bad)).toThrow(/matches neither "a" nor "b"/);
+  });
+
+  it("throws when verdict distinct also sets keep", () => {
+    const bad = `resolutions:\n  - a: "google:p1"\n    b: "osm:w1"\n    verdict: distinct\n    keep: "google:p1"\n    reason: "x"\n    decided: "2026-07-10"\n`;
+    expect(() => loadResolutions(bad)).toThrow(/also sets "keep"/);
+  });
+});
+
+describe("applyResolutions", () => {
+  function pair(overrides: Partial<DuplicatePair>): DuplicatePair {
+    return {
+      keep: venue({ id: "keep-id", name: "Facility", external_id: "google:facility" }),
+      drop: venue({ id: "drop-id", name: "Tenant", external_id: "google:tenant" }),
+      distanceM: 10,
+      nameSimilarity: 0.3,
+      tier: "review",
+      reason: "related name (sim 0.30) within 10m",
+      ...overrides,
+    };
+  }
+
+  function resolution(overrides: Partial<DedupeResolution>): DedupeResolution {
+    return {
+      a: "google:facility",
+      b: "google:tenant",
+      verdict: "distinct",
+      reason: "tenant at host facility",
+      decided: "2026-07-10",
+      ...overrides,
+    };
+  }
+
+  it("suppresses a pair resolved distinct", () => {
+    const p = pair({});
+    const result = applyResolutions([p], [resolution({})]);
+    expect(result.suppressed).toEqual([p]);
+    expect(result.promoted).toHaveLength(0);
+    expect(result.unresolved).toHaveLength(0);
+    expect(result.staleResolutions).toHaveLength(0);
+  });
+
+  it("matches a/b in either order against the pair's keep/drop", () => {
+    const p = pair({});
+    // Resolution recorded with a/b swapped relative to the pair's keep/drop.
+    const r = resolution({ a: "google:tenant", b: "google:facility" });
+    const result = applyResolutions([p], [r]);
+    expect(result.suppressed).toEqual([p]);
+    expect(result.unresolved).toHaveLength(0);
+  });
+
+  it("promotes a merge and forces the keeper from the resolution, even when it disagrees with pickWinner", () => {
+    // pickWinner would keep the higher-priority "google" source id, i.e. the
+    // pair's own `keep` side ("google:facility") — but the resolution says
+    // keep the OTHER side. The registry's human verdict must win.
+    const p = pair({
+      keep: venue({ id: "algo-keep", name: "Algo Winner", external_id: "google:algo-winner" }),
+      drop: venue({ id: "algo-drop", name: "Actual Keeper", external_id: "google:actual-keeper" }),
+    });
+    const r = resolution({
+      a: "google:algo-winner",
+      b: "google:actual-keeper",
+      verdict: "merge",
+      keep: "google:actual-keeper",
+    });
+    const result = applyResolutions([p], [r]);
+    expect(result.promoted).toHaveLength(1);
+    expect(result.promoted[0]!.keep.external_id).toBe("google:actual-keeper");
+    expect(result.promoted[0]!.drop.external_id).toBe("google:algo-winner");
+    expect(result.suppressed).toHaveLength(0);
+    expect(result.unresolved).toHaveLength(0);
+  });
+
+  it("leaves a pair with no matching resolution unresolved", () => {
+    const p = pair({});
+    const result = applyResolutions([p], []);
+    expect(result.unresolved).toEqual([p]);
+    expect(result.suppressed).toHaveLength(0);
+    expect(result.promoted).toHaveLength(0);
+  });
+
+  it("reports a resolution matching no found pair as stale", () => {
+    const p = pair({});
+    const staleResolution = resolution({ a: "google:ghost-a", b: "osm:ghost-b" });
+    const result = applyResolutions([p], [staleResolution]);
+    // The real pair has no matching resolution, so it's unresolved...
+    expect(result.unresolved).toEqual([p]);
+    // ...and the ghost resolution is reported as stale, not silently dropped.
+    expect(result.staleResolutions).toEqual([staleResolution]);
+  });
+
+  it("partitions a mixed batch: distinct, merge, unresolved, and stale all at once", () => {
+    const distinctPair = pair({
+      keep: venue({ id: "a1", external_id: "google:a1" }),
+      drop: venue({ id: "a2", external_id: "google:a2" }),
+    });
+    const mergePair = pair({
+      keep: venue({ id: "b1", external_id: "google:b1" }),
+      drop: venue({ id: "b2", external_id: "osm:b2" }),
+      tier: "review",
+    });
+    const unresolvedPair = pair({
+      keep: venue({ id: "c1", external_id: "google:c1" }),
+      drop: venue({ id: "c2", external_id: "google:c2" }),
+    });
+    const resolutions = [
+      resolution({ a: "google:a1", b: "google:a2", verdict: "distinct" }),
+      resolution({ a: "google:b1", b: "osm:b2", verdict: "merge", keep: "google:b1" }),
+      resolution({ a: "google:ghost-x", b: "google:ghost-y", verdict: "distinct" }),
+    ];
+    const result = applyResolutions([distinctPair, mergePair, unresolvedPair], resolutions);
+    expect(result.suppressed).toEqual([distinctPair]);
+    expect(result.promoted).toHaveLength(1);
+    expect(result.promoted[0]!.pair).toBe(mergePair);
+    expect(result.unresolved).toEqual([unresolvedPair]);
+    expect(result.staleResolutions).toHaveLength(1);
+    expect(result.staleResolutions[0]!.a).toBe("google:ghost-x");
   });
 });

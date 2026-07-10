@@ -1,3 +1,5 @@
+import { parse } from "yaml";
+
 /**
  * Cross-source dedup logic — the pure, unit-tested half of dedupe.ts.
  *
@@ -227,4 +229,153 @@ export function findDuplicates(venues: DedupeVenue[]): DuplicatePair[] {
   return pairs.sort((p, q) =>
     p.tier === q.tier ? p.distanceM - q.distanceM : p.tier === "auto" ? -1 : 1
   );
+}
+
+/**
+ * Dedupe resolutions registry (issue #495) — a human verdict on one REVIEW
+ * (or AUTO) pair, so it doesn't have to be re-adjudicated every time the
+ * weekly scrape's dedupe pass finds it again. Source of truth:
+ * data/dedupe-resolutions.yaml, one entry per pair, matched by `external_id`
+ * pair (unordered — see `resolutionKey` below).
+ */
+
+export type ResolutionVerdict = "merge" | "distinct";
+
+export type DedupeResolution = {
+  /** external_id of one venue in the pair. */
+  a: string;
+  /** external_id of the other venue in the pair. */
+  b: string;
+  verdict: ResolutionVerdict;
+  /** Required for verdict "merge"; must equal `a` or `b`. The other side is deactivated. */
+  keep?: string;
+  reason: string;
+  /** YYYY-MM-DD */
+  decided: string;
+};
+
+const DECIDED_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+function requireNonEmptyString(value: unknown, field: string, context: string): string {
+  if (typeof value !== "string" || value.trim().length === 0) {
+    throw new Error(`dedupe-resolutions.yaml: ${context} missing "${field}"`);
+  }
+  return value;
+}
+
+function validateResolutionEntry(entry: unknown, index: number): DedupeResolution {
+  if (typeof entry !== "object" || entry === null || Array.isArray(entry)) {
+    throw new Error(`dedupe-resolutions.yaml: entry ${index} is not a mapping`);
+  }
+  const e = entry as Record<string, unknown>;
+  const context = `entry ${index}`;
+  const a = requireNonEmptyString(e.a, "a", context);
+  const b = requireNonEmptyString(e.b, "b", context);
+  const pairContext = `entry ${index} (${a} / ${b})`;
+
+  if (e.verdict !== "merge" && e.verdict !== "distinct") {
+    throw new Error(
+      `dedupe-resolutions.yaml: ${pairContext} has invalid "verdict" (${JSON.stringify(e.verdict)}); expected "merge" or "distinct"`
+    );
+  }
+  const reason = requireNonEmptyString(e.reason, "reason", pairContext);
+  const decided = requireNonEmptyString(e.decided, "decided", pairContext);
+  if (!DECIDED_DATE_RE.test(decided)) {
+    throw new Error(`dedupe-resolutions.yaml: ${pairContext} has invalid "decided" (expected YYYY-MM-DD, got ${JSON.stringify(decided)})`);
+  }
+
+  if (e.verdict === "distinct") {
+    if (e.keep !== undefined) {
+      throw new Error(`dedupe-resolutions.yaml: ${pairContext} has verdict "distinct" but also sets "keep" (only "merge" may set it)`);
+    }
+    return { a, b, verdict: "distinct", reason, decided };
+  }
+
+  // verdict === "merge"
+  const keep = requireNonEmptyString(e.keep, "keep", pairContext);
+  if (keep !== a && keep !== b) {
+    throw new Error(`dedupe-resolutions.yaml: ${pairContext} has "keep" (${keep}) that matches neither "a" nor "b"`);
+  }
+  return { a, b, verdict: "merge", keep, reason, decided };
+}
+
+/**
+ * Parses and validates the resolutions registry YAML. Throws on any
+ * malformed entry (better to fail the whole run loudly than silently skip a
+ * broken resolution) — mirrors the "throw on parse errors" convention in
+ * lib/registry.ts.
+ */
+export function loadResolutions(raw: string): DedupeResolution[] {
+  const parsed = parse(raw) as { resolutions?: unknown } | null | undefined;
+  if (!parsed || !Array.isArray(parsed.resolutions)) {
+    throw new Error("dedupe-resolutions.yaml: expected top-level `resolutions:` list");
+  }
+  return parsed.resolutions.map((entry, i) => validateResolutionEntry(entry, i));
+}
+
+/** Unordered pair key so a/b can be recorded in either order in the YAML. */
+function resolutionKey(a: string, b: string): string {
+  return a < b ? `${a} ${b}` : `${b} ${a}`;
+}
+
+export type ResolutionPartition = {
+  /** Found pairs resolved "distinct" — kept active, no longer printed as REVIEW. */
+  suppressed: DuplicatePair[];
+  /** Found pairs resolved "merge" — keeper forced from the resolution, even if pickWinner disagrees. */
+  promoted: Array<{
+    pair: DuplicatePair;
+    keep: DedupeVenue;
+    drop: DedupeVenue;
+    resolution: DedupeResolution;
+  }>;
+  /** Found pairs with no matching resolution — unchanged runner behavior (AUTO applies, REVIEW just prints). */
+  unresolved: DuplicatePair[];
+  /** Resolutions that matched no pair in the current `pairs` list. */
+  staleResolutions: DedupeResolution[];
+};
+
+/**
+ * Partitions `pairs` (the output of `findDuplicates`) against the
+ * resolutions registry. A resolution matches a pair when its `a`/`b`
+ * external_ids equal the pair's keep/drop external_ids, in either order.
+ *
+ * AUTO-tier pairs pass through here too: one with no resolution lands in
+ * `unresolved` exactly like today (the runner still applies AUTO pairs
+ * regardless of resolution status), but a human can also mark an AUTO pair
+ * "distinct" to override a wrong auto-merge.
+ */
+export function applyResolutions(
+  pairs: DuplicatePair[],
+  resolutions: DedupeResolution[]
+): ResolutionPartition {
+  const suppressed: DuplicatePair[] = [];
+  const promoted: ResolutionPartition["promoted"] = [];
+  const unresolved: DuplicatePair[] = [];
+  const matched = new Set<number>();
+
+  const byKey = new Map<string, number>();
+  resolutions.forEach((r, i) => {
+    byKey.set(resolutionKey(r.a, r.b), i);
+  });
+
+  for (const pair of pairs) {
+    const idx = byKey.get(resolutionKey(pair.keep.external_id, pair.drop.external_id));
+    if (idx === undefined) {
+      unresolved.push(pair);
+      continue;
+    }
+    matched.add(idx);
+    const resolution = resolutions[idx]!;
+    if (resolution.verdict === "distinct") {
+      suppressed.push(pair);
+      continue;
+    }
+    const keep = resolution.keep === pair.keep.external_id ? pair.keep : pair.drop;
+    const drop = keep === pair.keep ? pair.drop : pair.keep;
+    promoted.push({ pair, keep, drop, resolution });
+  }
+
+  const staleResolutions = resolutions.filter((_, i) => !matched.has(i));
+
+  return { suppressed, promoted, unresolved, staleResolutions };
 }

@@ -359,6 +359,24 @@ Proposed approach (design, not yet built):
   prefixes** (they already don't overwrite each other) and accept some visible
   duplication, or run only the highest-precedence source for a given city.
 
+**Resolutions registry (issue #495):** the design above is now partly built —
+`apps/api/scripts/scrape/lib/dedupe.ts`'s `findDuplicates` already splits pairs
+into an AUTO tier (safe to deactivate unattended) and a REVIEW tier (a human
+decides). What used to evaporate every week is now recorded:
+`apps/api/scripts/scrape/data/dedupe-resolutions.yaml` holds one entry per
+adjudicated pair (the two venues' `external_id`, an unordered match; a verdict
+of `merge` or `distinct`; the keeper `external_id` for merges; a one-line
+reason; a `decided` date). `dedupe.ts` loads and applies it on every run: a
+`distinct` verdict suppresses that pair from REVIEW output for good (without
+deactivating the tenant/club row — see the club-noise follow-up note below); a
+`merge` verdict applies through the exact same soft-delete path as AUTO
+(`is_active=false` + `duplicate_of`) once `--apply` is passed, with the keeper
+forced from the registry even when it disagrees with `pickWinner`'s
+source-priority pick. A resolution that no longer matches any found pair
+prints as a stale info line rather than silently vanishing. See
+`lib/dedupe.ts`'s `loadResolutions`/`applyResolutions` for the validation and
+partitioning logic, and `apps/api/tests/dedupe.test.ts` for their tests.
+
 ### 4.4 ToS, legal, rate limits
 
 - **OSM/ODbL** — attribution already in place; keep it. Polite Overpass usage
