@@ -68,7 +68,7 @@ WHY: the API crashed on Fly bring-up when `REDIS_URL` was malformed (June 2026, 
 
 `GET /search/fields` calls RPC `search_fields` (current version: migration `020_search_fields_pagination.sql`, 10 args: `p_lat, p_lng, p_radius_meters, p_surfaces, p_sizes, p_venue_types, p_price_max, p_sort, p_limit, p_offset`). The RPC exists because PostgREST cannot sort by a PostGIS-derived distance on a join. The SQL builds each row's venue object with EXACTLY: `id, name, lat, lng, address, photos, venue_type`. Excluded: `hours`, `photo_attributions`, `booking_notes`, `cancellation_policy`, `amenities`, `operator_id`, `external_id`, and everything else.
 
-WHY thin: keep the search payload small and keep internal columns away from anon. KNOWN WEAK POINT: the exclusion of `hours` means the Explore screen's Open-now chip calls `isOpenNow(undefined, now)` and evaluates only the default 06:00-23:00 window, identically for every venue (open issue #475 as of 2026-07-05). Two TS drift notes: the API's `SearchVenue` type (`apps/api/src/lib/queries/search.ts`) omits `venue_type` even though the SQL returns it, while the app's `SearchResult` type (`fieldstack-app/src/types/api.ts`) includes it. If you widen the projection, change migration + API type + app type together, and remember changing an RPC's RETURN TYPE requires `drop function if exists` first (Postgres forbids `create or replace` across return types; that bug shipped in migration 019 and is why the Migrations CI workflow replays all migrations from scratch).
+WHY thin: keep the search payload small and keep internal columns away from anon. UPDATE (2026-07-09): migration 026 added `hours` to the projection (issue #475), and the API `SearchVenue` type now carries `venue_type` and `hours`, so Open-now evaluates real per-venue hours where the venue has them; venues without hours still use the default 06:00-23:00 window. If you widen the projection further, change migration + API type + app type together, and remember changing an RPC's RETURN TYPE requires `drop function if exists` first (Postgres forbids `create or replace` across return types; that bug shipped in migration 019 and is why the Migrations CI workflow replays all migrations from scratch). Migration 026 kept the same signature and jsonb return, so it used plain `create or replace` correctly.
 
 ### 6. Scrape idempotency rides on `external_id` with per-source prefixes
 
@@ -138,7 +138,7 @@ WHY it matters: custom schemes only exist in real builds; Expo Go registers `exp
 | Weak point | Detail | Status |
 |---|---|---|
 | 50-marker cap, no clustering | Clustering was deliberately dropped (May 2026); overflow gets a banner | Accepted; raising cap needs on-device profiling |
-| Open-now is an approximation | Search projection lacks `hours`; chip checks default 06:00-23:00 for all venues | Open issue #475 |
+| Open-now for hours-less venues is an approximation | Migration 026 ships real hours in search; venues with no `hours` row still evaluate the default 06:00-23:00 window | #475 closed 2026-07-09; residual gap is hours COVERAGE (see onside-research-frontier P1) |
 | Single search radius | App hardcodes `DEFAULT_RADIUS_KM = 75` (`useFieldSearch.tsx`); API caps `radius_km` at 500 | Accepted |
 | No screen/e2e tests | 21 jest suites in `fieldstack-app/src/lib/__tests__/` are pure logic only; API has 11 bun test files; `.maestro/` flows exist but are not CI-run | Accepted risk |
 | Manual prod db push | `npm run db:push` from `apps/api` is manual; CI only detects drift (migrations.yml, secret-gated) | By design, easy to forget |
@@ -193,6 +193,6 @@ All facts verified 2026-07-05 against the working tree. Re-verify before relying
 | booking_requests policies | `grep -n "create policy" supabase/migrations/025_booking_requests.sql` |
 | dynamicParams=false on site pages | `grep -rn dynamicParams site/app` |
 | Deep link prefixes | `grep -n "prefixes" fieldstack-app/App.tsx` |
-| Issue #475 still open | `gh issue view 475 --json state` |
+| Hours present in search projection | `grep -n "'hours'" supabase/migrations/026_search_fields_hours.sql` |
 | Sentry DSN still absent from EAS | `grep -c SENTRY_DSN fieldstack-app/eas.json` (0 = still absent) |
 | UA brands still split | `grep -rn "scraper/1.0" apps/api/scripts/scrape/` |
