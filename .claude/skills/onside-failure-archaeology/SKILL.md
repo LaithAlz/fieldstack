@@ -352,6 +352,16 @@ pre-paint script stamps `data-theme` from localStorage (`site/app/layout.tsx`). 
 | Merge commits, not squash (`gh pr merge --merge`); one PR per issue | project change-control rule; all 286 PR merges in history are merge commits | see onside-change-control |
 | AsyncStorage keys keep the legacy `@fieldstack/` prefix; renaming orphans user state | rebrand survived it deliberately | see onside-architecture-contract |
 
+## Incident 17: the untracked deploy workflow (2026-07-09)
+
+Symptom: after merging an API change, no deploy runs; prod behavior unchanged; a session searching for the "Fly Deploy" workflow on GitHub finds nothing despite `.github/workflows/fly-deploy.yml` sitting in the working tree.
+
+Root cause: fly-deploy.yml was drafted but never committed. `git ls-files .github/workflows/` lists only ci.yml, migrations.yml, scrape.yml, and `gh api repos/LaithAlz/fieldstack/actions/workflows` returns exactly those three. Every API deploy in this repo's history was a manual `flyctl deploy`. The first skill-library edition and its discovery dossier stated the auto-deploy as fact because the reader trusted the working tree without checking `git ls-files`.
+
+Evidence: `git log --follow -- .github/workflows/fly-deploy.yml` is empty; workflow registry count is 3; migration 026 shipped its behavior to prod via `db:push` alone, proving the read API passes RPC jsonb through without redeploy (live probe 2026-07-09 showed the new `hours` key with no Fly deploy).
+
+Status: documented; deploys are manual. Committing the workflow plus a `FLY_API_TOKEN` secret is an open owner decision (issue #492 footnote). Lesson: a file in the tree is not a fact about the system; verify workflows with `git ls-files` and the GitHub workflow registry before stating deploy behavior.
+
 ## How to add an entry
 
 1. Fix first, chronicle second. The entry must cite a MERGED commit hash (from

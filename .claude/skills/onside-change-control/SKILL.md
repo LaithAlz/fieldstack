@@ -41,7 +41,7 @@ your change first; each class has different CI gates and different deploy conseq
 |---|---|---|---|
 | App | `fieldstack-app/` | `ci.yml` mobile job: `npm ci`, typecheck, lint, jest (includes token drift test) | Nothing auto-ships. Users get it only via an EAS build or an OTA update (see `onside-run-and-operate`) |
 | Site | `site/` | `ci.yml` site job: `npm ci`, token drift check, `next build` | Vercel watches main and deploys getonside.ca (Root Directory = `site`, configured in the Vercel dashboard, no vercel.json in repo) |
-| API server | `apps/api/src/` | `ci.yml` backend job: `bun install --frozen-lockfile`, typecheck, `bun test` | `fly-deploy.yml` auto-deploys to Fly.io on every push to main. Merging IS deploying the API |
+| API server | `apps/api/src/` | `ci.yml` backend job: `bun install --frozen-lockfile`, typecheck, `bun test` | Deploy is MANUAL: `cd apps/api && flyctl deploy --remote-only` (no deploy workflow is tracked; corrected 2026-07-09). Merging does NOT deploy the API |
 | Scrape pipeline | `apps/api/scripts/scrape/` | same backend job | Next weekly `scrape.yml` run (Mondays 08:00 UTC) executes your code against PROD data with the service role key |
 | Migration | `supabase/migrations/**`, `supabase/config.toml` | `migrations.yml`: boots a fresh local Postgres and applies ALL migrations from scratch; optional remote drift check | Nothing. Prod schema changes ONLY via manual `bun run db:push` from `apps/api/` AFTER merge (section 5) |
 | Design tokens | `design/tokens.json` + regenerated outputs | two drift guards fail CI if outputs are stale (section 6) | Site side deploys via Vercel; app side waits for a build/OTA |
