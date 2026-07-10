@@ -21,6 +21,10 @@
  *        lib/platformLinks.ts: the field's own values win, else the
  *        operator's platform deep link (docs/scraping.md §3.2/§3.3),
  *        else its plain booking_url/website
+ *      - Resolve venue hours via lib/venueHours.ts: the adapter's own
+ *        hours win (only playtomic.ts sets them today), else the
+ *        matched operator's hand-verified `hours:` block from
+ *        operators.yaml, else null
  *      - Upsert venue (idempotent on external_id)
  *   4. Upsert each field under its venue.
  *
@@ -52,6 +56,7 @@ import {
 } from "./lib/registry.js";
 import { findOperator } from "./lib/operatorMatcher.js";
 import { resolveFieldBooking } from "./lib/platformLinks.js";
+import { resolveVenueHours } from "./lib/venueHours.js";
 import {
   sourcePrefixCounts,
   writeFailures,
@@ -157,7 +162,7 @@ async function main() {
         const operatorId = operator
           ? operatorIdsByName.get(operator.name.toLowerCase()) ?? placeholderId
           : placeholderId;
-        const venueId = await upsertVenue(v, operatorId);
+        const venueId = await upsertVenue(v, operatorId, operator);
         if (!venueId) continue;
         venuesUpserted++;
         // Inherit booking url/platform from the operator when the field
@@ -376,7 +381,8 @@ async function ensurePlaceholderOperator(): Promise<string> {
 
 async function upsertVenue(
   v: ScrapedVenue,
-  operatorId: string
+  operatorId: string,
+  operator: Operator | null
 ): Promise<string | null> {
   const { data, error } = await supabase
     .from("venues")
@@ -394,7 +400,11 @@ async function upsertVenue(
         is_active: true,
         data_source: "scrape",
         last_scraped_at: new Date().toISOString(),
-        hours: v.hours ?? null,
+        // Adapter's own hours win (e.g. playtomic.ts); else fall back to the
+        // matched operator's hand-verified hours from operators.yaml. Applied
+        // on every run since `hours` is written unconditionally, not backfilled
+        // (docs/scraping.md, lib/venueHours.ts).
+        hours: resolveVenueHours(v.hours, operator?.hours ?? null),
         booking_notes: v.bookingNotes ?? null,
         cancellation_policy: v.cancellationPolicy ?? null,
         // Only set when the adapter provided it, so sources that don't know

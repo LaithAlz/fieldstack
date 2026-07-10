@@ -82,6 +82,14 @@ export type Operator = {
   amiliaRewriteUrl?: string;
   /** Playtomic club slug — see data/operators.yaml header. */
   playtomicSlug?: string;
+  /**
+   * Hand-verified operating hours (issue #492 option 1), same shape as
+   * `venues.hours`: keys `sun`..`sat`, values `"HH:MM-HH:MM"` or `null`.
+   * Consumed by run.ts via `lib/venueHours.ts`'s `resolveVenueHours` —
+   * only applied to a matched venue when the adapter didn't supply its
+   * own hours.
+   */
+  hours?: Record<string, string | null>;
 };
 
 type OperatorsFile = {
@@ -94,8 +102,53 @@ type OperatorsFile = {
     courtreserve_org_id?: number;
     amilia_rewrite_url?: string;
     playtomic_slug?: string;
+    hours?: Record<string, unknown>;
   }>;
 };
+
+const HOURS_DAY_KEYS = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"] as const;
+const HOURS_RANGE_RE = /^\d{1,2}:\d{2}-\d{1,2}:\d{2}$/;
+
+/**
+ * Loosely validates an operator's optional `hours:` block. Never throws —
+ * a malformed hours block shouldn't fail the whole registry load (unlike
+ * the rest of operators.yaml, which throws on parse errors). Unknown day
+ * keys or malformed ranges are dropped with a warning; the operator still
+ * loads, just without that day (or without hours at all).
+ */
+export function parseOperatorHours(
+  operatorName: string,
+  raw: Record<string, unknown> | undefined
+): Record<string, string | null> | undefined {
+  if (raw == null) return undefined;
+  if (typeof raw !== "object" || Array.isArray(raw)) {
+    console.warn(
+      `[registry] operator "${operatorName}" has a malformed hours block (expected an object of day: range pairs) — ignoring`
+    );
+    return undefined;
+  }
+  const out: Record<string, string | null> = {};
+  for (const [day, value] of Object.entries(raw)) {
+    if (!(HOURS_DAY_KEYS as readonly string[]).includes(day)) {
+      console.warn(
+        `[registry] operator "${operatorName}" hours has unknown day key "${day}" — skipping`
+      );
+      continue;
+    }
+    if (value === null) {
+      out[day] = null;
+      continue;
+    }
+    if (typeof value === "string" && HOURS_RANGE_RE.test(value)) {
+      out[day] = value;
+      continue;
+    }
+    console.warn(
+      `[registry] operator "${operatorName}" hours.${day} is malformed (${JSON.stringify(value)}, expected "HH:MM-HH:MM" or null) — skipping`
+    );
+  }
+  return Object.keys(out).length > 0 ? out : undefined;
+}
 
 export function loadOperators(): Operator[] {
   const raw = fs.readFileSync(path.join(DATA_DIR, "operators.yaml"), "utf8");
@@ -132,6 +185,7 @@ export function loadOperators(): Operator[] {
       courtreserveOrgId: o.courtreserve_org_id ?? undefined,
       amiliaRewriteUrl: o.amilia_rewrite_url || undefined,
       playtomicSlug: o.playtomic_slug || undefined,
+      hours: parseOperatorHours(o.name, o.hours),
     };
   });
 }

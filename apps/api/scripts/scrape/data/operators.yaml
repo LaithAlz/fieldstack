@@ -35,6 +35,20 @@
 #   aliases       — alternate names that scraped venues might appear as.
 #                   Case-insensitive substring match. Add a new alias when
 #                   you see a venue that should be linked but isn't.
+#   hours         (optional) published operating hours, same shape as
+#                 venues.hours: keys sun, mon, tue, wed, thu, fri, sat,
+#                 values "HH:MM-HH:MM" (24 hour clock) or null for a
+#                 closed day. A midnight close is written "24:00", which
+#                 the app's parser accepts (parseRange in
+#                 fieldstack-app/src/lib/venueHours.ts allows exactly
+#                 24:00, nothing later). Only add hours actually verified
+#                 on the operator's own site (or a CatchCorner facility
+#                 page for CatchCorner booked venues). Put a one line
+#                 source comment directly above the block, e.g.
+#                   # hours: https://example.com/hours, verified YYYY-MM-DD
+#                 Applied by the runner only when the scraped venue's own
+#                 adapter did not already supply hours, see
+#                 lib/venueHours.ts; today only playtomic.ts does.
 #
 # Exactly one of courtreserve_org_id / amilia_rewrite_url / playtomic_slug
 # should be set per operator, matching its integration_type, e.g.:
@@ -83,6 +97,15 @@ operators:
     booking_url: https://www.brampton.ca/EN/residents/Recreation/Locations/Pages/Brampton-Soccer-Centre.aspx
     aliases:
       - Brampton Soccer Centre
+    # hours: https://www.brampton.ca/EN/residents/Recreation/Community-Centres/Pages/Brampton-Soccer-Centre.aspx, verified 2026-07-10
+    hours:
+      sun: "07:00-23:00"
+      mon: "08:00-23:00"
+      tue: "08:00-23:00"
+      wed: "08:00-23:00"
+      thu: "08:00-23:00"
+      fri: "07:00-23:00"
+      sat: "07:00-23:00"
 
   # ===== Toronto / Scarborough =====
   - name: Toronto Soccerplex
@@ -97,6 +120,15 @@ operators:
     booking_url: https://scarboroughsoccercentre.com
     aliases:
       - Scarborough Soccer Centre
+    # hours: https://scarboroughsoccercentre.com, verified 2026-07-10 (regular facility hours; summer office staffing is shorter but does not change facility hours)
+    hours:
+      sun: "08:00-24:00"
+      mon: "09:00-24:00"
+      tue: "09:00-24:00"
+      wed: "09:00-24:00"
+      thu: "09:00-24:00"
+      fri: "09:00-24:00"
+      sat: "08:00-24:00"
 
   - name: Toronto City Sports Centre
     website: https://www.torontocitysportscentre.com
@@ -137,6 +169,15 @@ operators:
     booking_url: https://www.markham.ca/wps/portal/home/recreation/recreation-facilities/milliken-mills-park
     aliases:
       - Milliken Mills Soccer Dome
+    # hours: https://www.markham.ca/sports-recreation-fitness/community-centres-libraries/milliken-mills-soccer-dome, verified 2026-07-10 (facility access hours; front desk hours are shorter)
+    hours:
+      sun: "06:00-24:00"
+      mon: "06:00-24:00"
+      tue: "06:00-24:00"
+      wed: "06:00-24:00"
+      thu: "06:00-24:00"
+      fri: "06:00-24:00"
+      sat: "06:00-24:00"
 
   - name: Markham Sports Dome
     website: https://www.markhamsportsdome.com
@@ -171,11 +212,23 @@ operators:
     aliases:
       - Soccer World
 
+  # Rebranded as Wentworth Sports Complex after the 2025 fire (same site,
+  # 2100 Main St W); the old wentwortharenas.ca domain no longer resolves.
   - name: Wentworth Arenas
-    website: https://wentwortharenas.ca
-    booking_url: https://wentwortharenas.ca
+    website: https://wentworth.info
+    booking_url: https://wentworth.info
     aliases:
       - Wentworth Arenas
+      - Wentworth Sports Complex
+    # hours: https://wentworth.info/, verified 2026-07-10 (site publishes one range for all days)
+    hours:
+      sun: "08:30-24:00"
+      mon: "08:30-24:00"
+      tue: "08:30-24:00"
+      wed: "08:30-24:00"
+      thu: "08:30-24:00"
+      fri: "08:30-24:00"
+      sat: "08:30-24:00"
 
   # ===== Halton =====
   - name: Sherwood Forest Park Field
@@ -192,10 +245,20 @@ operators:
       - 360 Soccer Centre
 
   - name: La Liga Sports Complex
-    website: ""
+    website: https://laligatoronto.ca
     booking_url: https://www.catchcorner.com/facility-page/la-liga-sports-complex/home
     aliases:
       - La Liga Sports Complex
+      - La Liga Toronto
+    # hours: https://laligatoronto.ca/, verified 2026-07-10 (complex visiting hours from the contact section)
+    hours:
+      sun: "07:30-23:00"
+      mon: "09:00-24:00"
+      tue: "09:00-24:00"
+      wed: "09:00-24:00"
+      thu: "09:00-24:00"
+      fri: "09:00-24:00"
+      sat: "07:30-24:00"
 
   - name: GTA Soccer Club
     website: https://www.gta-soccer.com

@@ -158,6 +158,17 @@ The schema already has the columns (migrations 009–012). The work is *populati
 them from richer sources, with the Google-content caveat from §1.4: Places-sourced
 photos/hours are display-time/short-TTL, not durable rows.
 
+**Operator-published hours** (shipped, issue #492 option 1): operators in
+`data/operators.yaml` may carry an optional `hours:` block — hours hand-verified
+on the operator's own site (or its CatchCorner facility page), with a source URL
+comment above each block. On every run the runner resolves `venues.hours` as
+*adapter hours → operator hours → null* (`lib/venueHours.ts`): a source that
+observed hours itself (today only `playtomic.ts`) always wins over the registry,
+and because `venues.hours` is written unconditionally on each upsert, operator
+hours are re-applied every run rather than backfilled once. These are
+operator-published facts, not Google Places content, so storing them durably is
+compliant with §1.4.
+
 ---
 
 ## 3. Operator connection — the booking model
