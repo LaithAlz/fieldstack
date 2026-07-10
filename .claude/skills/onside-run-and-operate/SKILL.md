@@ -223,9 +223,9 @@ Rules that keep this safe:
 
 ## 5. Deploys
 
-### API to Fly.io (automatic on merge)
+### API to Fly.io (MANUAL deploy)
 
-`.github/workflows/fly-deploy.yml` runs `flyctl deploy --remote-only` from `apps/api` on every push to `main` (secret `FLY_API_TOKEN`, concurrency group `deploy-group`). App `onside-api-wild-current-9606`, region `yyz` (Toronto), port 3000, `/health` check, `min_machines_running = 1` to avoid cold starts. Runtime credentials (`SUPABASE_URL`, `SUPABASE_ANON_KEY`, optional `REDIS_URL`) live in Fly secrets, not the repo; `fly.toml` only sets HOST/PORT/NODE_ENV/TRUST_PROXY.
+CORRECTED 2026-07-09: there is NO automatic API deploy. A file `.github/workflows/fly-deploy.yml` exists in some working trees but it is UNTRACKED (never committed; `git ls-files .github/workflows/` lists only ci, migrations, scrape, and GitHub registers exactly those three). Deploy manually: `cd apps/api && flyctl deploy --remote-only`. App `onside-api-wild-current-9606`, region `yyz` (Toronto), port 3000, `/health` check, `min_machines_running = 1` to avoid cold starts. Runtime credentials (`SUPABASE_URL`, `SUPABASE_ANON_KEY`, optional `REDIS_URL`) live in Fly secrets, not the repo; `fly.toml` only sets HOST/PORT/NODE_ENV/TRUST_PROXY. Corollary: merging API server changes does NOT ship them; RPC-only changes ship via `db:push` alone (the route passes the RPC jsonb through, proven live with migration 026). Committing the workflow (plus setting `FLY_API_TOKEN`) is an owner decision, tracked in issue #492's footnote.
 
 Manual operations (all from `apps/api`, where `fly.toml` lives so flyctl picks up the app):
 

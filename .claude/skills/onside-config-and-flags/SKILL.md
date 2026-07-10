@@ -32,7 +32,7 @@ Rule of thumb: this skill answers "what is the knob, where does it live, what do
 1. `apps/api/.env` (local only, gitignored): API server plus all scrape/seed scripts. Template: `apps/api/.env.example` (7 vars documented).
 2. `fieldstack-app/.env` (local only, gitignored): the iOS app in dev. Template: `fieldstack-app/.env.example` (6 vars). `EXPO_PUBLIC_API_URL` in it is auto-rewritten to your LAN IP by `fieldstack-app/scripts/sync-api-url.js`, wired as `prestart`/`preios`/`preandroid` npm hooks.
 3. `fieldstack-app/eas.json`: per-profile env baked into cloud builds (see EAS profiles section).
-4. GitHub repo secrets: consumed by `.github/workflows/{scrape,migrations,fly-deploy}.yml`. `ci.yml` consumes no secrets.
+4. GitHub repo secrets: consumed by `.github/workflows/{scrape,migrations}.yml`. `ci.yml` consumes no secrets. (No deploy workflow is tracked; corrected 2026-07-09.)
 5. Vercel dashboard (site project): `SUPABASE_URL`, `SUPABASE_ANON_KEY`. No `vercel.json` exists; all Vercel config is dashboard-side (`site/README.md`).
 6. Fly.io runtime: `apps/api/fly.toml` `[env]` sets only `HOST`, `NODE_ENV`, `PORT`, `TRUST_PROXY`. Everything else the deployed API needs (Supabase pair, `REDIS_URL`, `ALLOWED_ORIGINS`) must be set via `fly secrets` on app `onside-api-wild-current-9606`. UNVERIFIED from the repo: the actual Fly secret list is not inspectable here; run `fly secrets list` from `apps/api/` to confirm.
 7. `supabase/config.toml`: local Supabase stack (project_id `soccer`; ports below).
@@ -86,7 +86,7 @@ Confirmed by `grep -n "secrets\." .github/workflows/*.yml`:
 | `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` | scrape.yml: all three steps (scrape, enrich, dedupe) |
 | `GOOGLE_PLACES_API_KEY` | scrape.yml: scrape AND enrich steps |
 | `SUPABASE_ACCESS_TOKEN`, `SUPABASE_DB_PASSWORD`, `SUPABASE_PROJECT_REF` | migrations.yml: optional remote drift check (`supabase link` + `db push --dry-run`). The ref for the linked project is `hjvaoshvvjfygfeuzrfh` (visible in the eas.json Supabase URL) |
-| `FLY_API_TOKEN` | fly-deploy.yml: `flyctl deploy --remote-only` on every push to main |
+| `FLY_API_TOKEN` | Not consumed by any tracked workflow (an untracked fly-deploy.yml draft references it); API deploys are manual flyctl |
 
 All secret-gated steps use the skip idiom: if the secret is empty, print `::notice::` and `exit 0` instead of failing (safe on forks). So a green run does not prove the step ran; check the log for the notice.
 
