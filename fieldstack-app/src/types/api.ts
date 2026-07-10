@@ -80,5 +80,5 @@ export type VenueWithFields = Venue & { fields: Field[]; operator?: Operator };
 
 export type SearchResult = {
   field: Field;
-  venue: Pick<Venue, "id" | "name" | "lat" | "lng" | "address" | "photos" | "venue_type">;
+  venue: Pick<Venue, "id" | "name" | "lat" | "lng" | "address" | "photos" | "venue_type" | "hours">;
 };

@@ -70,12 +70,9 @@ export function ExploreCard({ group, userCoords, onPress }: Props) {
   const hasBookingUrl = fields.some((f) => f.booking_url);
   const meta = buildMeta(fields);
 
-  // `SearchResult.venue` doesn't include `hours` (only the single-venue GET
-  // endpoint returns it) — see lib/venueHours.ts's isOpenNow. Until the
-  // search endpoint's projection grows an hours column, every card falls
-  // through to the same 6 AM–11 PM default window rather than a venue-
-  // specific one.
-  const openNow = isOpenNow(undefined, new Date());
+  // Real per-venue hours from the search projection (migration 026).
+  // Venues without hours fall back to isOpenNow's default window.
+  const openNow = isOpenNow(venue.hours, new Date());
 
   const a11yLabel = [
     venue.name,

@@ -57,7 +57,7 @@ through Supabase. **Fabric** = React Native's new rendering architecture.
 | Prod API health | `{"data":{"supabase":"ok","redis":"error"},"error":null}` (redis "error" is tolerated, still 200) |
 | Sentry DSN in eas.json | absent as of 2026-07-06 (status home: onside-config-and-flags, known gap 1) |
 | `in_app_booking` flag | default false; no operator-side surface exists |
-| Open issues | #475 (hours in search projection), #484 (marketing audit) |
+| Open issues | #484 (marketing audit; user-action remainder). #475 closed 2026-07-09 by migration 026 |
 
 ---
 

@@ -303,7 +303,7 @@ export function ExploreScreen() {
     if (!openNowOn && !freeOnlyOn) return results;
     const now = new Date();
     return results.filter((r) => {
-      if (openNowOn && !isOpenNow(undefined, now)) return false;
+      if (openNowOn && !isOpenNow(r.venue.hours, now)) return false;
       if (freeOnlyOn && !isFreeVenue(r.venue.venue_type, r.field.price_per_hour)) return false;
       return true;
     });

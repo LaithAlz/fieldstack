@@ -26,7 +26,7 @@ export type SearchFieldsParams = {
 
 export type SearchVenue = Pick<
   Tables<"venues">,
-  "id" | "name" | "lat" | "lng" | "address" | "photos"
+  "id" | "name" | "lat" | "lng" | "address" | "photos" | "venue_type" | "hours"
 >;
 
 export type SearchResult = {
