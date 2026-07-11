@@ -50,6 +50,12 @@ import {
   openLocationSettings,
   requestPermission,
 } from "../../lib/location";
+import {
+  computeMapPlacements,
+  type ClusterableVenue,
+  type PlacedCluster,
+  type PlacedItem,
+} from "../../lib/mapClustering";
 import { getLastRegion, setLastRegion } from "../../lib/mapState";
 import { venuePriceSummary } from "../../lib/priceDisplay";
 import { isOpenNow } from "../../lib/venueHours";
@@ -64,13 +70,22 @@ const DEFAULT_DELTA = 0.15; // ~16km — comfortable starting zoom for a city
 // Fixed pool size: Marker children of MapView must NEVER mount/unmount under
 // Expo Go 54 Fabric interop — see VenueMarkerSlot below. Kept at parity with
 // the old MapViewScreen; raising it needs on-device profiling this change
-// couldn't do, so the cap stays put for this PR.
+// couldn't do, so the cap stays put for this PR. Since #498, this is no
+// longer "first 50 of the result list" — lib/mapClustering.ts grid-bins
+// whatever's visible in the current viewport (which can be 700+ venues
+// downtown) down to at most this many pins/clusters, so the pool is always
+// full of something meaningful regardless of how many venues matched.
 const MAX_MARKERS = 50;
 // Minimum camera-center movement before a settled pan triggers a refetch —
 // see the identical constant in the old MapViewScreen for the reasoning
 // (75km search radius means micro-pans can't change the result set).
 const REFETCH_PAN_THRESHOLD_KM = 1.5;
 const SNAP_POINTS = ["22%", "55%", "92%"];
+// Cluster-tap zoom: padding factor so member pins aren't flush against the
+// viewport edge, and a floor span guarding against a ~zero-size region when
+// a cluster's members are near-coincident.
+const CLUSTER_ZOOM_PADDING = 1.6;
+const MIN_CLUSTER_SPAN = 0.0015;
 // ExploreCard's approximate row height (84pt photo + padding) plus the list
 // separator — good enough for scrollToIndex's estimate; onScrollToIndexFailed
 // covers the rest.
@@ -107,43 +122,57 @@ function groupByVenue(results: SearchResult[]): ExploreVenueGroup[] {
 // toggles reassigned venues to slots whose stale image then showed the wrong
 // price. Verified on-simulator: permanent-true renders pin content correctly
 // with no flip-crash; the children are memoized so idle cost stays low.
-// group=null means the slot is inactive: rendered at null-island with opacity
+// item=null means the slot is inactive: rendered at null-island with opacity
 // 0, but still MOUNTED (never removed) so the pool never changes length.
+// item is a PlacedItem from lib/mapClustering.ts (#498): either a "single"
+// (one venue — looked up in groupsById for its price/free/count pin) or a
+// "cluster" (several venues grid-binned together — rendered as the numeral
+// pill in VenuePin's cluster mode). Which slot holds a single vs. a cluster
+// can change between recomputes as the viewport changes; the slot itself
+// still never mounts/unmounts, this is a prop update like any other.
 type VenueMarkerSlotProps = {
-  group: ExploreVenueGroup | null;
-  onPress: (venueId: string) => void;
+  item: PlacedItem | null;
+  groupsById: Map<string, ExploreVenueGroup>;
+  onPressVenue: (venueId: string) => void;
+  onPressCluster: (cluster: PlacedCluster) => void;
 };
 
 const VenueMarkerSlot = memo(function VenueMarkerSlot({
-  group,
-  onPress,
+  item,
+  groupsById,
+  onPressVenue,
+  onPressCluster,
 }: VenueMarkerSlotProps) {
   const coordinate = useMemo(
-    () =>
-      group
-        ? { latitude: group.venue.lat!, longitude: group.venue.lng! }
-        : { latitude: 0, longitude: 0 },
+    () => (item ? { latitude: item.lat, longitude: item.lng } : { latitude: 0, longitude: 0 }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [group?.venue.lat, group?.venue.lng]
+    [item?.lat, item?.lng]
   );
 
+  const group = item && item.kind === "single" ? (groupsById.get(item.venueId) ?? null) : null;
   const priceSummary = group ? venuePriceSummary(group.fields, group.venue.venue_type) : null;
 
+  const handlePress = useMemo(() => {
+    if (!item) return undefined;
+    if (item.kind === "cluster") {
+      const cluster = item;
+      return (e: { stopPropagation: () => void }) => {
+        e.stopPropagation();
+        onPressCluster(cluster);
+      };
+    }
+    const venueId = item.venueId;
+    return (e: { stopPropagation: () => void }) => {
+      e.stopPropagation();
+      onPressVenue(venueId);
+    };
+  }, [item, onPressVenue, onPressCluster]);
+
   return (
-    <Marker
-      coordinate={coordinate}
-      opacity={group ? 1 : 0}
-      onPress={
-        group
-          ? (e) => {
-              e.stopPropagation();
-              onPress(group.venue.id);
-            }
-          : undefined
-      }
-      tracksViewChanges={true}
-    >
-      {group && priceSummary?.kind === "free" ? (
+    <Marker coordinate={coordinate} opacity={item ? 1 : 0} onPress={handlePress} tracksViewChanges={true}>
+      {item?.kind === "cluster" ? (
+        <VenuePin mode="cluster" count={item.count} venueName="" />
+      ) : group && priceSummary?.kind === "free" ? (
         <VenuePin mode="free" fieldCount={group.fields.length} venueName={group.venue.name} />
       ) : group && priceSummary?.kind === "from" ? (
         <VenuePin
@@ -310,18 +339,46 @@ export function ExploreScreen() {
   }, [results, openNowOn, freeOnlyOn]);
 
   const groups = useMemo(() => groupByVenue(filteredResults), [filteredResults]);
+  // O(1) lookup from a placement's venueId back to its full group (fields,
+  // venue_type, name) — the sheet list still iterates `groups` directly and
+  // is unaffected by any of this; only pin placement is viewport-driven.
+  const groupsById = useMemo(() => {
+    const map = new Map<string, ExploreVenueGroup>();
+    for (const g of groups) map.set(g.venue.id, g);
+    return map;
+  }, [groups]);
+
+  // Grid-bin whatever's visible in currentRegion (#498) instead of taking
+  // the first MAX_MARKERS of the full result list — see lib/mapClustering.ts
+  // for the pure binning function. currentRegion only updates from
+  // onRegionChangeComplete (handleRegionChange below), so this recomputes on
+  // a settled pan/zoom (plus the initial region), never continuously during
+  // a drag.
+  const clusterableVenues = useMemo<ClusterableVenue[]>(
+    () =>
+      groups
+        .filter((g) => g.venue.lat !== null && g.venue.lng !== null)
+        .map((g) => ({ id: g.venue.id, lat: g.venue.lat!, lng: g.venue.lng! })),
+    [groups]
+  );
+  const placements = useMemo(
+    () => computeMapPlacements(clusterableVenues, currentRegion, MAX_MARKERS),
+    [clusterableVenues, currentRegion]
+  );
 
   // Fixed-size slot array — see VenueMarkerSlot for why this must stay a
-  // constant length regardless of how many venues are loaded.
-  const { markerSlots, placeableCount } = useMemo(() => {
-    const valid = groups.filter((g) => g.venue.lat !== null && g.venue.lng !== null);
-    const pool: (ExploreVenueGroup | null)[] = new Array(MAX_MARKERS).fill(null);
-    for (let i = 0; i < Math.min(valid.length, MAX_MARKERS); i++) {
-      pool[i] = valid[i]!;
+  // constant length regardless of how many placements clustering produced.
+  // computeMapPlacements is expected to already fit within MAX_MARKERS (its
+  // adaptive coarsening loop keeps merging until it does), but the slice
+  // below is kept as a defensive backstop so the pool itself can never
+  // overrun even in a pathological case.
+  const markerSlots = useMemo<(PlacedItem | null)[]>(() => {
+    const pool: (PlacedItem | null)[] = new Array(MAX_MARKERS).fill(null);
+    for (let i = 0; i < Math.min(placements.length, MAX_MARKERS); i++) {
+      pool[i] = placements[i]!;
     }
-    return { markerSlots: pool, placeableCount: valid.length };
-  }, [groups]);
-  const overflowCount = Math.max(0, placeableCount - MAX_MARKERS);
+    return pool;
+  }, [placements]);
 
   const selectedGroup = useMemo(
     () => (selectedVenueId ? groups.find((g) => g.venue.id === selectedVenueId) ?? null : null),
@@ -373,6 +430,27 @@ export function ExploreScreen() {
     },
     [panToVenue, groups]
   );
+
+
+  // Tapping a cluster pin zooms into its bounding region — same programmatic-
+  // pan bookkeeping as panToVenue (skips the next auto-refetch; see
+  // handleRegionChange), just fit-to-bounds instead of a fixed-delta pan.
+  const handleClusterPress = useCallback((cluster: PlacedCluster) => {
+    if (!mapRef.current) return;
+    const { minLat, maxLat, minLng, maxLng } = cluster.bounds;
+    const latSpan = Math.max(maxLat - minLat, MIN_CLUSTER_SPAN);
+    const lngSpan = Math.max(maxLng - minLng, MIN_CLUSTER_SPAN);
+    isProgrammaticPanRef.current = true;
+    mapRef.current.animateToRegion(
+      {
+        latitude: (minLat + maxLat) / 2,
+        longitude: (minLng + maxLng) / 2,
+        latitudeDelta: latSpan * CLUSTER_ZOOM_PADDING,
+        longitudeDelta: lngSpan * CLUSTER_ZOOM_PADDING,
+      },
+      350
+    );
+  }, []);
 
   const handleMapPress = useCallback(() => setSelectedVenueId(null), []);
 
@@ -481,8 +559,14 @@ export function ExploreScreen() {
         showsUserLocation
         showsMyLocationButton={false}
       >
-        {markerSlots.map((g, i) => (
-          <VenueMarkerSlot key={`slot-${i}`} group={g} onPress={handleMarkerPress} />
+        {markerSlots.map((item, i) => (
+          <VenueMarkerSlot
+            key={`slot-${i}`}
+            item={item}
+            groupsById={groupsById}
+            onPressVenue={handleMarkerPress}
+            onPressCluster={handleClusterPress}
+          />
         ))}
 
         {/* Selection halo — always mounted, see VenueMarkerSlot for why. */}
@@ -562,16 +646,11 @@ export function ExploreScreen() {
           />
         </ScrollView>
 
-        {overflowCount > 0 ? (
-          <View
-            style={[styles.banner, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}
-            accessibilityLiveRegion="polite"
-          >
-            <Text size="xs" variant="secondary">
-              Showing {MAX_MARKERS} of {placeableCount} venues. Move the map to see others.
-            </Text>
-          </View>
-        ) : null}
+        {/* The "Showing 50 of N venues" overflow banner (pre-#498) is gone:
+            clustering means the pin pool now always represents every visible
+            venue (as a single or folded into a cluster), so there's no
+            longer a subset being silently hidden for the banner to warn
+            about. */}
 
         {permissionStatus === "granted" && coordsFetchFailed ? (
           <View
@@ -636,6 +715,38 @@ export function ExploreScreen() {
             {freeFieldsCount} free to play
           </Text>
         </View>
+
+        {/* Pinned card for the venue selected on the map. scrollToIndex
+            inside a peeked BottomSheetFlatList is unreliable (estimated
+            layouts, tiny visible window), so the tapped pin's card renders
+            HERE, always visible at the top of the sheet, instead of hoping
+            the list scrolled. Cleared by the map's own deselect tap or the
+            close affordance. */}
+        {selectedGroup ? (
+          <View
+            style={[styles.selectedCardWrap, { borderColor: colors.brand }]}
+            accessibilityLiveRegion="polite"
+          >
+            <View style={styles.selectedCardHeader}>
+              <Text size="xs" weight="bold" style={{ color: colors.brand, letterSpacing: 1 }}>
+                SELECTED ON MAP
+              </Text>
+              <Pressable
+                onPress={() => setSelectedVenueId(null)}
+                accessibilityRole="button"
+                accessibilityLabel="Dismiss selected venue"
+                hitSlop={spacing.md}
+              >
+                <Ionicons name="close" size={18} color={colors.textSecondary} />
+              </Pressable>
+            </View>
+            <ExploreCard
+              group={selectedGroup}
+              userCoords={userCoords}
+              onPress={() => handleCardPress(selectedGroup.venue.id)}
+            />
+          </View>
+        ) : null}
 
         {staleFromCache ? (
           <View
@@ -849,6 +960,21 @@ const styles = StyleSheet.create({
     shadowRadius: 3,
     shadowOffset: { width: 0, height: 1 },
     elevation: 2,
+  },
+  selectedCardWrap: {
+    marginHorizontal: spacing.lg,
+    marginBottom: spacing.sm,
+    borderWidth: 1,
+    borderRadius: borderRadius.lg,
+    padding: spacing.xs,
+  },
+  selectedCardHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    minHeight: 32,
   },
   sheetHeader: {
     flexDirection: "row",
