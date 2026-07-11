@@ -15,6 +15,10 @@ const SELECTED_SIZE = 46;
 // REQ-F0.2 — minimum touch target. The dot itself stays its small visual
 // size; only the invisible hit area around it grows.
 const FREE_HIT_AREA_SIZE = 44;
+// Cluster pill's minimum height meets the same 44pt touch-target rule
+// (REQ-F0.2) directly, rather than via an oversized invisible hit area —
+// unlike the free dot, the cluster pill's whole visible face is the target.
+const CLUSTER_MIN_SIZE = 44;
 
 type CountProps = {
   mode: "count";
@@ -39,12 +43,18 @@ type SelectedProps = {
   mode: "selected";
 };
 
+type ClusterProps = {
+  mode: "cluster";
+  /** Number of venues represented by this cluster pin. */
+  count: number;
+};
+
 type Props = {
   venueName: string;
-} & (CountProps | PriceProps | FreeProps | SelectedProps);
+} & (CountProps | PriceProps | FreeProps | SelectedProps | ClusterProps);
 
 /**
- * Map pin — four modes:
+ * Map pin — five modes:
  *   - `count`: brand teardrop pin (Ionicons location-sharp). No number;
  *     field count lives in the bottom card after tapping. Fallback for a
  *     venue whose pricing is simply unknown (not free, not priced — see
@@ -57,13 +67,20 @@ type Props = {
  *     unmistakable "this one" marker. Rendered by a single dedicated
  *     selection marker that's always mounted and only moved/faded, so its
  *     content never changes and `tracksViewChanges={false}` stays safe.
+ *   - `cluster`: a numeral pill (structurally cloned from `price`'s pill —
+ *     surfaceElevated background, hairline border) showing the venue count
+ *     for a grid-binned group (see lib/mapClustering.ts). Cloned rather than
+ *     invented from scratch because the price pill is proven to rasterize
+ *     under the Fabric interop (see incident 2); a from-scratch shape would
+ *     need its own on-device proof.
  *
- * The base price/free/count pins are intentionally static (no selected
- * styling of their own): repainting a custom-view marker would require
- * flipping tracksViewChanges, which crashes under the Expo Go 54 Fabric
- * interop. The separate filled `selected` marker sits on top of the chosen
- * pin instead — this is why it can't show the venue's own price digits (its
- * content must never vary per-selection under a frozen-snapshot marker).
+ * The base price/free/count/cluster pins are intentionally static (no
+ * selected styling of their own): repainting a custom-view marker would
+ * require flipping tracksViewChanges, which crashes under the Expo Go 54
+ * Fabric interop. The separate filled `selected` marker sits on top of the
+ * chosen pin instead — this is why it can't show the venue's own price
+ * digits (its content must never vary per-selection under a
+ * frozen-snapshot marker).
  */
 export function VenuePin(props: Props) {
   const colors = useTheme();
@@ -129,6 +146,35 @@ export function VenuePin(props: Props) {
     );
   }
 
+  if (props.mode === "cluster") {
+    const a11y = `${props.count} venues, zooms in when tapped`;
+    return (
+      <View
+        accessibilityRole="button"
+        accessibilityLabel={a11y}
+        style={[
+          styles.clusterPill,
+          {
+            backgroundColor: colors.surfaceElevated,
+            borderColor: colors.border,
+          },
+        ]}
+      >
+        <Text
+          font="display"
+          style={{
+            color: colors.textPrimary,
+            fontSize: fontSize.md,
+            letterSpacing: 0.3,
+          }}
+          numberOfLines={1}
+        >
+          {props.count}
+        </Text>
+      </View>
+    );
+  }
+
   if (props.mode === "free") {
     const a11y = [
       props.venueName,
@@ -183,6 +229,24 @@ const styles = StyleSheet.create({
   pricePill: {
     minWidth: 48,
     borderRadius: 18,
+    borderWidth: StyleSheet.hairlineWidth,
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 6,
+    shadowOpacity: 0.22,
+    elevation: 4,
+  },
+  // Structurally cloned from pricePill above (same background/border/shadow
+  // treatment, proven to rasterize — see incident 2), sized up to
+  // CLUSTER_MIN_SIZE so the pill itself is the 44pt touch target rather than
+  // needing a separate invisible hit area like the free dot.
+  clusterPill: {
+    minWidth: CLUSTER_MIN_SIZE,
+    minHeight: CLUSTER_MIN_SIZE,
+    paddingHorizontal: spacing.sm + 2,
+    borderRadius: CLUSTER_MIN_SIZE / 2,
     borderWidth: StyleSheet.hairlineWidth,
     alignItems: "center",
     justifyContent: "center",

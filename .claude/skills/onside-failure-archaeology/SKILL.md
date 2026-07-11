@@ -362,6 +362,16 @@ Evidence: `git log --follow -- .github/workflows/fly-deploy.yml` is empty; workf
 
 Status: documented; deploys are manual. Committing the workflow plus a `FLY_API_TOKEN` secret is an open owner decision (issue #492 footnote). Lesson: a file in the tree is not a fact about the system; verify workflows with `git ls-files` and the GitHub workflow registry before stating deploy behavior.
 
+## Incident 18: git checkout wiped uncommitted agent work (2026-07-11, near miss)
+
+Symptom: after an on-device verification pass, the Explore map silently lost its clustering integration; pins rendered as unclustered singles again with no error anywhere.
+
+Root cause: the coordinator made a temporary zoom-level edit to ExploreScreen.tsx in a worktree carrying UNCOMMITTED agent work, then reverted it with `git checkout <file>`, which restored the file to HEAD and destroyed the agent's entire uncommitted integration along with the temp edit.
+
+Evidence: verification screenshots before and after the wipe in the #498 PR trail; the file was restored from the authoring agent's context and re-verified identical in intent.
+
+Status: recovered same day. Rule: NEVER `git checkout`/`git restore` a file in a worktree holding uncommitted work. Revert temporary instrumentation with an exact-string replace of only what you added, or `git stash push`/`pop` scoped to your own edit. Cost: ~30 minutes plus a full re-verification cycle.
+
 ## How to add an entry
 
 1. Fix first, chronicle second. The entry must cite a MERGED commit hash (from
