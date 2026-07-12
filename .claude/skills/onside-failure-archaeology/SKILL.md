@@ -60,6 +60,9 @@ of surviving comments or guards), **Status** (`fixed`; `guarded` = fixed plus a 
 | 14 | Theme flash before hydration | app startup | fixed |
 | 15 | Minor incidents (Redis crash, recovery-redirect revert, App Store binary) | various | fixed |
 | 16 | Open wounds (Sentry DSN, dead calendar prompt, split scraper UA) | various | open |
+| 17 | Untracked deploy workflow believed to auto-deploy the API | API deploys | documented (deploys are manual) |
+| 18 | git checkout wiped uncommitted agent work | dev workflow | recovered (rule in entry) |
+| 19 | Vercel dropped the production deploy for a merge | site deploys | fixed (trigger commit) |
 
 ---
 
@@ -372,6 +375,30 @@ Evidence: verification screenshots before and after the wipe in the #498 PR trai
 
 Status: recovered same day. Rule: NEVER `git checkout`/`git restore` a file in a worktree holding uncommitted work. Revert temporary instrumentation with an exact-string replace of only what you added, or `git stash push`/`pop` scoped to your own edit. Cost: ~30 minutes plus a full re-verification cycle.
 
+## Incident 19: Vercel dropped the production deploy for a merge (2026-07-12)
+
+Symptom: a site fix (PR #502, day-map hero in light theme) merged with CI green at 07:03 UTC,
+but getonside.ca kept serving the old CSS; the owner reported the hero still dark well after
+the merge. The live stylesheet still contained the pre-fix rule
+(`background: var(--hero-surface)` on `.night-map`).
+
+Root cause: Vercel's GitHub integration created the Preview deployment for the branch push at
+07:03:15Z but never created a Production deployment for the main push (merge `99d15c0` at
+07:03:28Z, 13 seconds later). Most likely a dropped webhook delivery on Vercel's side; nothing
+in the repo caused it and nothing in the repo can prevent it. The failure is silent: CI is
+green, the merge is on main, and only the deployments list shows the gap.
+
+Evidence: `gh api repos/LaithAlz/fieldstack/deployments` on 2026-07-12 listed Preview
+`4a86a1d` (07:03:15Z) and no Production entry newer than the previous day's `594c794`;
+a live-CSS probe (curl the homepage, extract the stylesheet href, grep the chunk for
+`.night-map{`) showed the stale rule; empty trigger commit `d4ee59b` ("Trigger site deploy")
+produced a successful Production deployment, after which the same probe showed the fixed rule.
+
+Status: fixed by the trigger commit. Rule: after merging a site change, confirm a Production
+deployment exists for the merge SHA before concluding anything about the change itself
+(command home: onside-run-and-operate, section 5); if none arrives, push an empty commit to
+main. Lesson: check what is deployed before debugging what is written.
+
 ## How to add an entry
 
 1. Fix first, chronicle second. The entry must cite a MERGED commit hash (from
@@ -410,6 +437,7 @@ from the repo root to re-verify the drift-prone claims:
 | Calendar prompt still unwired | `grep -rn "promptAddToCalendarOnReturn" fieldstack-app/src --include="*.ts*"` (1 file = still dead) |
 | Failed scrape run that exposed incident 9 | `gh run view 28731318093 --json workflowName,conclusion,createdAt` |
 | Price single-sources intact | `grep -n "isFreeVenue" fieldstack-app/src/lib/priceDisplay.ts site/lib/venues.ts` |
+| Incident 19 trigger commit on main | `git log --oneline -1 d4ee59b` |
 
 Unverified items are labeled inline: the canonical scraper User-Agent (incident 16) and the
 original intent behind the `7303c88` mis-commit (incident 15) are not recoverable from git alone.

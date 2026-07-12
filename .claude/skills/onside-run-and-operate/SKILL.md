@@ -254,6 +254,17 @@ gh api repos/LaithAlz/fieldstack/deployments \
 
 If the deploy is green but the browser shows old content, suspect CDN caching first: hard-refresh (Cmd+Shift+R) before debugging the build.
 
+If that list shows NO Production entry for your merge SHA, Vercel missed the main push
+(it happened on 2026-07-12; story: onside-failure-archaeology incident 19). Trigger a
+deploy without touching code:
+
+```sh
+git commit --allow-empty -m "Trigger site deploy" && git push origin main
+```
+
+After merging any site change, confirm a Production deployment exists for the merge
+before evaluating the change on getonside.ca.
+
 ### iOS app via EAS
 
 This section is the raw build/submit mechanics only. For the full App Store
