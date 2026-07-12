@@ -62,6 +62,7 @@ intent at time of writing and code wins.
 | `.maestro/README.md` | | Maestro screenshot/smoke flows | AUTHORITATIVE for how to run them |
 | `fieldstack-app/docs/{fieldstack-issues.md, standards.md}` | | May-era planning artifacts (component build order, REQ-F0.x standards) | HISTORICAL. Do not update; do not treat as current process |
 | `.claude/skills/onside-*` | | The operational knowledge library (this skill and its siblings) | AUTHORITATIVE; each skill ends with a Provenance section |
+| `AGENTS.md` (root) | | Entry point for non-Claude agents (Codex CLI): skill routing table + one-line hard-rule digests, each citing its home. `.agents/skills` is a symlink to `.claude/skills`, so both harnesses read one library | AUTHORITATIVE as a pointer file; if it disagrees with a skill, the skill wins and AGENTS.md gets fixed in the same PR |
 
 Rule: one home per fact. If two docs state the same fact, one of them must become a
 pointer to the other in your PR.
@@ -320,4 +321,5 @@ library, not yet in `docs/`). Re-verify from the repo root:
 | Bug issue shape | `gh issue view 454 --json body -q .body` |
 | Build-order shipped marker convention | `sed -n '397,426p' docs/scraping.md` |
 | Night Kickoff comment renamed yet | `grep -rn "Night Kickoff" fieldstack-app/src` |
+| AGENTS.md skill count and symlink intact (as of 2026-07-12: 17 skills) | `ls -la .agents/skills && ls .claude/skills \| wc -l && grep -n "17 skills" AGENTS.md` |
 | Decision count D1 to D14 | `grep -c "^### D" docs/architecture.md` |
