@@ -1,10 +1,10 @@
 /**
- * Decorative "every field, lit up" hero panel: a night-map card (always the
- * dark hero-surface token, in both light and dark site themes — the same
- * night palette the app ships) with a faint street grid and a scatter of
- * field pins. Replaces a static app screenshot with pure CSS, and doubles as
- * the home for the real, statically-fetched venue count in the display
- * (numeral) face.
+ * Decorative "every field" hero panel: a stylized map card with a faint
+ * street grid and a scatter of field pins. Themed with the site (paper day
+ * map in light, the app's night map in dark; the component name keeps the
+ * dark-theme identity). Replaces a static app screenshot with pure CSS, and
+ * doubles as the home for the real, statically-fetched venue count in the
+ * display (numeral) face.
  */
 export function NightMap({ count }: { count: number }) {
   return (
@@ -21,7 +21,7 @@ export function NightMap({ count }: { count: number }) {
       {count > 0 && (
         <div className="night-map-stat">
           <b>{count}</b>
-          <span>fields lit up tonight</span>
+          <span>venues across the GTA</span>
         </div>
       )}
     </div>
