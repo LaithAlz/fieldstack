@@ -8,7 +8,7 @@
  */
 export function NightMap({ count }: { count: number }) {
   return (
-    <div className="night-map" role="img" aria-label="Stylized night map of soccer fields across the GTA">
+    <div className="night-map" role="img" aria-label="Stylized map of soccer fields across the GTA">
       <div className="night-map-grid" />
       <div className="night-map-glow" />
       <span className="nm-pin nm-pin-1" />
