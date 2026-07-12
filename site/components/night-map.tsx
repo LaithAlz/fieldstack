@@ -21,7 +21,7 @@ export function NightMap({ count }: { count: number }) {
       {count > 0 && (
         <div className="night-map-stat">
           <b>{count}</b>
-          <span>venues across the GTA</span>
+          <span>venues ready for kickoff</span>
         </div>
       )}
     </div>
