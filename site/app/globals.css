@@ -142,9 +142,9 @@ a:hover { color: var(--brand-deep); }
 .stat-line .dot { width: 4px; height: 4px; border-radius: 50%; background: var(--text-3); }
 .stat-line span { color: var(--text-2); font-weight: 500; }
 
-/* ---------- night map (hero art) ----------
-   Always the night palette (--hero-surface/--on-hero stay dark navy in both
-   the light and dark site themes) — pure CSS, no screenshot needed. */
+/* ---------- hero map (hero art) ----------
+   Themed with the site (paper day map in light, night map in dark) — pure
+   CSS, no screenshot needed. Class names keep the night-map prefix. */
 .hero-map-wrap { display: flex; justify-content: center; position: relative; }
 .hero-map-wrap::before {
   content: ""; position: absolute; width: 360px; height: 360px; border-radius: 50%;
