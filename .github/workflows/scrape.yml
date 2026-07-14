@@ -54,6 +54,26 @@ jobs:
           fi
           bun scripts/scrape/run.ts all
 
+      # The google scrape above re-upserts every fetched venue with
+      # is_active=true, which reactivates the club/academy noise that refine
+      # previously deactivated (the cycle rule documented in refine.ts:
+      # "run refine after every google scrape"). Without this step the weekly
+      # run silently undoes the cleanup — observed 2026-07-13, when prod went
+      # from 592 to 751 active venues. Runs BEFORE photo enrichment so paid
+      # photo lookups skip venues this step deactivates. `always()` for the
+      # same reason as the steps below.
+      - name: Refine google noise
+        if: ${{ always() }}
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          if [ -z "$SUPABASE_SERVICE_ROLE_KEY" ] || [ -z "$SUPABASE_URL" ]; then
+            echo "::notice::Skipping refine — Supabase secrets not set."
+            exit 0
+          fi
+          bun scripts/scrape/refine.ts --apply
+
       # Weekly photo refresh is NOT optional freshness polish: the stored
       # googleusercontent URIs are short-lived per Google's terms, so if this
       # stops running, venue photos rot into broken images (clients then fall
