@@ -97,10 +97,17 @@ Every run ends with a per-source block plus a freshness line:
 
 ```
 [scrape] ── run summary ──────────────────────────
-[scrape] osm          fetched 412  upserted 410 venues / 455 fields
+[scrape] osm          fetched 81   upserted 81 venues / 81 fields
 [scrape] playtomic    fetched 0    upserted 0 venues / 0 fields
 [scrape] freshness: 12 active venues not rescraped in 14+ days
 ```
+
+Realistic magnitudes so drops are recognizable (verified against prod
+2026-07-14): osm ~80 on a full sweep (82 osm venues exist in the DB, ever),
+google ~295 fetched, mississauga 140, toronto 135, brampton 91. An osm figure
+in the 30s-50s means one or more cities lost every Overpass attempt that run
+(the adapter rotates endpoints since #514); the missed venues go stale, not
+inactive.
 
 How to read it:
 - `fetched` = venues the adapter returned from upstream. A source that threw prints a `FAILED` line with its error message instead.
