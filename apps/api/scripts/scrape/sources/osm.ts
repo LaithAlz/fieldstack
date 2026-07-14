@@ -24,7 +24,27 @@ import type { FieldSize, FieldSurface, VenueType } from "../fieldEnums.js";
 import { loadCities } from "../lib/registry.js";
 
 const AREA_OFFSET = 3_600_000_000;
-const OVERPASS_URL = "https://overpass-api.de/api/interpreter";
+
+/**
+ * Public Overpass instances, tried in order on retry (attempt N uses
+ * endpoint N mod length). The main instance's dispatcher rejects reads
+ * within seconds when overloaded, and instances fail independently, so
+ * rotating raises per-city success odds far more than re-hitting one host.
+ * Observed 2026-07-13/14: main = dispatcher busy, Toronto + Hamilton lost
+ * all 4 same-host attempts; kumi = slow but processing; private.coffee =
+ * intermittent. Mirrors can lag the main DB by days, which is fine at a
+ * weekly cadence.
+ */
+const OVERPASS_ENDPOINTS = [
+  "https://overpass-api.de/api/interpreter",
+  "https://overpass.kumi.systems/api/interpreter",
+  "https://overpass.private.coffee/api/interpreter",
+];
+
+/** Client-side cap per request: [timeout:120] server-side, plus headroom.
+ * Without it a hung mirror (observed on private.coffee) stalls the city
+ * until the runner gives up on the whole job. */
+const FETCH_TIMEOUT_MS = 150_000;
 
 function buildQueryForCity(relationId: number): string {
   const areaId = AREA_OFFSET + relationId;
@@ -125,26 +145,29 @@ async function sleep(ms: number): Promise<void> {
 }
 
 /**
- * Fetch with retry on 429 / 503 / 504. Overpass throttles aggressive
- * scrapers; per-IP slot reservations live for ~30s. Backoff at 8s,
- * 20s, 40s.
+ * Fetch with retry on 429 / 503 / 504 and endpoint rotation. Overpass
+ * throttles aggressive scrapers; per-IP slot reservations live for ~30s.
+ * Each retry backs off AND moves to the next endpoint, so a chronically
+ * busy instance costs one attempt, not the whole city.
  */
 async function fetchOsmForCity(
   cityName: string,
   relationId: number
 ): Promise<OsmElement[]> {
-  const backoffsMs: number[] = [0, 8000, 20000, 40000];
+  const backoffsMs: number[] = [0, 8000, 20000, 30000, 45000, 60000];
   let lastErr: unknown = null;
   for (let attempt = 0; attempt < backoffsMs.length; attempt++) {
+    const endpoint =
+      OVERPASS_ENDPOINTS[attempt % OVERPASS_ENDPOINTS.length] as string;
     const delayMs = backoffsMs[attempt] ?? 0;
     if (delayMs > 0) {
       console.log(
-        `[osm]   ${cityName}: backing off ${delayMs / 1000}s before retry`
+        `[osm]   ${cityName}: backing off ${delayMs / 1000}s, retrying via ${new URL(endpoint).host}`
       );
       await sleep(delayMs);
     }
     try {
-      const res = await fetch(OVERPASS_URL, {
+      const res = await fetch(endpoint, {
         method: "POST",
         headers: {
           "Content-Type": "application/x-www-form-urlencoded",
@@ -153,6 +176,7 @@ async function fetchOsmForCity(
         body: new URLSearchParams({
           data: buildQueryForCity(relationId),
         }).toString(),
+        signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
       });
       if (res.status === 429 || res.status === 503 || res.status === 504) {
         lastErr = new Error(`HTTP ${res.status}`);
