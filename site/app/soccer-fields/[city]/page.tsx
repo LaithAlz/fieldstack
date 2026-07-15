@@ -15,6 +15,7 @@ import {
   venuePriceState,
   type Venue,
 } from "@/lib/venues";
+import { jsonLdScript } from "@/lib/safe";
 
 // The pSEO play for "indoor soccer <city>" / "soccer fields <city>" — one
 // static page per city with enough venues to not be thin. Statically
@@ -109,11 +110,11 @@ export default async function CityPage({ params }: Props) {
       <Nav />
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListLd) }}
+        dangerouslySetInnerHTML={{ __html: jsonLdScript(itemListLd) }}
       />
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbLd) }}
+        dangerouslySetInnerHTML={{ __html: jsonLdScript(breadcrumbLd) }}
       />
 
       <header className="hero venues-hero">

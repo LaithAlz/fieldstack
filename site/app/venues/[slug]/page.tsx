@@ -15,6 +15,7 @@ import {
   slugify,
   type Venue,
 } from "@/lib/venues";
+import { jsonLdScript } from "@/lib/safe";
 
 export const dynamicParams = false;
 
@@ -124,8 +125,8 @@ export default async function VenuePage({
   return (
     <>
       <Nav />
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdScript(jsonLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdScript(breadcrumbLd) }} />
 
       <article className="venue">
         <nav className="crumbs">
