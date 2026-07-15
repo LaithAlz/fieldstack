@@ -6,7 +6,6 @@ import rateLimit from "@fastify/rate-limit";
 import { ZodError } from "zod";
 import { ApiError } from "./lib/errors.js";
 import { redis } from "./lib/redis.js";
-import { verifyJWT } from "./lib/verifyJWT.js";
 import { venuesRoutes } from "./routes/venues.js";
 import { fieldsRoutes } from "./routes/fields.js";
 import { searchRoutes } from "./routes/search.js";
@@ -41,11 +40,24 @@ await app.register(cors, {
 });
 
 // Global rate limit: 60 req/min per IP. The search endpoint sets its own
-// per-route limit in searchRoutes (also 60/min — see the comment there).
+// per-route limit in searchRoutes (also 60/min — see the comment there); it
+// inherits this keyGenerator.
+//
+// Key off Fly's `Fly-Client-IP`, not `req.ip`. With trustProxy=true (needed so
+// req.ip is real behind Fly), Fastify honours the whole X-Forwarded-For chain,
+// and Fly *appends* the client IP rather than replacing it — so a client that
+// pre-seeds `X-Forwarded-For: <random>` makes req.ip the spoofed leftmost
+// value and gets a fresh bucket per request, defeating the limit. Fly-Client-IP
+// is set by the proxy and cannot be forged through it. Fall back to req.ip for
+// local/direct runs where the header is absent.
 await app.register(rateLimit, {
   global: true,
   max: 60,
   timeWindow: "1 minute",
+  keyGenerator: (req) => {
+    const flyIp = req.headers["fly-client-ip"];
+    return (typeof flyIp === "string" && flyIp) || req.ip;
+  },
   errorResponseBuilder: (_req, context) => ({
     data: null,
     error: {
@@ -55,16 +67,12 @@ await app.register(rateLimit, {
   }),
 });
 
-// Global JWT preHandler. Permissive: attaches `req.user` when the
-// Authorization bearer token validates, leaves it null otherwise. Public
-// reads (venues / fields / search) keep working for guests; future
-// user-scoped endpoints opt in by checking `req.user` themselves.
-//
-// No server-side auth routes exist today (the client talks to Supabase
-// directly for sign-in / sign-up / sign-out), so the "skip auth routes"
-// exemption is moot. If we ever add /auth/* on this server, exempt them
-// explicitly via app.register with a scoped preHandler instead.
-app.addHook("preHandler", verifyJWT);
+// No global auth hook. Every route on this server serves public catalog data
+// (venues / fields / search) and none reads `req.user`, so registering
+// `verifyJWT` globally only added a blocking Supabase `auth.getUser()` round
+// trip to every request that carries any bearer token — pure cost and a DoS
+// amplifier. When a user-scoped route is added, register `verifyJWT` (still in
+// src/lib/verifyJWT.ts) as a scoped preHandler on just that route.
 
 // Centralized error → response shape. Routes throw ApiError for known cases;
 // Zod parse failures bubble up as ZodError; anything else is a 500.
