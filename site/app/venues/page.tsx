@@ -6,6 +6,7 @@ import { AppStoreButton } from "@/components/app-store-button";
 import { PitchLines } from "@/components/pitch-lines";
 import { VenueFinder, type FinderVenue } from "@/components/venue-finder";
 import { getAllVenues, getVenuesByCity, surfaceLabel, sizeLabel, venuePriceState } from "@/lib/venues";
+import { jsonLdScript } from "@/lib/safe";
 
 const VENUES_TITLE = "Find Soccer Fields in the GTA: Indoor, Turf & Futsal | Onside";
 const VENUES_DESCRIPTION =
@@ -59,7 +60,7 @@ export default async function VenuesIndex() {
   return (
     <>
       <Nav />
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdScript(itemListLd) }} />
 
       <header className="hero venues-hero">
         <div className="wrap">

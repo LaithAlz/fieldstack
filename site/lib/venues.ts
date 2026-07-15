@@ -10,6 +10,7 @@
  */
 
 import { createClient } from "@supabase/supabase-js";
+import { safeHttpUrl } from "./safe";
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY;
@@ -155,11 +156,13 @@ async function loadVenues(): Promise<Venue[]> {
         size: f.size,
         pricePerHour: f.price_per_hour,
         priceNote: f.price_note,
-        bookingUrl: f.booking_url,
+        // Scraped URLs are untrusted; drop anything that isn't http(s) so a
+        // javascript:/data: value can never reach an href.
+        bookingUrl: safeHttpUrl(f.booking_url),
       }));
     const city = extractCity(r.address);
     const bookingUrl =
-      fields.find((f) => f.bookingUrl)?.bookingUrl ?? r.operator?.website ?? null;
+      fields.find((f) => f.bookingUrl)?.bookingUrl ?? safeHttpUrl(r.operator?.website) ?? null;
     return {
       id: r.id,
       name: r.name,
@@ -172,7 +175,7 @@ async function loadVenues(): Promise<Venue[]> {
       photoAttributions: r.photo_attributions ?? [],
       venueType: r.venue_type,
       operatorName: r.operator?.name ?? null,
-      operatorWebsite: r.operator?.website ?? null,
+      operatorWebsite: safeHttpUrl(r.operator?.website),
       fields,
       bookingUrl,
       slug: "", // filled below
