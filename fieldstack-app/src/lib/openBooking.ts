@@ -31,6 +31,7 @@ import * as Linking from "expo-linking";
 import { EVENT_BOOKING_REDIRECT_CONFIRMED, track } from "./analytics";
 import type { BookingAttempt } from "./bookingHistory";
 import { buildBookingUrl } from "./bookingUrl";
+import { isHttpUrl } from "./openExternalUrl";
 import { lightImpact } from "./haptics";
 import { scheduleBookingReminder } from "./notifications";
 import { preferredSlotDate, type PreferredSlot } from "./preferredSlot";
@@ -54,6 +55,11 @@ export async function openOperatorBooking(params: {
 
   if (!field.booking_url) {
     toast.show("This field doesn't have a booking link yet.", { type: "error" });
+    return;
+  }
+  // Untrusted scraped URL: never hand a non-http(s) scheme to openURL.
+  if (!isHttpUrl(field.booking_url)) {
+    toast.show("This field doesn't have a valid booking link yet.", { type: "error" });
     return;
   }
   const bookingUrl = field.booking_url;
