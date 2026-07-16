@@ -16,7 +16,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { Linking, Pressable, ScrollView, Share, StyleSheet, View } from "react-native";
+import { Pressable, ScrollView, Share, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { AmenityChip } from "../../components/AmenityChip";
@@ -34,6 +34,7 @@ import { useLocation } from "../../hooks/useLocation";
 import { useVenue } from "../../hooks/useVenue";
 import { useVenueReviews } from "../../hooks/useVenueReviews";
 import { useAuth } from "../../lib/auth";
+import { openHttpUrl } from "../../lib/openExternalUrl";
 import { reserveBarActionLabel, resolveBookingAction } from "../../lib/bookingAction";
 import { useBookingHistory } from "../../lib/bookingHistory";
 import { formatEndTime, formatSlotRange, formatTime12h } from "../../lib/datetime";
@@ -268,7 +269,9 @@ export function VenueDetailScreen({ route }: Props) {
   const handleViewOperatorInfo = async () => {
     if (!venue.website) return;
     try {
-      await Linking.openURL(venue.website);
+      // Scraped URL — only open if it's http(s).
+      const opened = await openHttpUrl(venue.website);
+      if (!opened) toast.show("Couldn't open the operator's website.", { type: "error" });
     } catch {
       toast.show("Couldn't open the operator's website.", { type: "error" });
     }

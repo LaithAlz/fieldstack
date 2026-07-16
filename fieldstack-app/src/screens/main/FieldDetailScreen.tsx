@@ -6,7 +6,7 @@ import type {
 } from "@react-navigation/native-stack";
 import { BottomSheetModal } from "@gorhom/bottom-sheet";
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { Linking, Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { AmenityChip } from "../../components/AmenityChip";
@@ -27,6 +27,7 @@ import {
   track,
 } from "../../lib/analytics";
 import { useAuth } from "../../lib/auth";
+import { openHttpUrl } from "../../lib/openExternalUrl";
 import { reserveBarActionLabel, resolveBookingAction } from "../../lib/bookingAction";
 import { useBookingHistory } from "../../lib/bookingHistory";
 import { formatSlotRange } from "../../lib/datetime";
@@ -186,7 +187,9 @@ export function FieldDetailScreen({ route }: Props) {
   const handleViewOperatorInfo = async () => {
     if (!venue.website) return;
     try {
-      await Linking.openURL(venue.website);
+      // Scraped URL — only open if it's http(s).
+      const opened = await openHttpUrl(venue.website);
+      if (!opened) toast.show("Couldn't open the operator's website.", { type: "error" });
     } catch {
       toast.show("Couldn't open the operator's website.", { type: "error" });
     }
