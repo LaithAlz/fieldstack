@@ -18,7 +18,7 @@ export const ListVenuesQuery = z
       .pipe(z.array(z.string().uuid()).min(1).max(100).optional()),
     lat: z.coerce.number().min(-90).max(90).optional(),
     lng: z.coerce.number().min(-180).max(180).optional(),
-    radius_km: z.coerce.number().positive().max(500).default(10),
+    radius_km: z.coerce.number().positive().max(100).default(10),
     limit: z.coerce.number().int().min(1).max(200).default(50),
     offset: z.coerce.number().int().min(0).default(0),
   })

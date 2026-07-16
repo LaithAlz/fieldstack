@@ -58,7 +58,8 @@ describe("SearchFieldsQuery", () => {
 
   it("bounds coordinates, radius, and pagination", () => {
     expect(() => SearchFieldsQuery.parse({ lat: "91", lng: "0" })).toThrow();
-    expect(() => SearchFieldsQuery.parse({ radius_km: "501" })).toThrow();
+    expect(() => SearchFieldsQuery.parse({ radius_km: "101" })).toThrow();
+    expect(SearchFieldsQuery.parse({ radius_km: "100" }).radius_km).toBe(100);
     expect(() => SearchFieldsQuery.parse({ limit: "201" })).toThrow();
     expect(() => SearchFieldsQuery.parse({ offset: "-1" })).toThrow();
   });

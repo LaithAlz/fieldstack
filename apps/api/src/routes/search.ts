@@ -35,7 +35,7 @@ export const SearchFieldsQuery = z
   .object({
     lat: z.coerce.number().min(-90).max(90).optional(),
     lng: z.coerce.number().min(-180).max(180).optional(),
-    radius_km: z.coerce.number().positive().max(500).default(10),
+    radius_km: z.coerce.number().positive().max(100).default(10),
     surface: surfaceList,
     size: sizeList,
     venue_type: venueTypeList,
