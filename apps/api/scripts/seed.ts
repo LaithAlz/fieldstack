@@ -326,6 +326,24 @@ const FIELDS: FieldSeed[] = [
 // Run
 // ---------------------------------------------------------------------------
 
+/**
+ * Refuse to run against anything that isn't a local Supabase stack. `wipe()`
+ * hard-deletes every operator/venue/field, so one `npm run seed` with a prod
+ * `.env` would destroy the live catalog. Local Supabase is always on
+ * 127.0.0.1/localhost; override with SEED_ALLOW_NONLOCAL=1 only if you truly
+ * mean to reseed a remote (you almost never do).
+ */
+function assertLocalTarget() {
+  const isLocal = /^https?:\/\/(127\.0\.0\.1|localhost)(:|\/|$)/.test(String(SUPABASE_URL));
+  if (isLocal || process.env.SEED_ALLOW_NONLOCAL === "1") return;
+  console.error(
+    `Refusing to seed: SUPABASE_URL is not local (${SUPABASE_URL}). seed.ts wipes ` +
+      `operators/venues/fields. Point apps/api/.env at the local stack, or set ` +
+      `SEED_ALLOW_NONLOCAL=1 if you really mean to wipe a remote database.`
+  );
+  process.exit(1);
+}
+
 async function wipe() {
   // Delete dependents first. Supabase requires a filter on .delete(), so we
   // use a guaranteed-no-match UUID to mean "all rows".
@@ -340,6 +358,7 @@ async function wipe() {
 }
 
 async function seed() {
+  assertLocalTarget();
   console.log("→ Wiping operators / venues / fields…");
   await wipe();
 

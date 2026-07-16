@@ -64,6 +64,16 @@ const PHOTO_WIDTH_PX = 1280;
 const MATCH_RADIUS_M = 300;
 /** Politeness delay between venues (ms). */
 const DELAY_MS = 120;
+/**
+ * Cap on paid Text Search resolutions per run. Each `resolvePlaceId` call is
+ * billed, and the venue set is whatever the scrape upserted — a poisoned or
+ * compromised source returning thousands of fake venues would otherwise drive
+ * unbounded Google spend on this weekly job. Steady state resolves well under
+ * this; hitting the cap means something upstream changed, and the run logs it
+ * and stops paying rather than silently burning budget. Roughly one full
+ * catalog's worth of first-time resolutions with headroom.
+ */
+const MAX_PAID_RESOLUTIONS = 1200;
 
 type VenueRow = {
   id: string;
@@ -150,8 +160,12 @@ async function fetchPlacePhotos(placeId: string): Promise<PlacePhoto[] | null> {
 
 /** Keyless googleusercontent URI for one photo resource. */
 async function fetchPhotoUri(photoName: string): Promise<string | null> {
+  // Key goes in the header, not the query string, so it can't leak via
+  // proxy/CDN/error logs. photoName is Google-supplied (`places/…/photos/…`)
+  // and its slashes are the path, so it is not URL-encoded here.
   const res = await fetch(
-    `https://places.googleapis.com/v1/${photoName}/media?maxWidthPx=${PHOTO_WIDTH_PX}&skipHttpRedirect=true&key=${GOOGLE_PLACES_API_KEY}`
+    `https://places.googleapis.com/v1/${photoName}/media?maxWidthPx=${PHOTO_WIDTH_PX}&skipHttpRedirect=true`,
+    { headers: { "X-Goog-Api-Key": GOOGLE_PLACES_API_KEY! } }
   );
   if (!res.ok) return null;
   const data = (await res.json()) as { photoUri?: string };
@@ -214,7 +228,7 @@ async function main() {
         if (candidate === v.google_place_id) usedStoredId++;
         break;
       }
-      if (!placeId) {
+      if (!placeId && usedPaidResolution < MAX_PAID_RESOLUTIONS) {
         const resolved = await resolvePlaceId(v);
         if (resolved) {
           usedPaidResolution++;
@@ -224,6 +238,11 @@ async function main() {
             placePhotos = result;
           }
         }
+      } else if (!placeId && usedPaidResolution >= MAX_PAID_RESOLUTIONS) {
+        console.warn(
+          `[photos] PAID-RESOLUTION CAP reached (${MAX_PAID_RESOLUTIONS}); skipping paid lookups for the rest of this run. Investigate the venue count before re-running.`
+        );
+        break;
       }
       // A dead stored id we couldn't replace gets cleared — otherwise every
       // future run short-circuits onto the same dead id forever.

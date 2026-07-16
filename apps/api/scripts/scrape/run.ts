@@ -57,6 +57,7 @@ import {
 import { findOperator } from "./lib/operatorMatcher.js";
 import { resolveFieldBooking } from "./lib/platformLinks.js";
 import { resolveVenueHours } from "./lib/venueHours.js";
+import { safeHttpUrl, safeHttpUrls } from "./lib/safeUrl.js";
 import {
   sourcePrefixCounts,
   writeFailures,
@@ -394,7 +395,8 @@ async function upsertVenue(
         address: v.address,
         lat: v.lat,
         lng: v.lng,
-        photos: v.photos,
+        // Drop any non-http(s) photo URLs before they reach clients.
+        photos: safeHttpUrls(v.photos),
         amenities: v.amenities,
         venue_type: v.venueType ?? null,
         is_active: true,
@@ -437,7 +439,8 @@ async function upsertField(
       surface: f.surface,
       size: f.size,
       price_per_hour: f.pricePerHour ?? null,
-      booking_url: booking.bookingUrl,
+      // Reject non-http(s) booking URLs (javascript:/data:) at ingestion.
+      booking_url: safeHttpUrl(booking.bookingUrl),
       booking_platform: booking.bookingPlatform,
       is_active: true,
     },
