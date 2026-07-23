@@ -77,6 +77,17 @@ describe("loadOperators — hours block end to end", () => {
         expect(["sun", "mon", "tue", "wed", "thu", "fri", "sat"]).toContain(day);
         if (value !== null) {
           expect(value).toMatch(/^\d{1,2}:\d{2}-\d{1,2}:\d{2}$/);
+          // Must ALSO satisfy the app's stricter parseRange (fieldstack-app
+          // src/lib/venueHours.ts): open < close <= 24:00. The registry regex
+          // alone would accept an inverted or >24h range that the "Open now"
+          // logic silently rejects, so the venue would fall back to the
+          // default window and this data would be a no-op. Guard against that.
+          const m = /^(\d{1,2}):(\d{2})-(\d{1,2}):(\d{2})$/.exec(value)!;
+          const open = Number(m[1]) * 60 + Number(m[2]);
+          const close = Number(m[3]) * 60 + Number(m[4]);
+          expect(open).toBeGreaterThanOrEqual(0);
+          expect(close).toBeGreaterThan(open);
+          expect(close).toBeLessThanOrEqual(24 * 60);
         }
       }
     }
