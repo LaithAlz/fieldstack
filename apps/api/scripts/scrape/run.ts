@@ -57,6 +57,7 @@ import {
 import { findOperator } from "./lib/operatorMatcher.js";
 import { resolveFieldBooking } from "./lib/platformLinks.js";
 import { resolveVenueHours } from "./lib/venueHours.js";
+import { resolveParkHours } from "./lib/parkHours.js";
 import { safeHttpUrl, safeHttpUrls } from "./lib/safeUrl.js";
 import {
   sourcePrefixCounts,
@@ -402,11 +403,13 @@ async function upsertVenue(
         is_active: true,
         data_source: "scrape",
         last_scraped_at: new Date().toISOString(),
-        // Adapter's own hours win (e.g. playtomic.ts); else fall back to the
-        // matched operator's hand-verified hours from operators.yaml. Applied
-        // on every run since `hours` is written unconditionally, not backfilled
+        // Hours precedence: the adapter's own observed hours win (e.g.
+        // playtomic.ts), else the matched operator's hand-verified hours from
+        // operators.yaml, else the municipal park bylaw window for public
+        // parks (lib/parkHours.ts). Null falls through to the app's default
+        // window. Written unconditionally on every run, not backfilled
         // (docs/scraping.md, lib/venueHours.ts).
-        hours: resolveVenueHours(v.hours, operator?.hours ?? null),
+        hours: resolveVenueHours(v.hours, operator?.hours ?? null) ?? resolveParkHours(v),
         booking_notes: v.bookingNotes ?? null,
         cancellation_policy: v.cancellationPolicy ?? null,
         // Only set when the adapter provided it, so sources that don't know

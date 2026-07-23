@@ -169,6 +169,20 @@ hours are re-applied every run rather than backfilled once. These are
 operator-published facts, not Google Places content, so storing them durably is
 compliant with §1.4.
 
+**Municipal park bylaw hours** (shipped, issue #492 option 2): public parks
+operate under a citywide bylaw window, not per-venue posted hours. `lib/parkHours.ts`
+encodes that window explicitly, with a bylaw citation per city, and the runner
+applies it as the LAST fallback: *adapter hours → operator hours → park bylaw
+window → null*. It applies only to `public_park` venues keyed on the municipal
+source prefix (`toronto:` open 05:30-24:00, Municipal Code Ch. 608; `mississauga:`
+06:00-23:00, Parks By-law 0197-2020, dawn approximated as 06:00; `brampton:`
+07:00-23:00, Park Lands By-law 161-83). This is a cited POLICY default that
+replaces the app's blanket 06:00-23:00 fallback for these venues with the actual
+legal window; it is not observed per-venue data. OSM parks in other cities keep
+the app default until their city's bylaw is added. Open follow-up: the app renders
+bylaw hours the same as operator hours; labeling them distinctly ("City park
+hours") is a separate UI refinement and does not affect Open-now correctness.
+
 ---
 
 ## 3. Operator connection — the booking model
