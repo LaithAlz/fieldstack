@@ -6,6 +6,7 @@ import { Nav } from "@/components/nav";
 import { Footer } from "@/components/footer";
 import { AppStoreButton } from "@/components/app-store-button";
 import { BookButton } from "@/components/book-button";
+import { OpenNowBadge } from "@/components/open-now-badge";
 import {
   getAllVenues,
   getVenueBySlug,
@@ -16,6 +17,7 @@ import {
   type Venue,
 } from "@/lib/venues";
 import { jsonLdScript } from "@/lib/safe";
+import { DISPLAY_DAYS, formatDay, hasHours, openingHoursSpec } from "@/lib/hours";
 
 export const dynamicParams = false;
 
@@ -92,6 +94,7 @@ export default async function VenuePage({
     ...(venueTypeLabel ? [{ label: "Type", value: venueTypeLabel }] : []),
   ];
 
+  const hoursSpec = openingHoursSpec(v.hours);
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "SportsActivityLocation",
@@ -106,6 +109,7 @@ export default async function VenuePage({
     ...(v.amenities.length
       ? { amenityFeature: v.amenities.map((a) => ({ "@type": "LocationFeatureSpecification", name: a })) }
       : {}),
+    ...(hoursSpec ? { openingHoursSpecification: hoursSpec } : {}),
   };
   const breadcrumbLd = {
     "@context": "https://schema.org",
@@ -217,6 +221,24 @@ export default async function VenuePage({
                 );
               })}
             </div>
+
+            {hasHours(v.hours) && (
+              <>
+                <h2 className="sub">
+                  Opening hours <OpenNowBadge hours={v.hours} />
+                </h2>
+                <table className="hours-table">
+                  <tbody>
+                    {DISPLAY_DAYS.map(({ key, label }) => (
+                      <tr key={key}>
+                        <th scope="row">{label}</th>
+                        <td>{formatDay(v.hours?.[key])}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </>
+            )}
 
             {v.amenities.length > 0 && (
               <>
