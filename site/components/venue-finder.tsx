@@ -5,6 +5,7 @@ import { useMemo, useState } from "react";
 
 import { VenueCard, type VenueCardData } from "@/components/venue-card";
 import { slugify } from "@/lib/venues";
+import { isOpenNow } from "@/lib/hours";
 
 /** Slim, serializable venue shape the finder needs for cards + filtering. */
 export type FinderVenue = VenueCardData;
@@ -23,19 +24,24 @@ export function VenueFinder({
   const [surface, setSurface] = useState<string | null>(null);
   const [size, setSize] = useState<string | null>(null);
   const [city, setCity] = useState("");
+  const [openNow, setOpenNow] = useState(false);
 
   const filtered = useMemo(() => {
     const needle = q.trim().toLowerCase();
+    // Evaluated at filter time; toggling re-runs the memo with the current
+    // clock. A venue with no/unknown hours is excluded when Open-now is on.
+    const now = new Date();
     return venues.filter((v) => {
       if (needle && !`${v.name} ${v.city}`.toLowerCase().includes(needle)) return false;
       if (city && v.city !== city) return false;
       if (surface && !v.surfaces.includes(surface)) return false;
       if (size && !v.sizes.includes(size)) return false;
+      if (openNow && isOpenNow(v.hours, now) !== true) return false;
       return true;
     });
-  }, [venues, q, surface, size, city]);
+  }, [venues, q, surface, size, city, openNow]);
 
-  const active = Boolean(q || surface || size || city);
+  const active = Boolean(q || surface || size || city || openNow);
 
   // Re-group the filtered set by city, biggest city first (preserves the
   // "Soccer fields in <city>" headings that matter for search ranking).
@@ -52,6 +58,7 @@ export function VenueFinder({
     setSurface(null);
     setSize(null);
     setCity("");
+    setOpenNow(false);
   };
 
   return (
@@ -109,6 +116,17 @@ export function VenueFinder({
                 {s}
               </button>
             ))}
+          </div>
+          <div className="chip-group">
+            <span className="chip-label">Availability</span>
+            <button
+              type="button"
+              className={`chip ${openNow ? "on" : ""}`}
+              aria-pressed={openNow}
+              onClick={() => setOpenNow((v) => !v)}
+            >
+              Open now
+            </button>
           </div>
           {active && (
             <button type="button" className="chip clear" onClick={reset}>

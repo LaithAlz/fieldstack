@@ -41,6 +41,7 @@ export default async function VenuesIndex() {
     sizes: [...new Set(v.fields.map((f) => sizeLabel(f.size)))],
     fieldCount: v.fields.length,
     price: venuePriceState(v),
+    hours: v.hours,
   }));
   const cityNames = byCity.map(([c]) => c);
 
