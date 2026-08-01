@@ -11,6 +11,8 @@ export type VenueCardData = {
   sizes: string[];
   fieldCount: number;
   price: PriceState;
+  /** Weekly hours `{ sun: "HH:MM-HH:MM" | null, ... }`, for the Open-now filter. */
+  hours?: Record<string, string | null> | null;
 };
 
 /**
