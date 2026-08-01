@@ -546,6 +546,20 @@ footer a:hover { color: var(--brand); }
 .amenities { display: flex; flex-wrap: wrap; gap: 9px; list-style: none; padding: 0; }
 .amenities li { font-size: 14px; color: var(--text-2); background: var(--panel-2);
   border: 1px solid var(--line); border-radius: var(--radius-md); padding: 7px 13px; text-transform: capitalize; }
+
+/* opening hours */
+.hours-table { width: 100%; max-width: 360px; border-collapse: collapse; }
+.hours-table th, .hours-table td { text-align: left; padding: 9px 4px; font-size: 15px;
+  border-bottom: 1px solid var(--line); }
+.hours-table th { color: var(--text-2); font-weight: 500; }
+.hours-table td { color: var(--text); font-variant-numeric: tabular-nums; text-align: right; }
+.hours-table tr:last-child th, .hours-table tr:last-child td { border-bottom: none; }
+.open-badge { display: inline-flex; align-items: center; margin-left: 10px; vertical-align: middle;
+  font-family: var(--font-body); font-size: 12px; font-weight: 700; letter-spacing: 0.3px;
+  text-transform: none; padding: 3px 10px; border-radius: var(--radius-pill); border: 1px solid; }
+.open-badge.is-open { color: var(--success); background: color-mix(in srgb, var(--success) 12%, transparent);
+  border-color: color-mix(in srgb, var(--success) 35%, transparent); }
+.open-badge.is-closed { color: var(--text-3); background: var(--panel-2); border-color: var(--line); }
 .venue-prose p { color: var(--text-2); font-size: 16px; max-width: 65ch; }
 
 .venue-aside { display: flex; flex-direction: column; gap: var(--space-lg); }

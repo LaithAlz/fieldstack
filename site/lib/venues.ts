@@ -38,6 +38,8 @@ export type Venue = {
   /** Author credit for the same-index photo — Google terms require display. */
   photoAttributions: string[];
   venueType: string | null;
+  /** Weekly opening hours `{ sun: "HH:MM-HH:MM" | null, ... }`, or null. */
+  hours: Record<string, string | null> | null;
   operatorName: string | null;
   operatorWebsite: string | null;
   fields: VenueField[];
@@ -92,6 +94,7 @@ type Row = {
   photo_attributions: string[] | null;
   venue_type: string | null;
   booking_notes: string | null;
+  hours: Record<string, string | null> | null;
   operator: { name: string | null; website: string | null } | null;
   fields:
     | {
@@ -130,7 +133,7 @@ async function loadVenues(): Promise<Venue[]> {
   const { data, error } = await supabase
     .from("venues")
     .select(
-      "id, name, address, lat, lng, amenities, photos, photo_attributions, venue_type, booking_notes, " +
+      "id, name, address, lat, lng, amenities, photos, photo_attributions, venue_type, booking_notes, hours, " +
         "operator:operators(name, website), " +
         "fields(id, name, surface, size, price_per_hour, price_note, booking_url, is_active)"
     )
@@ -174,6 +177,7 @@ async function loadVenues(): Promise<Venue[]> {
       photos: r.photos ?? [],
       photoAttributions: r.photo_attributions ?? [],
       venueType: r.venue_type,
+      hours: r.hours ?? null,
       operatorName: r.operator?.name ?? null,
       operatorWebsite: safeHttpUrl(r.operator?.website),
       fields,
