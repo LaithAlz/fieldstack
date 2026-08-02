@@ -32,6 +32,7 @@ import { VenueDetailSkeleton } from "../../components/VenueDetailSkeleton";
 import { WhenPickerSheet } from "../../components/WhenPicker";
 import { useLocation } from "../../hooks/useLocation";
 import { useVenue } from "../../hooks/useVenue";
+import { useResolvedVenueHours } from "../../hooks/useResolvedVenueHours";
 import { useVenueReviews } from "../../hooks/useVenueReviews";
 import { useAuth } from "../../lib/auth";
 import { openHttpUrl } from "../../lib/openExternalUrl";
@@ -104,6 +105,14 @@ export function VenueDetailScreen({ route }: Props) {
   } = useVenueReviews(venueId);
   const { isSaved, toggle: toggleSaved } = useSavedVenues();
   const { recordView } = useRecentlyViewed();
+  // Effective hours: the venue's own stored hours when present, otherwise live
+  // Google Places hours resolved via the API (issue #492 option 3). Falls back
+  // to stored (usually null) if that route errors or isn't deployed yet.
+  const { hours: resolvedHours, source: hoursSource } = useResolvedVenueHours(
+    venueId,
+    venue?.hours,
+    Boolean(venue)
+  );
   const savedForVenue = venue ? isSaved(venue.id) : false;
   const onToggleSave = venue ? () => void toggleSaved(venue.id) : undefined;
 
@@ -254,7 +263,7 @@ export function VenueDetailScreen({ route }: Props) {
   if (locality) ratingParts.push(locality);
   const ratingLine = ratingParts.join(" · ");
 
-  const status = openStatus(venue.hours);
+  const status = openStatus(resolvedHours);
 
   const handleDirections = async () => {
     const ok = await openDirections({
@@ -391,6 +400,9 @@ export function VenueDetailScreen({ route }: Props) {
                 {status.statusLabel}
               </Text>
               <Text size="sm" variant="secondary">{` · ${status.timeLabel}`}</Text>
+              {hoursSource === "google" ? (
+                <Text size="sm" variant="secondary">{" · hours via Google"}</Text>
+              ) : null}
             </View>
           ) : null}
           {addressLine ? (
@@ -523,7 +535,7 @@ export function VenueDetailScreen({ route }: Props) {
 
       <WhenPickerSheet
         ref={slotSheetRef}
-        getOpenHours={(date) => getDayHours(venue.hours, date)}
+        getOpenHours={(date) => getDayHours(resolvedHours, date)}
       />
       <FieldPickerSheet
         ref={fieldPickerRef}

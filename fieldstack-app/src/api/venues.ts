@@ -1,5 +1,5 @@
 import { get, request, type ApiResult } from "./client";
-import type { Field, VenueWithFields } from "../types/api";
+import type { Field, VenueHoursJson, VenueWithFields } from "../types/api";
 
 type GetVenuesParams = {
   /** Exact venue ids (Saved tab). When set, proximity params are ignored. */
@@ -70,4 +70,24 @@ export function getVenueFields(
     `/venues/${encodeURIComponent(id)}/fields`,
     compactParams(params)
   );
+}
+
+/** Where a venue's hours came from — lets the UI label Google-sourced hours. */
+export type VenueHoursSource = "stored" | "google" | "none";
+
+export type VenueHoursResponse = {
+  hours: VenueHoursJson | null;
+  source: VenueHoursSource;
+};
+
+/**
+ * Opening hours for a venue (GET /venues/:id/hours). Returns stored hours when
+ * present, else live Google Places hours for venues that have a Google place id
+ * (the paid facilities we don't otherwise have hours for). Only worth calling
+ * when the venue's own `hours` is empty — see useResolvedVenueHours. Degrades
+ * to an error result (which the hook treats as "no hours") on an older API
+ * that lacks this route.
+ */
+export function getVenueHours(id: string): Promise<ApiResult<VenueHoursResponse>> {
+  return get<VenueHoursResponse>(`/venues/${encodeURIComponent(id)}/hours`);
 }
