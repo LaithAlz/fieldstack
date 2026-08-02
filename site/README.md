@@ -13,7 +13,7 @@ site/
     support/page.tsx  → /support   (App Store Support URL)
     privacy/page.tsx  → /privacy   (App Store Privacy Policy URL)
     terms/page.tsx    → /terms
-    globals.css       Matchday design system styles, tokens from design/tokens.json
+    globals.css       Matchday design system styles (tokens via generated app/tokens.css, from design/tokens.json)
   components/         nav, footer, app-store-button
   public/            mark.svg + app screenshots
 ```
@@ -33,9 +33,12 @@ Monorepo, so point Vercel at the `site/` folder:
 1. Vercel → project → **Settings → Build & Deployment → Root Directory → `site`**.
 2. Framework Preset: **Next.js** (auto-detected). No other config needed.
 3. **Settings → Domains → add `getonside.ca` + `www`** and set the DNS records.
-4. `app/opengraph-image.tsx` imports `../../design/tokens.json` (one level
-   the Root Directory in the Build" option on (it's on by default) or the
-   build will fail to resolve that import.
+4. No "include files outside the Root Directory" setting is needed:
+   `app/opengraph-image.tsx` imports `../lib/tokens.generated.json` — a
+   color-only copy of the design tokens that `design/generate.mjs` writes
+   inside `site/`, precisely so the OG image never reaches outside Vercel's
+   `site/` root. Regenerate it with `node design/generate.mjs` from the repo
+   root (a CI drift check fails if it's stale).
 
 Analytics: **Settings → Analytics → Enable Web Analytics** and **Speed Insights**
 (the `<Analytics/>` + `<SpeedInsights/>` components are already in the layout).
