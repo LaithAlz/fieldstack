@@ -2,6 +2,7 @@ import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { listVenues, listVenuesByIds, getVenueWithFields } from "../lib/queries/venues.js";
 import { listFieldsByVenue } from "../lib/queries/fields.js";
+import { getVenueHours } from "../lib/queries/hours.js";
 import { ApiError } from "../lib/errors.js";
 
 // `coerce.number` because query strings come in as strings.
@@ -81,5 +82,25 @@ export async function venuesRoutes(app: FastifyInstance) {
     const data = await listFieldsByVenue(id, filters);
     reply.header("Cache-Control", "public, max-age=60");
     return { data, error: null };
+  });
+
+  // GET /venues/:id/hours — opening hours for a venue. Returns stored hours
+  // (operator + park bylaw, from the pipeline) when present, else live Google
+  // Places hours for venues that have a google_place_id (#492 option 3 —
+  // Google content is fetched at display time, never stored durably). `source`
+  // is "stored" | "google" | "none" so the client can label them.
+  app.get("/venues/:id/hours", async (req, reply) => {
+    const { id } = VenueIdParams.parse(req.params);
+
+    const result = await getVenueHours(id);
+    if (!result) throw new ApiError(404, "venue not found", "VENUE_NOT_FOUND");
+
+    // Google-sourced hours must not be cached durably at the edge; stored hours
+    // can be. Keep both modest since "open now" is time-sensitive.
+    reply.header(
+      "Cache-Control",
+      result.source === "google" ? "public, max-age=300" : "public, max-age=3600"
+    );
+    return { data: result, error: null };
   });
 }
