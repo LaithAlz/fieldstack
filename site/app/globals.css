@@ -307,6 +307,9 @@ footer a:hover { color: var(--brand); }
 .foot-links { display: flex; gap: var(--space-xl); flex-wrap: wrap; }
 .foot-cities { display: flex; gap: var(--space-sm) 20px; flex-wrap: wrap; width: 100%; font-size: 14px; padding-bottom: 4px; border-bottom: 1px solid var(--line); }
 .foot-legal { font-size: 13px; width: 100%; color: var(--text-2); padding-top: 10px; line-height: 1.6; }
+.foot-data { font-size: 12px; width: 100%; color: var(--text-3); padding-top: 4px; line-height: 1.6; }
+.foot-data a { color: var(--text-2); text-decoration: underline; text-underline-offset: 2px; }
+.foot-data a:hover { color: var(--brand); }
 
 /* ---------- legal / support docs ---------- */
 .doc { max-width: 760px; margin: 0 auto; padding: 44px var(--space-xl) 88px; }
