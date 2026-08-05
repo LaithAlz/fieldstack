@@ -32,6 +32,17 @@ export async function Footer() {
           © 2026 Allaith Alzoubi. Onside is a field-discovery app; bookings are made
           directly with each field&apos;s operator.
         </p>
+        <p className="foot-data">
+          Field data from{" "}
+          <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">
+            OpenStreetMap
+          </a>{" "}
+          contributors (ODbL), the Cities of{" "}
+          <a href="https://open.toronto.ca/" target="_blank" rel="noopener noreferrer">Toronto</a>,{" "}
+          <a href="https://data.mississauga.ca/" target="_blank" rel="noopener noreferrer">Mississauga</a>, and{" "}
+          <a href="https://geohub.brampton.ca/" target="_blank" rel="noopener noreferrer">Brampton</a>{" "}
+          (open data, Brampton under CC BY 4.0), and Google.
+        </p>
       </div>
     </footer>
   );
